@@ -53,30 +53,34 @@ def atmospheric_profile(p, x, ax=None, **kwargs):
     return ax.plot(x, p, **kwargs)
 
 
-def plot_overview(p, vmr, T, fig, **kwargs):
+def plot_overview(data, rad_lw, rad_sw, fig, **kwargs):
     """Plot overview of atmopsheric temperature and humidity profiles.
 
     Parameters:
-        p (ndarray): Pressure [Pa].
-        vmr (ndarray): Pressure [Pa].
-        T (ndarray): Pressure [Pa].
+        data:
+        rad_lw:
+        rad_sw:
         fig (Figure): Matplotlib figure with three AxesSubplots.
         **kwargs: Additional keyword arguments passed to all calls
             of `atmospheric_profile`.
     """
     # Plot temperature, ...
-    atmospheric_profile(p, T, ax=fig.axes[0], **kwargs)
+    atmospheric_profile(data.index * 100, data['T'], ax=fig.axes[0], **kwargs)
     fig.axes[0].set_xlabel('Temperaure [K]')
-    fig.axes[0].set_xlim(180, 320)
+    fig.axes[0].set_xlim(140, 320)
 
     # ... water vapor ...
-    atmospheric_profile(p, vmr, ax=fig.axes[1], **kwargs)
+    atmospheric_profile(data.index * 100, data['Q'] / 1000, ax=fig.axes[1], **kwargs)
     fig.axes[1].set_xlabel('$\mathsf{H_2O}$ [VMR]')
     fig.axes[1].set_xlim(0, 0.04)
 
-    # ... and relative humidity.
-    rh = typhon.atmosphere.relative_humidity(vmr, p, T)
-    atmospheric_profile(p, rh, ax=fig.axes[2], **kwargs)
-    fig.axes[2].set_xlabel('Relative Humidity')
-    fig.axes[2].xaxis.set_major_formatter(_percent_formatter)
-    fig.axes[2].set_xlim(0, 1.05)
+    atmospheric_profile(
+        data.index * 100, rad_lw['lw_htngrt'], ax=fig.axes[2], label='Longwave')
+    atmospheric_profile(
+        data.index * 100, rad_sw['sw_htngrt'], ax=fig.axes[2], label='Shortwave')
+    atmospheric_profile(
+        data.index * 100, rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=fig.axes[2],
+        label='Net rate', color='k')
+    fig.axes[2].set_xlabel('Heatingrate [°C/day]')
+    fig.axes[2].set_xlim(-5, 2)
+    fig.axes[2].legend(loc='upper center')
