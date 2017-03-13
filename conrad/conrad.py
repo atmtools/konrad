@@ -2,7 +2,6 @@
 """
 
 """
-import os
 import numpy as np
 from typhon import atmosphere
 from . import utils
@@ -82,7 +81,8 @@ class ConRad():
         fig.axes[1].set_ylim(0, 30)
         fig.axes[2].set_ylim(0, 30)
 
-    def _run(self):
+    @utils.with_psrad_symlinks
+    def run(self):
         """Run the radiative-convective equilibirum model."""
         from . import psrad
 
@@ -117,8 +117,3 @@ class ConRad():
             print('Iteration {}...'.format(self.niter))
             self.niter += 1
 
-    def run(self, *args, **kwargs):
-        """Run the radiative-convective equilibirum model."""
-        # Create symlinks for all inputs needed by PSRAD.
-        with utils.PsradSymlinks():
-            self._run(*args, **kwargs)

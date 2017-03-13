@@ -4,11 +4,13 @@
 import os
 import pandas as pd
 import typhon
+from functools import wraps
 
 
 __all__ = [
     'atmfield2pandas',
     'PsradSymlinks',
+    'with_psrad_symlinks',
 ]
 
 
@@ -56,3 +58,17 @@ class PsradSymlinks():
     def __exit__(self, *args):
         for f in self._created_files:
                 os.remove(f)
+
+
+def with_psrad_symlinks(func):
+    """Wrapper for all functions that import the psrad module.
+
+    The decorator asures that ´libpsrad.so.1´ and the requied *.nc files are
+    symlinked in the current working directory. This allows a more flexible
+    usage of the psrad module.
+    """
+    @wraps(func)
+    def func_wrapper(*args, **kwargs):
+        with PsradSymlinks():
+            return func(*args, **kwargs)
+    return func_wrapper
