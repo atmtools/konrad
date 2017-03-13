@@ -53,6 +53,34 @@ def atmospheric_profile(p, x, ax=None, **kwargs):
     return ax.plot(x, p, **kwargs)
 
 
+def atmospheric_profile_z(z, x, ax=None, **kwargs):
+    """Plot atmospheric profile of arbitrary property.
+
+    Parameters:
+        z (ndarray): Height [km].
+        x (ndarray): Atmospheric property.
+        ax (AxesSubplot): Axes to plot in.
+        **kwargs: Additional keyword arguments passed to `plt.plot`.
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    # Determine min/max pressure of **all** data in plot.
+    zmin = np.min((z.min(), *ax.get_ylim()))
+    zmax = np.max((z.max(), *ax.get_ylim()))
+    ax.set_ylim(zmin, zmax)  # implicitly invert yaxis
+
+    # Only plot bottom and left spines.
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # Label and format for yaxis.
+    if ax.is_first_col():
+        ax.set_ylabel('Height [km]')
+
+    # Actual plot.
+    return ax.plot(x, z / 1e3, **kwargs)
+
 def plot_overview(data, rad_lw, rad_sw, fig, **kwargs):
     """Plot overview of atmopsheric temperature and humidity profiles.
 
@@ -84,3 +112,40 @@ def plot_overview(data, rad_lw, rad_sw, fig, **kwargs):
     fig.axes[2].set_xlabel('Heatingrate [°C/day]')
     fig.axes[2].set_xlim(-5, 2)
     fig.axes[2].legend(loc='upper center')
+
+
+def plot_overview_z(data, rad_lw, rad_sw, fig, **kwargs):
+    """Plot overview of atmopsheric temperature and humidity profiles.
+
+    Parameters:
+        data:
+        rad_lw:
+        rad_sw:
+        fig (Figure): Matplotlib figure with three AxesSubplots.
+        **kwargs: Additional keyword arguments passed to all calls
+            of `atmospheric_profile`.
+    """
+    # Plot temperature, ...
+    atmospheric_profile_z(data['Z'], data['T'], ax=fig.axes[0], **kwargs)
+    fig.axes[0].set_xlabel('Temperaure [K]')
+    fig.axes[0].set_xlim(140, 320)
+
+    # ... water vapor ...
+    atmospheric_profile_z(data['Z'], data['Q'] / 1000, ax=fig.axes[1], **kwargs)
+    fig.axes[1].set_xlabel('$\mathsf{H_2O}$ [VMR]')
+    fig.axes[1].set_xlim(0, 0.04)
+
+    atmospheric_profile_z(
+        data['Z'], rad_lw['lw_htngrt'], ax=fig.axes[2], label='Longwave')
+    atmospheric_profile_z(
+        data['Z'], rad_sw['sw_htngrt'], ax=fig.axes[2], label='Shortwave')
+    atmospheric_profile_z(
+        data['Z'], rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=fig.axes[2],
+        label='Net rate', color='k')
+    fig.axes[2].set_xlabel('Heatingrate [°C/day]')
+    fig.axes[2].set_xlim(-5, 2)
+    fig.axes[2].legend(loc='upper center')
+
+    fig.axes[0].set_ylim(0, 30)
+    fig.axes[1].set_ylim(0, 30)
+    fig.axes[2].set_ylim(0, 30)

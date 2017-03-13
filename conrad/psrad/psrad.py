@@ -14,8 +14,7 @@ This interface uses the Numpy module, and all arrays passed as arguments to or r
 from ctypes import cdll as __cdll
 from ctypes import POINTER as __POINTER
 from ctypes import c_int, c_double
-# solib = __cdll.LoadLibrary('./libpsrad.so.1')
-solib = __cdll.LoadLibrary('libpsrad.so.1')
+solib = __cdll.LoadLibrary('./libpsrad.so.1')
 _c_int_p = __POINTER(c_int)
 _c_double_p = __POINTER(c_double)
 

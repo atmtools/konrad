@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """Common utility functions.
 """
-from glob import glob
+import os
 import pandas as pd
 import typhon
-from subprocess import call
 
 
 __all__ = [
     'atmfield2pandas',
+    'PsradSymlinks',
 ]
 
 
@@ -34,3 +34,25 @@ def atmfield2pandas(gf):
 
     return pd.DataFrame({k: pd.Series(data[k], index=data['P'])
                          for k in data.keys()})
+
+
+class PsradSymlinks():
+    def __init__(self):
+        self._psrad_path = os.environ['PSRAD_PATH']
+        self._psrad_files = [
+            'ECHAM6_CldOptProps.nc',
+            'rrtmg_lw.nc',
+            'rrtmg_sw.nc',
+            'libpsrad.so.1',
+            ]
+        self._created_files = []
+
+    def __enter__(self):
+        for f in self._psrad_files:
+            if not os.path.isfile(f):
+                os.symlink(os.path.join(self._psrad_path, f), f)
+                self._created_files.append(f)
+
+    def __exit__(self, *args):
+        for f in self._created_files:
+                os.remove(f)
