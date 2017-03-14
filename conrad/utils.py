@@ -2,6 +2,7 @@
 """Common utility functions.
 """
 import os
+import logging
 from functools import wraps
 
 import pandas as pd
@@ -13,6 +14,8 @@ __all__ = [
     'PsradSymlinks',
     'with_psrad_symlinks',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def atmfield2pandas(gf):
@@ -41,7 +44,11 @@ def atmfield2pandas(gf):
 
 class PsradSymlinks():
     def __init__(self):
-        self._psrad_path = os.environ['PSRAD_PATH']
+        try:
+            self._psrad_path = os.environ['PSRAD_PATH']
+        except KeyError:
+            logger.exception('Path to PSRAD directory not set.')
+
         self._psrad_files = [
             'ECHAM6_CldOptProps.nc',
             'rrtmg_lw.nc',
@@ -55,6 +62,7 @@ class PsradSymlinks():
             if not os.path.isfile(f):
                 os.symlink(os.path.join(self._psrad_path, f), f)
                 self._created_files.append(f)
+                logger.debug("Create symlink %s", f)
 
     def __exit__(self, *args):
         for f in self._created_files:

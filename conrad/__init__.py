@@ -19,5 +19,7 @@ __version__ = '0.1'
 logging.basicConfig(
     # filename='log.txt',
     level=logging.DEBUG,
-    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    style='{',
+    format='{asctime} {levelname}:{name}:{message}',
     )
