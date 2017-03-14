@@ -2,9 +2,10 @@
 """Common utility functions.
 """
 import os
+from functools import wraps
+
 import pandas as pd
 import typhon
-from functools import wraps
 
 
 __all__ = [
