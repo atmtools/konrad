@@ -48,6 +48,7 @@ class PsradSymlinks():
             self._psrad_path = os.environ['PSRAD_PATH']
         except KeyError:
             logger.exception('Path to PSRAD directory not set.')
+            raise
 
         self._psrad_files = [
             'ECHAM6_CldOptProps.nc',
