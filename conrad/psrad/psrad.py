@@ -41,7 +41,7 @@ c_double, c_double, _c_double_p, _c_double_p, _c_double_p, _c_double_p, \
 _c_double_p, _c_double_p, _c_double_p,_c_double_p]
 def setup_single(klev, nlayers, icldlyr_index, cldlyr_lwc, cldlyr_iwc, \
 cldlyr_frc, zenith, albedo, pp_sfc, tk_sfc, hgt_fl_vr, pp_fl_vr, tk_fl_vr, \
-xm_h2o_vr, xm_o3_vr, xm_n2o_vr, xm_co_vr, xm_ch4_vr):
+xm_h2o_vr, xm_o3_vr, xm_co2_vr, xm_n2o_vr, xm_co_vr, xm_ch4_vr):
 	"""Setup radiation calculation. Input data is as follows:
 * klev (int): number of layers in the column
 * nlayers (int): number of layers with clouds
@@ -53,10 +53,10 @@ xm_h2o_vr, xm_o3_vr, xm_n2o_vr, xm_co_vr, xm_ch4_vr):
 * albedo (float64): constant, band independent albedo (in [0,1]).
 * pp_sfc (float64): Surface pressure [Pa]
 * tk_sfc (float64): Surface temperature [K]
-* hgt_fl_vr (float64[klev]): Full level heights [mb] anscheinend Hoehe in m?
-* pp_fl_vr (float64[klev]): Full level pressure [Pa] anscheinend in hPa? 
+* hgt_fl_vr (float64[klev]): Full level heights [mb]
+* pp_fl_vr (float64[klev]): Full level pressure [Pa]
 * tk_fl_vr (float64[klev]): Full level temperature [K]
-* xm_*_vr (float64[klev]): Volume mixing rations for chemical species *. [???] anscheinend ppm?
+* xm_*_vr (float64[klev]): Volume mixing rations for chemical species *. [???]
 The last variables are indexed from the ground up, i.e. pp_fl_vr[0] is the pressure at the surface and pp_fl_vr[klev-1] is the TOA pressure."""
 	l_lw = c_int(1)
 	l_sw = c_int(1)
@@ -74,13 +74,14 @@ The last variables are indexed from the ground up, i.e. pp_fl_vr[0] is the press
 	C_tk_fl_vr = __get_double_p(tk_fl_vr)
 	C_xm_h2o_vr = __get_double_p(xm_h2o_vr)
 	C_xm_o3_vr = __get_double_p(xm_o3_vr)
+	C_xm_co2_vr = __get_double_p(xm_co2_vr)
 	C_xm_n2o_vr = __get_double_p(xm_n2o_vr)
 	C_xm_co_vr = __get_double_p(xm_co_vr)
 	C_xm_ch4_vr = __get_double_p(xm_ch4_vr)
 	C_zenith = c_double(zenith)
 	C_albedo = c_double(albedo)
 	
-	solib.psrad_standalone_setup_single(klev, nlayers, C_icldlyr_index, C_cldlyr_lwc, C_cldlyr_iwc, C_cldlyr_frc, C_zenith, C_albedo, C_pp_sfc, C_tk_sfc, C_hgt_fl_vr, C_pp_fl_vr, C_tk_fl_vr, C_xm_h2o_vr, C_xm_o3_vr, C_xm_n2o_vr, C_xm_co_vr, C_xm_ch4_vr)
+	solib.psrad_standalone_setup_single(klev, nlayers, C_icldlyr_index, C_cldlyr_lwc, C_cldlyr_iwc, C_cldlyr_frc, C_zenith, C_albedo, C_pp_sfc, C_tk_sfc, C_hgt_fl_vr, C_pp_fl_vr, C_tk_fl_vr, C_xm_h2o_vr, C_xm_o3_vr, C_xm_co2_vr, C_xm_n2o_vr, C_xm_co_vr, C_xm_ch4_vr)
 
 solib.psrad_standalone_setup_multi.argtypes = [c_int, c_int, _c_int_p, \
 _c_double_p, _c_double_p, _c_double_p, c_double, c_double, \

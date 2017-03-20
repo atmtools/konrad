@@ -26,9 +26,10 @@ logger = logging.getLogger(__name__)
 def atmfield2pandas(gf):
     """Convert a atm_field_compact to pandas DataFrame."""
     # List PSRAD variable names and corresponding ARTS species tags.
-    psrad_keys = ['Z', 'T', 'Q', 'N2O', 'O3', 'CO', 'CH4']
+    psrad_keys = ['Z', 'T', 'Q', 'N2O', 'O3', 'CO2', 'CO', 'CH4']
     arts_keys = ['z', 'T', 'abs_species-H2O', 'abs_species-N2O',
-                 'abs_species-O3', 'abs_species-CO', 'abs_species-CH4']
+                 'abs_species-O3', 'abs_species-CO2', 'abs_species-CO',
+                 'abs_species-CH4']
 
     # Store GriddedField fields in dict, matching PSRAD name is the key.
     data = {}
@@ -42,6 +43,17 @@ def atmfield2pandas(gf):
 
 
 class PsradSymlinks():
+    """Defines a with-block to ensure that all files needed to run PSRAD are
+    symlinked.
+
+    Examples:
+        >>> print(os.listdir())
+        []
+        >>> with PsradSymlinks():
+        ...     print(os.listdir())
+        ['ECHAM6_CldOptProps.nc', 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'libpsrad.so.1']
+
+    """
     def __init__(self):
         try:
             self._psrad_path = os.environ['PSRAD_PATH']

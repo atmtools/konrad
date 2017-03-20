@@ -42,8 +42,8 @@ def psrad_lw(s, albedo=0.05, zenith=41.0):
         nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith, albedo, P_sfc, T_sfc,
         s['Z'].values[1:], s['P'].values[1:] / 100, s['T'].values[1:],
         s['Q'].values[1:] * 1e6, s['O3'].values[1:] * 1e6,
-        s['N2O'].values[1:] * 1e6, s['CO'].values[1:] * 1e6,
-        s['CH4'].values[1:] * 1e6
+        s['CO2'].values[1:] * 1e6, s['N2O'].values[1:] * 1e6,
+        s['CO'].values[1:] * 1e6, s['CH4'].values[1:] * 1e6
         )
 
     psrad.advance_lrtm()
@@ -96,8 +96,8 @@ def psrad_sw(s, albedo=0.05, zenith=41.0):
         nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith, albedo, P_sfc, T_sfc,
         s['Z'].values[1:], s['P'].values[1:] / 100, s['T'].values[1:],
         s['Q'].values[1:] * 1e6, s['O3'].values[1:] * 1e6,
-        s['N2O'].values[1:] * 1e6, s['CO'].values[1:] * 1e6,
-        s['CH4'].values[1:] * 1e6
+        s['CO2'].values[1:] * 1e6, s['N2O'].values[1:] * 1e6,
+        s['CO'].values[1:] * 1e6, s['CH4'].values[1:] * 1e6
         )
 
     psrad.advance_srtm()

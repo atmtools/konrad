@@ -22,7 +22,7 @@ __all__ = [
 atmvariables = {
     'CH4': ('Methane', 'VMR'),
     'CO': ('Carbon monoxide', 'VMR'),
-    # 'CO2': ('Carbon dioxide', 'VMR'),
+    'CO2': ('Carbon dioxide', 'VMR'),
     'N2O': ('Nitrogen', 'VMR'),
     'O3': ('Ozone', 'VMR'),
     'Q': ('Water vapor', 'VMR'),
