@@ -8,8 +8,10 @@ import typhon
 
 
 __all__ = [
-    'atmospheric_profile',
-    'plot_overview',
+    'atmospheric_profile_p',
+    'atmospheric_profile_z',
+    'plot_overview_p',
+    'plot_overview_z',
 ]
 
 
@@ -23,7 +25,7 @@ def _percent_formatter(x, pos):
     return '{:.0f}\N{SIX-PER-EM SPACE}%'.format(x * 100)
 
 
-def atmospheric_profile(p, x, ax=None, **kwargs):
+def atmospheric_profile_p(p, x, ax=None, **kwargs):
     """Plot atmospheric profile of arbitrary property.
 
     Parameters:
@@ -57,13 +59,15 @@ def atmospheric_profile_z(z, x, ax=None, **kwargs):
     """Plot atmospheric profile of arbitrary property.
 
     Parameters:
-        z (ndarray): Height [km].
+        z (ndarray): Height [m].
         x (ndarray): Atmospheric property.
         ax (AxesSubplot): Axes to plot in.
         **kwargs: Additional keyword arguments passed to `plt.plot`.
     """
     if ax is None:
         ax = plt.gca()
+
+    z = z / 1e3  # scale to km.
 
     # Determine min/max pressure of **all** data in plot.
     zmin = np.min((z.min(), *ax.get_ylim()))
@@ -79,73 +83,77 @@ def atmospheric_profile_z(z, x, ax=None, **kwargs):
         ax.set_ylabel('Height [km]')
 
     # Actual plot.
-    return ax.plot(x, z / 1e3, **kwargs)
+    return ax.plot(x, z, **kwargs)
 
-def plot_overview(data, rad_lw, rad_sw, fig, **kwargs):
+def plot_overview_p(data, rad_lw, rad_sw, axes, **kwargs):
     """Plot overview of atmopsheric temperature and humidity profiles.
 
     Parameters:
         data:
         rad_lw:
         rad_sw:
-        fig (Figure): Matplotlib figure with three AxesSubplots.
+        axes (list, tuple or ndarray): Three AxesSubplots.
         **kwargs: Additional keyword arguments passed to all calls
             of `atmospheric_profile`.
     """
+    if len(axes) != 3:
+        raise Expception('Need to pass three AxesSubplot.')
+    ax1, ax2, ax3 = np.ravel(axes)
+
     # Plot temperature, ...
-    atmospheric_profile(data.index * 100, data['T'], ax=fig.axes[0], **kwargs)
-    fig.axes[0].set_xlabel('Temperaure [K]')
-    fig.axes[0].set_xlim(140, 320)
+    atmospheric_profile_p(data.index, data['T'], ax=ax1, **kwargs)
+    ax1.set_xlabel('Temperaure [K]')
+    ax1.set_xlim(140, 320)
 
     # ... water vapor ...
-    atmospheric_profile(data.index * 100, data['Q'] / 1000, ax=fig.axes[1], **kwargs)
-    fig.axes[1].set_xlabel('$\mathsf{H_2O}$ [VMR]')
-    fig.axes[1].set_xlim(0, 0.04)
+    atmospheric_profile_p(data.index, data['Q'], ax=ax2, **kwargs)
+    ax2.set_xlabel('$\mathsf{H_2O}$ [VMR]')
+    ax2.set_xlim(0, 0.04)
 
-    atmospheric_profile(
-        data.index * 100, rad_lw['lw_htngrt'], ax=fig.axes[2], label='Longwave')
-    atmospheric_profile(
-        data.index * 100, rad_sw['sw_htngrt'], ax=fig.axes[2], label='Shortwave')
-    atmospheric_profile(
-        data.index * 100, rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=fig.axes[2],
-        label='Net rate', color='k')
-    fig.axes[2].set_xlabel('Heatingrate [°C/day]')
-    fig.axes[2].set_xlim(-5, 2)
-    fig.axes[2].legend(loc='upper center')
+    atmospheric_profile_p(
+        data.index, rad_lw['lw_htngrt'], ax=ax3, label='Longwave')
+    atmospheric_profile_p(
+        data.index, rad_sw['sw_htngrt'], ax=ax3, label='Shortwave')
+    atmospheric_profile_p(
+        data.index, rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=ax3,
+            label='Net rate', color='k')
+    ax3.set_xlabel('Heatingrate [°C/day]')
+    ax3.set_xlim(-5, 2)
+    ax3.legend(loc='upper center')
 
 
-def plot_overview_z(data, rad_lw, rad_sw, fig, **kwargs):
+def plot_overview_z(data, rad_lw, rad_sw, axes, **kwargs):
     """Plot overview of atmopsheric temperature and humidity profiles.
 
     Parameters:
         data:
         rad_lw:
         rad_sw:
-        fig (Figure): Matplotlib figure with three AxesSubplots.
+        axes (list, tuple or ndarray): Three AxesSubplots.
         **kwargs: Additional keyword arguments passed to all calls
             of `atmospheric_profile`.
     """
+    if len(axes) != 3:
+        raise Expception('Need to pass three AxesSubplot.')
+    ax1, ax2, ax3 = np.ravel(axes)
+
     # Plot temperature, ...
-    atmospheric_profile_z(data['Z'], data['T'], ax=fig.axes[0], **kwargs)
-    fig.axes[0].set_xlabel('Temperaure [K]')
-    fig.axes[0].set_xlim(140, 320)
+    atmospheric_profile_z(data['Z'], data['T'], ax=ax1, **kwargs)
+    ax1.set_xlabel('Temperaure [K]')
+    ax1.set_xlim(140, 320)
 
     # ... water vapor ...
-    atmospheric_profile_z(data['Z'], data['Q'] / 1000, ax=fig.axes[1], **kwargs)
-    fig.axes[1].set_xlabel('$\mathsf{H_2O}$ [VMR]')
-    fig.axes[1].set_xlim(0, 0.04)
+    atmospheric_profile_z(data['Z'], data['Q'], ax=ax2, **kwargs)
+    ax2.set_xlabel('$\mathsf{H_2O}$ [VMR]')
+    ax2.set_xlim(0, 0.04)
 
     atmospheric_profile_z(
-        data['Z'], rad_lw['lw_htngrt'], ax=fig.axes[2], label='Longwave')
+        data['Z'], rad_lw['lw_htngrt'], ax=ax3, label='Longwave')
     atmospheric_profile_z(
-        data['Z'], rad_sw['sw_htngrt'], ax=fig.axes[2], label='Shortwave')
+        data['Z'], rad_sw['sw_htngrt'], ax=ax3, label='Shortwave')
     atmospheric_profile_z(
-        data['Z'], rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=fig.axes[2],
+        data['Z'], rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=ax3,
         label='Net rate', color='k')
-    fig.axes[2].set_xlabel('Heatingrate [°C/day]')
-    fig.axes[2].set_xlim(-5, 2)
-    fig.axes[2].legend(loc='upper center')
-
-    fig.axes[0].set_ylim(0, 30)
-    fig.axes[1].set_ylim(0, 30)
-    fig.axes[2].set_ylim(0, 30)
+    ax3.set_xlabel('Heatingrate [°C/day]')
+    ax3.set_xlim(-5, 2)
+    ax3.legend(loc='upper center')

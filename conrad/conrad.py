@@ -2,118 +2,145 @@
 """
 
 """
+import logging
+
+import matplotlib.pyplot as plt
 import numpy as np
 from typhon import atmosphere
-from . import utils
-from .plots import atmospheric_profile_z
-import matplotlib.pyplot as plt
 
+from . import utils
+from . import plots
+from . import core
+
+
+logger = logging.getLogger()
 
 __all__ = [
     'ConRad',
 ]
 
+atmvariables = {
+    'CH4': ('Methane', 'VMR'),
+    'CO': ('Carbon monoxide', 'VMR'),
+    # 'CO2': ('Carbon dioxide', 'VMR'),
+    'N2O': ('Nitrogen', 'VMR'),
+    'O3': ('Ozone', 'VMR'),
+    'Q': ('Water vapor', 'VMR'),
+    'T': ('Temperature', 'K'),
+}
+
 
 class ConRad():
-    """Implementation of a radiative-convective equilibrium model."""
-    def __init__(self, sounding=None, adjust_vmr=True, dt=1,
-                 max_iterations=365, delta=0.07, plot_iterations=True):
+    """Implementation of a radiative-convective equilibrium model.
+
+    Examples:
+        Create an object to setup a simulation.
+        >>> c = ConRad(data=pands.DataFrame(...))
+        >>> c.run()
+    """
+    def __init__(self, sounding=None, fix_rel_humidity=True, outfile=None,
+                 convective_adjustment=False, dt=1, max_iterations=5000,
+                 delta=0.03):
         """Set-up a radiative-convective model.
 
         Parameters:
             sounding (pd.DataFrame): pandas DataFrame representing an
                 atmospheric sounding.
-            adjust_vmr (bool): Adjust the water vapor mixing ratio to keep
-                the relative humidity constant.
+            fix_rel_humidity (bool): Adjust the water vapor mixing ratio to
+                keep the relative humidity constant.
+            outfile (str): netCDF4 file to store output.
+            convective_adjustment (bool): Adjust the temperature profile to an
+                critical lapse rate.
             dt (float): Time step in days.
             max_iterations (int): Maximum number of iterations.
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
-            plot_iterations (bool): Plot iterations.
         """
-        self.sounding = sounding
-        self.adjust_vmr = adjust_vmr
-        self.dt = dt
+        self.convective_adjustment = convective_adjustment
+        self.delta = delta
+        self.dt = dt  # TODO: Decide: days or hours
+        self.outfile = outfile
+        self.fix_rel_humidity = fix_rel_humidity
         self.max_iterations = max_iterations
         self.niter = 0
-        self.delta = delta
         self.rad_lw = None
         self.rad_sw = None
-        self.plot_iterations = plot_iterations
+        self.sounding = sounding
 
-    def plot_overview_z(self, fig, **kwargs):
-        """Plot overview of atmopsheric temperature and humidity profiles.
+        logging.info('Created ConRad object: {}'.format(self))
 
-        Parameters:
-            data:
-            rad_lw:
-            rad_sw:
-            fig (Figure): Matplotlib figure with three AxesSubplots.
-            **kwargs: Additional keyword arguments passed to all calls
-                of `atmospheric_profile`.
-        """
-        # Plot temperature, ...
-        atmospheric_profile_z(self.sounding['Z'], self.sounding['T'],
-                              ax=fig.axes[0], **kwargs)
-        fig.axes[0].set_xlabel('Temperaure [K]')
-        fig.axes[0].set_xlim(140, 320)
+    def plot_sounding_p(self, variable, ax=None, **kwargs):
+        return plots.atmospheric_profile_p(
+                self.sounding.index, self.sounding[variable], **kwargs)
 
-        # ... water vapor ...
-        atmospheric_profile_z(self.sounding['Z'], self.sounding['Q'] / 1000,
-                              ax=fig.axes[1], **kwargs)
-        fig.axes[1].set_xlabel('$\mathsf{H_2O}$ [VMR]')
-        fig.axes[1].set_xlim(0, 0.04)
+    def plot_sounding_z(self, variable, ax=None, **kwargs):
+        return plots.atmospheric_profile_z(
+                self.sounding['Z'], self.sounding[variable], **kwargs)
 
-        atmospheric_profile_z(self.sounding['Z'], self.rad_lw['lw_htngrt'],
-                              ax=fig.axes[2], label='Longwave')
-        atmospheric_profile_z(self.sounding['Z'], self.rad_sw['sw_htngrt'],
-                              ax=fig.axes[2], label='Shortwave')
-        atmospheric_profile_z(
-            self.sounding['Z'],
-            self.rad_sw['sw_htngrt'] + self.rad_lw['lw_htngrt'],
-            ax=fig.axes[2], label='Net rate', color='k')
-        fig.axes[2].set_xlabel('Heatingrate [°C/day]')
-        fig.axes[2].set_xlim(-5, 2)
-        fig.axes[2].legend(loc='upper center')
+    def plot_overview_z(self, axes=None, **kwargs):
+        return plots.plot_overview_z(
+            self.sounding, self.rad_lw, self.rad_sw, axes, **kwargs)
 
-        fig.axes[0].set_ylim(0, 30)
-        fig.axes[0].set_title('Iteration: {}'.format(self.niter))
-        fig.axes[1].set_ylim(0, 30)
-        fig.axes[2].set_ylim(0, 30)
+    def plot_overview_p(self, axes=None, **kwargs):
+        return plots.plot_overview_z(
+            self.sounding, self.rad_lw, self.rad_sw, axes, **kwargs)
 
     @utils.with_psrad_symlinks
     def run(self):
         """Run the radiative-convective equilibirum model."""
         from . import psrad
 
+        logger.info(
+            'Start iterative model run.\n'
+            'Maximum number of iterations: {}\n'
+            'Stop criterion: {}'.format(self.max_iterations, self.delta)
+            )
+
+        # Create netCDF4 file to store simulation results.
+        if self.outfile is not None:
+            utils.create_netcdf(
+                self.outfile,
+                pressure=self.sounding['P'],
+                description='Radiative-convective equilibrium simulation.',
+                variable_description=atmvariables,
+                )
+
         while self.niter < self.max_iterations:
+            logger.debug('Enter iteration {}.'.format(self.niter))
+
+            # TODO: Maybe merge all the radiative quantities?
+            # Calculate shortwave and longwave heating rates.
             self.rad_lw = psrad.psrad_lw(self.sounding)
             self.rad_sw = psrad.psrad_sw(self.sounding)
-            net_rate = (self.rad_lw['lw_htngrt'] + self.rad_sw['sw_htngrt'])
 
-            T_new = self.sounding['T'] + net_rate
+            T_new = core.adjust_temperature(
+                self, convective_adjustment=self.convective_adjustment)
 
-            if self.adjust_vmr:
-                rh = atmosphere.relative_humidity(
-                    self.sounding['Q'] / 1000,
-                    self.sounding['P'],
-                    self.sounding['T'])
+            # TODO: I do not like this solution. Maybe switch to a boolean
+            # `converged` or so?
+            dT = T_new - self.sounding['T']
 
-                self.sounding['Q'] = atmosphere.vmr(
-                    rh, self.sounding['P'], T_new) * 1000
+            if self.fix_rel_humidity:
+                logger.debug('Adjust VMR to preserve relative humidity.')
+                self.sounding['Q'] = core.adjust_vmr(self.sounding, T_new)
 
             self.sounding['T'] = T_new
 
-            if self.plot_iterations:
-                fig, axes = plt.subplots(1, 3, sharey=True, figsize=(8, 6))
-                self.plot_overview_z(fig)
-                fig.savefig('plots/iter_{:03d}.png'.format(self.niter),
-                            bbox_inches='tight')
-                plt.close(fig)
+            if self.outfile is not None:
+                utils.append_timestep_netcdf(
+                    self.outfile,
+                    # TODO: Dirty hack for now. Not all variables are supported
+                    # for appending to netCDF4 . Therefore only the ones with
+                    # proper definition are passed to the function.
+                    {v: self.sounding[v].values for v in atmvariables},
+                    self.niter * 24 * self.dt,
+                    )
 
-            if np.all(np.abs(net_rate) < self.delta):
+            if np.all(np.abs(dT) < self.delta):
+                logger.info(
+                    'Converged after {} iterations.'.format(self.niter))
                 break
 
-            print('Iteration {}...'.format(self.niter))
             self.niter += 1
-
+        else:
+            logger.info('Stopped after maximum number of iterations.')

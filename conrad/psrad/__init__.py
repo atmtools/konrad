@@ -27,28 +27,25 @@ def psrad_lw(s, albedo=0.05, zenith=41.0):
     .. Author : Bjorn Stevens (bjorn.stevens@mpimet.mpg.de)
     .. Created: 8.10.2016
     """
-    H2O = s['Q'].values[1:] * 1000
-    O3 = s['O3'].values[1:]
-    N2O = s['N2O'].values[1:]
-    CO = s['CO'].values[1:]
-    CH4 = s['CH4'].values[1:]
-    Z = s['Z'].values[1:]
-    T = s['T'].values[1:]
-    P = s['P'].values[1:]
-
     dmy_indices = np.asarray([0, 0, 0, 0])
     ic = dmy_indices.astype("int32") + 1
     c_lwc = np.asarray([0., 0., 0., 0.])
     c_iwc = np.asarray([0., 0., 0., 0.])
     c_frc = np.asarray([0., 0., 0., 0.])
 
-    P_sfc = s['P'].values[0]
+    P_sfc = s['P'].values[0] / 100
     T_sfc = s['T'].values[0]
 
-    nlev = len(P)
+    nlev = len(s['P'].values[1:])
 
-    psrad.setup_single(nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith, albedo,
-                       P_sfc, T_sfc, Z, P, T, H2O, O3, N2O, CO, CH4)
+    psrad.setup_single(
+        nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith, albedo, P_sfc, T_sfc,
+        s['Z'].values[1:], s['P'].values[1:] / 100, s['T'].values[1:],
+        s['Q'].values[1:] * 1e6, s['O3'].values[1:] * 1e6,
+        s['N2O'].values[1:] * 1e6, s['CO'].values[1:] * 1e6,
+        s['CH4'].values[1:] * 1e6
+        )
+
     psrad.advance_lrtm()
     hr, hr_clr, lw_flxd, lw_flxd_clr, lw_flxu, lw_flxu_clr = \
         psrad.get_lw_fluxes()
@@ -84,29 +81,25 @@ def psrad_sw(s, albedo=0.05, zenith=41.0):
     .. Author: Theresa Lang
     .. Created: 19.12.16
     """
-
-    H2O = s['Q'].values[1:] * 1000.
-    O3 = s['O3'].values[1:]
-    N2O = s['N2O'].values[1:]
-    CO = s['CO'].values[1:]
-    CH4 = s['CH4'].values[1:]
-    Z = s['Z'].values[1:]
-    T = s['T'].values[1:]
-    P = s['P'].values[1:]
-
     dmy_indices = np.asarray([0, 0, 0, 0])
     ic = dmy_indices.astype("int32") + 1
     c_lwc = np.asarray([0., 0., 0., 0.])
     c_iwc = np.asarray([0., 0., 0., 0.])
     c_frc = np.asarray([0., 0., 0., 0.])
 
-    P_sfc = s['P'].values[0]
+    P_sfc = s['P'].values[0] / 100
     T_sfc = s['T'].values[0]
 
-    nlev = len(P)
+    nlev = len(s['P'].values[1:])
 
-    psrad.setup_single(nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith, albedo,
-                       P_sfc, T_sfc, Z, P, T, H2O, O3, N2O, CO, CH4)
+    psrad.setup_single(
+        nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith, albedo, P_sfc, T_sfc,
+        s['Z'].values[1:], s['P'].values[1:] / 100, s['T'].values[1:],
+        s['Q'].values[1:] * 1e6, s['O3'].values[1:] * 1e6,
+        s['N2O'].values[1:] * 1e6, s['CO'].values[1:] * 1e6,
+        s['CH4'].values[1:] * 1e6
+        )
+
     psrad.advance_srtm()
     hr, hr_clr, sw_flxd, sw_flxd_clr, sw_flxu, sw_flxu_clr, vis_frc, \
         par_dn, nir_dff, vis_diff, par_diff = \
