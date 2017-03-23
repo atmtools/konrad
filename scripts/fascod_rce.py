@@ -9,6 +9,7 @@
 """
 import conrad
 import matplotlib.pyplot as plt
+import typhon
 from typhon.arts import xml
 
 
@@ -22,9 +23,13 @@ fascod_seasons = [
 
 for season in fascod_seasons:
     gf = xml.load('data/{}.xml'.format(season))
+    # Refine original pressure grid to 200 levels.
+    p = typhon.math.nlogspace(1100e2, 0.1, 200)
+    gf.refine_grid(p, axis=1)
+
     data = conrad.utils.atmfield2pandas(gf)
 
-    c = conrad.ConRad( sounding=data, outfile='results/{}.nc'.format(season))
+    c = conrad.ConRad(sounding=data, outfile='results/{}.nc'.format(season))
     c.run()
 
 # # Plot final result.
@@ -37,4 +42,4 @@ for season in fascod_seasons:
 # c.plot_sounding_z('T', ax)
 # ax.set_ylim(0, 30)
 
-plt.show()
+# plt.show()

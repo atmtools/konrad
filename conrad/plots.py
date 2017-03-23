@@ -4,7 +4,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import numpy as np
-import typhon
 
 
 __all__ = [
@@ -85,19 +84,20 @@ def atmospheric_profile_z(z, x, ax=None, **kwargs):
     # Actual plot.
     return ax.plot(x, z, **kwargs)
 
-def plot_overview_p(data, rad_lw, rad_sw, axes, **kwargs):
+
+def plot_overview_p(data, lw_htngrt, sw_htngrt, axes, **kwargs):
     """Plot overview of atmopsheric temperature and humidity profiles.
 
     Parameters:
         data:
-        rad_lw:
-        rad_sw:
+        lw_htngrt:
+        sw_htngrt:
         axes (list, tuple or ndarray): Three AxesSubplots.
         **kwargs: Additional keyword arguments passed to all calls
             of `atmospheric_profile`.
     """
     if len(axes) != 3:
-        raise Expception('Need to pass three AxesSubplot.')
+        raise Exception('Need to pass three AxesSubplot.')
     ax1, ax2, ax3 = np.ravel(axes)
 
     # Plot temperature, ...
@@ -110,31 +110,28 @@ def plot_overview_p(data, rad_lw, rad_sw, axes, **kwargs):
     ax2.set_xlabel('$\mathsf{H_2O}$ [VMR]')
     ax2.set_xlim(0, 0.04)
 
-    atmospheric_profile_p(
-        data.index, rad_lw['lw_htngrt'], ax=ax3, label='Longwave')
-    atmospheric_profile_p(
-        data.index, rad_sw['sw_htngrt'], ax=ax3, label='Shortwave')
-    atmospheric_profile_p(
-        data.index, rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=ax3,
-            label='Net rate', color='k')
+    atmospheric_profile_p(data.index, lw_htngrt, ax=ax3, label='Longwave')
+    atmospheric_profile_p(data.index, sw_htngrt, ax=ax3, label='Shortwave')
+    atmospheric_profile_p(data.index, sw_htngrt + lw_htngrt, ax=ax3,
+                          label='Net rate', color='k')
     ax3.set_xlabel('Heatingrate [°C/day]')
     ax3.set_xlim(-5, 2)
     ax3.legend(loc='upper center')
 
 
-def plot_overview_z(data, rad_lw, rad_sw, axes, **kwargs):
+def plot_overview_z(data, lw_htngrt, sw_htngrt, axes, **kwargs):
     """Plot overview of atmopsheric temperature and humidity profiles.
 
     Parameters:
         data:
-        rad_lw:
-        rad_sw:
+        lw_htngrt:
+        sw_htngrt:
         axes (list, tuple or ndarray): Three AxesSubplots.
         **kwargs: Additional keyword arguments passed to all calls
             of `atmospheric_profile`.
     """
     if len(axes) != 3:
-        raise Expception('Need to pass three AxesSubplot.')
+        raise Exception('Need to pass three AxesSubplot.')
     ax1, ax2, ax3 = np.ravel(axes)
 
     # Plot temperature, ...
@@ -147,13 +144,10 @@ def plot_overview_z(data, rad_lw, rad_sw, axes, **kwargs):
     ax2.set_xlabel('$\mathsf{H_2O}$ [VMR]')
     ax2.set_xlim(0, 0.04)
 
-    atmospheric_profile_z(
-        data['Z'], rad_lw['lw_htngrt'], ax=ax3, label='Longwave')
-    atmospheric_profile_z(
-        data['Z'], rad_sw['sw_htngrt'], ax=ax3, label='Shortwave')
-    atmospheric_profile_z(
-        data['Z'], rad_sw['sw_htngrt'] + rad_lw['lw_htngrt'], ax=ax3,
-        label='Net rate', color='k')
+    atmospheric_profile_z(data['Z'], lw_htngrt, ax=ax3, label='Longwave')
+    atmospheric_profile_z(data['Z'], sw_htngrt, ax=ax3, label='Shortwave')
+    atmospheric_profile_z(data['Z'], sw_htngrt + lw_htngrt, ax=ax3,
+                          label='Net rate', color='k')
     ax3.set_xlabel('Heatingrate [°C/day]')
     ax3.set_xlim(-5, 2)
     ax3.legend(loc='upper center')

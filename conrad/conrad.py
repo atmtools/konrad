@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
+"""Implementation of a radiative-convective equilibrium model.
 
+This module defines the class `ConRad` only.
 """
 import logging
+import os
 
-import matplotlib.pyplot as plt
 import numpy as np
-from typhon import atmosphere
 
 from . import utils
 from . import plots
@@ -19,7 +19,9 @@ __all__ = [
     'ConRad',
 ]
 
-atmvariables = {
+
+# Define long names and units for netCDF4 export of variables.
+_netcdf_vars = {
     'CH4': ('Methane', 'VMR'),
     'CO': ('Carbon monoxide', 'VMR'),
     'CO2': ('Carbon dioxide', 'VMR'),
@@ -34,13 +36,12 @@ class ConRad():
     """Implementation of a radiative-convective equilibrium model.
 
     Examples:
-        Create an object to setup a simulation.
+        Create an object to setup and run a simulation:
         >>> c = ConRad(data=pands.DataFrame(...))
         >>> c.run()
     """
-    def __init__(self, sounding=None, fix_rel_humidity=True, outfile=None,
-                 convective_adjustment=False, dt=1, max_iterations=5000,
-                 delta=0.03):
+    def __init__(self, sounding=None, fix_rel_humidity=True, fix_surface=True,
+                 outfile=None, dt=1, max_iterations=5000, delta=0.03):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -48,26 +49,42 @@ class ConRad():
                 atmospheric sounding.
             fix_rel_humidity (bool): Adjust the water vapor mixing ratio to
                 keep the relative humidity constant.
+            fix_stick (bool): Fix surface temperature.
             outfile (str): netCDF4 file to store output.
-            convective_adjustment (bool): Adjust the temperature profile to an
-                critical lapse rate.
             dt (float): Time step in days.
             max_iterations (int): Maximum number of iterations.
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
         """
-        self.convective_adjustment = convective_adjustment
+        self.converged = False
         self.delta = delta
-        self.dt = dt  # TODO: Decide: days or hours
+        self.dt = dt
         self.outfile = outfile
         self.fix_rel_humidity = fix_rel_humidity
+        self.fix_surface = fix_surface
         self.max_iterations = max_iterations
         self.niter = 0
-        self.rad_lw = None
-        self.rad_sw = None
+        self.heatingrates = None
         self.sounding = sounding
 
-        logging.info('Created ConRad object: {}'.format(self))
+        logging.info('Created ConRad object:\n{}'.format(self))
+
+    def __repr__(self):
+        # List of attributes to include in __repr__ output.
+        repr_attrs = [
+            'delta',
+            'dt',
+            'fix_rel_humidity',
+            'max_iterations',
+            'niter',
+            ]
+
+        retstr = '{}(\n'.format(self.__class__.__name__)
+        for a in repr_attrs:
+            retstr += '    {}={},\n'.format(a, getattr(self, a))
+        retstr += ')'
+
+        return retstr
 
     def plot_sounding_p(self, variable, ax=None, **kwargs):
         return plots.atmospheric_profile_p(
@@ -79,68 +96,108 @@ class ConRad():
 
     def plot_overview_z(self, axes=None, **kwargs):
         return plots.plot_overview_z(
-            self.sounding, self.rad_lw, self.rad_sw, axes, **kwargs)
+            self.sounding,
+            self.heatingrates['lw_htngrt'],
+            self.heatingrates['sw_hrngrt'],
+            axes,
+            **kwargs)
 
     def plot_overview_p(self, axes=None, **kwargs):
         return plots.plot_overview_z(
-            self.sounding, self.rad_lw, self.rad_sw, axes, **kwargs)
+            self.sounding,
+            self.heatingrates['lw_htngrt'],
+            self.heatingrates['sw_hrngrt'],
+            axes,
+            **kwargs)
 
+    def get_datetime(self):
+        """Return the timestamp for the current iteration."""
+        return self.niter * 24 * self.dt
+
+    @utils.with_psrad_symlinks
+    def calculate_heatingrates(self):
+        """Use PSRAD to calculate shortwave, longwave and net heatingsrates."""
+        from . import psrad
+
+        self.heatingrates = psrad.psrad_heatingrates(
+            self.sounding, fix_surface=self.fix_surface)
+
+    def adjust_temperature(self):
+        """Adjust the temperature profile.
+
+        This methods calls `self.calculate_heatingsrates` and applies the
+        simulated heatingrates to the current atmospheric state.
+        """
+        # Caculate shortwave, longwave and net heatingrates.
+        self.calculate_heatingrates()
+
+        # Apply heatingrates to temperature profile.
+        T_new = self.sounding['T'] + self.heatingrates['net_htngrt']
+
+        # Get absolute difference between current and last timestep.
+        dT = np.abs(T_new - self.sounding['T'])
+
+        # The model is converged, if all changes are below the set threshold.
+        self.converged = np.all(dT < self.delta)
+
+        # Adjust the VMR to keep the relative humidity fixed.
+        if self.fix_rel_humidity:
+            logger.debug('Adjust VMR to preserve relative humidity.')
+            self.sounding['Q'] = core.adjust_vmr(self.sounding, T_new)
+
+        self.sounding['T'] = T_new  # Updated temperature values.
+
+    def to_netcdf(self):
+        """Store the current atmospheric state to the netCDF4 file specified in
+        `self.outfile`. If the file does not exist, create it.
+
+        New timesteps are appended to existing files.
+        """
+        # TODO: Consider writing a decent export framework. Including a
+        # get_netcdf_vars() function and the possibility to pass such a dict to
+        # the writing method.
+
+        # TODO: Currently files are not overwritten when already existing.
+        # Consider chaning this behaviour.
+        if not os.path.isfile(self.outfile):
+            # If the output netCDF4 file does not exist, create it.
+            utils.create_netcdf(
+                filename=self.outfile,
+                pressure=self.sounding['P'],
+                description='Radiative-convective equilibrium simulation.',
+                variable_description=_netcdf_vars,
+                )
+
+        # Export all variables porperly specified with longname and unit.
+        export_vars = {v: self.sounding[v].values for v in _netcdf_vars}
+
+        # Append variables to netCDF4 file.
+        utils.append_timestep_netcdf(
+            filename=self.outfile,
+            data=export_vars,
+            timestamp=self.get_datetime(),
+            )
+
+    # The decorator prevents that the symlinks are created and removed during
+    # each iteration.
     @utils.with_psrad_symlinks
     def run(self):
         """Run the radiative-convective equilibirum model."""
-        from . import psrad
-
-        logger.info(
-            'Start iterative model run.\n'
-            'Maximum number of iterations: {}\n'
-            'Stop criterion: {}'.format(self.max_iterations, self.delta)
-            )
-
-        # Create netCDF4 file to store simulation results.
-        if self.outfile is not None:
-            utils.create_netcdf(
-                self.outfile,
-                pressure=self.sounding['P'],
-                description='Radiative-convective equilibrium simulation.',
-                variable_description=atmvariables,
-                )
+        logger.info('Start RCE model run.')
 
         while self.niter < self.max_iterations:
             logger.debug('Enter iteration {}.'.format(self.niter))
 
-            # TODO: Maybe merge all the radiative quantities?
-            # Calculate shortwave and longwave heating rates.
-            self.rad_lw = psrad.psrad_lw(self.sounding)
-            self.rad_sw = psrad.psrad_sw(self.sounding)
-
-            T_new = core.adjust_temperature(
-                self, convective_adjustment=self.convective_adjustment)
-
-            # TODO: I do not like this solution. Maybe switch to a boolean
-            # `converged` or so?
-            dT = T_new - self.sounding['T']
-
-            if self.fix_rel_humidity:
-                logger.debug('Adjust VMR to preserve relative humidity.')
-                self.sounding['Q'] = core.adjust_vmr(self.sounding, T_new)
-
-            self.sounding['T'] = T_new
+            self.adjust_temperature()
 
             if self.outfile is not None:
-                utils.append_timestep_netcdf(
-                    self.outfile,
-                    # TODO: Dirty hack for now. Not all variables are supported
-                    # for appending to netCDF4 . Therefore only the ones with
-                    # proper definition are passed to the function.
-                    {v: self.sounding[v].values for v in atmvariables},
-                    self.niter * 24 * self.dt,
-                    )
+                self.to_netcdf()
 
-            if np.all(np.abs(dT) < self.delta):
+            if self.converged:
                 logger.info(
                     'Converged after {} iterations.'.format(self.niter))
                 break
-
-            self.niter += 1
+            else:
+                self.niter += 1
         else:
             logger.info('Stopped after maximum number of iterations.')

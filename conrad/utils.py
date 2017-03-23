@@ -110,7 +110,7 @@ def create_netcdf(filename, pressure, description='',
         variable_description (dict{tuple}): Description of variables to create.
             The dictionary keys are used as variable name. The dictionary value
             is a tuple with the varible long name and unit: `(long name, unit)`
-        clobber (bool): If `True`, opening a file will clobber an 
+        clobber (bool): If `True`, opening a file will clobber an
             existing file.
         zlib (bool): Enable data compression.
     """
@@ -167,7 +167,7 @@ def append_timestep_netcdf(filename, data, timestamp):
     """
     # Open netCDF4 file in `append` mode.
     with Dataset(filename, 'a') as nc:
-        logging.debug( 'Append timestep to "{}".'.format(filename))
+        logging.debug('Append timestep to "{}".'.format(filename))
         t = nc.dimensions['time'].size  # get index to store data.
         nc.variables['time'][t] = timestamp  # append timestamp.
 
