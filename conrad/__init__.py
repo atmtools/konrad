@@ -4,6 +4,7 @@
 import logging
 
 from . import plots
+from . import surface
 from . import utils
 from .conrad import ConRad
 

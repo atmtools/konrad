@@ -4,7 +4,6 @@
 This module defines the class `ConRad` only.
 """
 import logging
-import os
 
 import numpy as np
 from typhon import atmosphere
@@ -22,11 +21,11 @@ __all__ = [
 
 # Define long names and units for netCDF4 export of variables.
 _netcdf_vars = {
-    # 'CH4': ('Methane', 'VMR'),
-    # 'CO': ('Carbon monoxide', 'VMR'),
-    # 'CO2': ('Carbon dioxide', 'VMR'),
-    # 'N2O': ('Nitrogen', 'VMR'),
-    # 'O3': ('Ozone', 'VMR'),
+    'CH4': ('Methane', 'VMR'),
+    'CO': ('Carbon monoxide', 'VMR'),
+    'CO2': ('Carbon dioxide', 'VMR'),
+    'N2O': ('Nitrogen', 'VMR'),
+    'O3': ('Ozone', 'VMR'),
     'Q': ('Water vapor', 'VMR'),
     'RH': ('Relative humidity', '1'),
     'T': ('Temperature', 'K'),
@@ -41,16 +40,17 @@ class ConRad():
         >>> c = ConRad(data=pands.DataFrame(...))
         >>> c.run()
     """
-    def __init__(self, sounding=None, fix_rel_humidity=True, fix_surface=True,
+    def __init__(self, sounding=None, surface=None, fix_rel_humidity=True,
                  outfile=None, dt=1, max_iterations=5000, delta=0.03):
         """Set-up a radiative-convective model.
 
         Parameters:
             sounding (pd.DataFrame): pandas DataFrame representing an
                 atmospheric sounding.
+            surface (Surface): An surface object inherited from
+                `conrad.surface.Surface`.
             fix_rel_humidity (bool): Adjust the water vapor mixing ratio to
                 keep the relative humidity constant.
-            fix_stick (bool): Fix surface temperature.
             outfile (str): netCDF4 file to store output.
             dt (float): Time step in days.
             max_iterations (int): Maximum number of iterations.
@@ -62,11 +62,11 @@ class ConRad():
         self.dt = dt
         self.outfile = outfile
         self.fix_rel_humidity = fix_rel_humidity
-        self.fix_surface = fix_surface
         self.max_iterations = max_iterations
         self.niter = 0
         self.heatingrates = None
         self.sounding = sounding
+        self.surface = surface
 
         logging.info('Created ConRad object:\n{}'.format(self))
 
@@ -121,7 +121,9 @@ class ConRad():
         from . import psrad
 
         self.heatingrates = psrad.psrad_heatingrates(
-            self.sounding, fix_surface=self.fix_surface)
+                self.sounding,
+                self.surface,
+                )
 
     def adjust_temperature(self):
         """Adjust the temperature profile.
@@ -132,8 +134,11 @@ class ConRad():
         # Caculate shortwave, longwave and net heatingrates.
         self.calculate_heatingrates()
 
-        # Apply heatingrates to temperature profile.
+        # Apply heatingrates to temperature profile...
         self.sounding['T'] += self.dt * self.heatingrates['net_htngrt']
+
+        # and the surface.
+        self.surface.adjust(self.dt * self.heatingrates['net_htngrt'].values[0])
 
     def adjust_vmr(self):
         """Adjust water vapor mixing ratio to preserve relative humidity."""
@@ -159,27 +164,24 @@ class ConRad():
         """
         return np.all(np.abs(self.heatingrates['net_htngrt']) < self.delta)
 
+    # TODO: Consider writing a decent export framework. Including a
+    # get_netcdf_vars() function and the possibility to pass such a dict to
+    # the writing method.
+    def create_outfile(self):
+        """Create netCDF4 file to store simulation results."""
+        utils.create_netcdf(
+            filename=self.outfile,
+            pressure=self.sounding['P'],
+            description='Radiative-convective equilibrium simulation.',
+            variable_description=_netcdf_vars,
+            )
+
     def to_netcdf(self):
         """Store the current atmospheric state to the netCDF4 file specified in
         `self.outfile`. If the file does not exist, create it.
 
         New timesteps are appended to existing files.
         """
-        # TODO: Consider writing a decent export framework. Including a
-        # get_netcdf_vars() function and the possibility to pass such a dict to
-        # the writing method.
-
-        # TODO: Currently files are not overwritten when already existing.
-        # Consider chaning this behaviour.
-        if not os.path.isfile(self.outfile):
-            # If the output netCDF4 file does not exist, create it.
-            utils.create_netcdf(
-                filename=self.outfile,
-                pressure=self.sounding['P'],
-                description='Radiative-convective equilibrium simulation.',
-                variable_description=_netcdf_vars,
-                )
-
         # Export all variables porperly specified with longname and unit.
         export_vars = {v: self.sounding[v].values for v in _netcdf_vars}
 
@@ -196,6 +198,9 @@ class ConRad():
     def run(self):
         """Run the radiative-convective equilibirum model."""
         logger.info('Start RCE model run.')
+
+        if self.outfile is not None:
+            self.create_outfile()
 
         # Calculate the relative humidity for given atmosphere.
         self.adjust_relative_humidity()

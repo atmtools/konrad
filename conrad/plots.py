@@ -149,5 +149,5 @@ def plot_overview_z(data, lw_htngrt, sw_htngrt, axes, **kwargs):
     atmospheric_profile_z(data['Z'], sw_htngrt + lw_htngrt, ax=ax3,
                           label='Net rate', color='k')
     ax3.set_xlabel('Heatingrate [°C/day]')
-    ax3.set_xlim(-5, 2)
+    # ax3.set_xlim(-5, 2)
     ax3.legend(loc='upper center')
