@@ -1,5 +1,5 @@
 # Installation path for psrad
-export PSRAD_PATH='/scratch/uni/u237/users/lkluft/psrad'
+export PSRAD_PATH='/scratch/uni/u237/users/lkluft/icon-aes/psrad'
 
 # Environment settings
 export F90="gfortran"  # FORTRAN compiler

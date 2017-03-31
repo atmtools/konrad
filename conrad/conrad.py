@@ -7,10 +7,10 @@ import logging
 import os
 
 import numpy as np
+from typhon import atmosphere
 
 from . import utils
 from . import plots
-from . import core
 
 
 logger = logging.getLogger()
@@ -22,12 +22,13 @@ __all__ = [
 
 # Define long names and units for netCDF4 export of variables.
 _netcdf_vars = {
-    'CH4': ('Methane', 'VMR'),
-    'CO': ('Carbon monoxide', 'VMR'),
-    'CO2': ('Carbon dioxide', 'VMR'),
-    'N2O': ('Nitrogen', 'VMR'),
-    'O3': ('Ozone', 'VMR'),
+    # 'CH4': ('Methane', 'VMR'),
+    # 'CO': ('Carbon monoxide', 'VMR'),
+    # 'CO2': ('Carbon dioxide', 'VMR'),
+    # 'N2O': ('Nitrogen', 'VMR'),
+    # 'O3': ('Ozone', 'VMR'),
     'Q': ('Water vapor', 'VMR'),
+    'RH': ('Relative humidity', '1'),
     'T': ('Temperature', 'K'),
 }
 
@@ -98,7 +99,7 @@ class ConRad():
         return plots.plot_overview_z(
             self.sounding,
             self.heatingrates['lw_htngrt'],
-            self.heatingrates['sw_hrngrt'],
+            self.heatingrates['sw_htngrt'],
             axes,
             **kwargs)
 
@@ -132,20 +133,31 @@ class ConRad():
         self.calculate_heatingrates()
 
         # Apply heatingrates to temperature profile.
-        T_new = self.sounding['T'] + self.heatingrates['net_htngrt']
+        self.sounding['T'] += self.dt * self.heatingrates['net_htngrt']
 
-        # Get absolute difference between current and last timestep.
-        dT = np.abs(T_new - self.sounding['T'])
+    def adjust_vmr(self):
+        """Adjust water vapor mixing ratio to preserve relative humidity."""
+        logger.debug('Adjust VMR to preserve relative humidity.')
+        self.sounding['Q'] = atmosphere.vmr(
+                                    self.sounding['RH'],
+                                    self.sounding['P'],
+                                    self.sounding['T'])
 
-        # The model is converged, if all changes are below the set threshold.
-        self.converged = np.all(dT < self.delta)
+    def adjust_relative_humidity(self):
+        """Adjust relative humidity to preserve water vapor mixing ratio."""
+        logger.debug('Adjust relative humidity to preserve VMR.')
+        self.sounding['RH'] = atmosphere.relative_humidity(
+                                    self.sounding['Q'],
+                                    self.sounding['P'],
+                                    self.sounding['T'])
 
-        # Adjust the VMR to keep the relative humidity fixed.
-        if self.fix_rel_humidity:
-            logger.debug('Adjust VMR to preserve relative humidity.')
-            self.sounding['Q'] = core.adjust_vmr(self.sounding, T_new)
+    def is_converged(self):
+        """Check if equilibirum is reached.
 
-        self.sounding['T'] = T_new  # Updated temperature values.
+        Returns:
+            bool: ``True`` if converged, else ``False``.
+        """
+        return np.all(np.abs(self.heatingrates['net_htngrt']) < self.delta)
 
     def to_netcdf(self):
         """Store the current atmospheric state to the netCDF4 file specified in
@@ -185,19 +197,25 @@ class ConRad():
         """Run the radiative-convective equilibirum model."""
         logger.info('Start RCE model run.')
 
+        # Calculate the relative humidity for given atmosphere.
+        self.adjust_relative_humidity()
+
         while self.niter < self.max_iterations:
+            self.niter += 1
             logger.debug('Enter iteration {}.'.format(self.niter))
 
             self.adjust_temperature()
 
+            if self.fix_rel_humidity:
+                self.adjust_vmr()
+            else:
+                self.adjust_relative_humidity()
+
             if self.outfile is not None:
                 self.to_netcdf()
 
-            if self.converged:
-                logger.info(
-                    'Converged after {} iterations.'.format(self.niter))
+            if self.is_converged():
+                logger.info('Converged after %s iterations.' % self.niter)
                 break
-            else:
-                self.niter += 1
         else:
             logger.info('Stopped after maximum number of iterations.')
