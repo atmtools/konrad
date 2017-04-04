@@ -2,7 +2,7 @@
 """Python wrapper for the PSRAD radiation scheme.
 """
 from . import psrad
-import pandas as pd
+from xarray import DataArray, Dataset
 import numpy as np
 
 
@@ -11,38 +11,39 @@ __all__ = [
 ]
 
 
-def _extract_psrad_args(sounding):
+def _extract_psrad_args(atmosphere):
     """Returns tuple of mixing ratios to use with psrad.
 
     Paramteres:
-        sounding (dict or pandas.DataFrame): Atmospheric sounding.
+        atmosphere (dict or pandas.DataFrame): Atmospheric atmosphere.
 
     Returns:
         tuple(ndarray): ndarrays in the order and unit to use with `psrad`:
             Z, P, T, x_vmr, ...
     """
-    p = sounding['P'].values / 100
-    T = sounding['T'].values
-    z = sounding['Z'].values
+    z = atmosphere['z'].values
+    p = atmosphere['plev'].values / 100
+    T = atmosphere['T'].values
 
     ret = [z, p, T]  # Z, P, T
 
-    required_gases = ['Q', 'O3', 'CO2', 'N2O', 'CO', 'CH4']
+    # Keep order as it is expected by PSRAD.
+    required_gases = ['H2O', 'O3', 'CO2', 'N2O', 'CO', 'CH4']
 
     for gas in required_gases:
-        if gas in sounding:
-            ret.append(sounding[gas].values * 1e6)  # Append gas in ppm.
+        if gas in atmosphere:
+            ret.append(atmosphere[gas].values * 1e6)  # Append gas in ppm.
         else:
             ret.append(np.zeros(p.size))
 
     return tuple(ret)
 
 
-def psrad_heatingrates(sounding, surface, zenith=41.0):
-    """Computes the heating rates for a given sounding.
+def psrad_heatingrates(atmosphere, surface, zenith=41.0):
+    """Computes the heating rates for a given atmosphere.
 
     Parameters:
-        sounding (pd.DataFrame): Atmospheric sounding.
+        atmosphere (pd.DataFrame): Atmospheric atmosphere.
         surface (conrad.surface.Surface): Surface model inherited from abstract
             class `conrad.surface.Surface`.
         zenith (float): Zenith angle of the sun.
@@ -57,7 +58,7 @@ def psrad_heatingrates(sounding, surface, zenith=41.0):
     c_iwc = np.asarray([0., 0., 0., 0.])
     c_frc = np.asarray([0., 0., 0., 0.])
 
-    nlev = len(sounding['P'].values)
+    nlev = atmosphere['plev'].size
 
     # Extract surface properties.
     P_sfc = surface.pressure / 100
@@ -65,19 +66,23 @@ def psrad_heatingrates(sounding, surface, zenith=41.0):
     albedo = surface.albedo
 
     psrad.setup_single(nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith,
-                       albedo, P_sfc, T_sfc, *_extract_psrad_args(sounding))
+                       albedo, P_sfc, T_sfc, *_extract_psrad_args(atmosphere))
 
-    ret = pd.DataFrame()  # Create pandas DataFrame for return values.
+    ret = Dataset()  # Create xarray.Dataset for return values.
 
     # Shortwave heating rate.
     psrad.advance_lrtm()  # Perform PSRAD simulation.
     hr = psrad.get_lw_fluxes()[0]  # Ignore additional output.
-    ret['lw_htngrt'] = pd.Series(hr.ravel(), index=sounding['P'].values)
+    ret['lw_htngrt'] = DataArray(hr.ravel(),
+                                 coords=[atmosphere['plev']],
+                                 dims=['plev'])
 
     # Longwave heating rate.
     psrad.advance_srtm()
     hr = psrad.get_sw_fluxes()[0]
-    ret['sw_htngrt'] = pd.Series(hr.ravel(), index=sounding['P'].values)
+    ret['sw_htngrt'] = DataArray(hr.ravel(),
+                                 coords=[atmosphere['plev']],
+                                 dims=['plev'])
 
     # Net heating rate.
     ret['net_htngrt'] = ret['sw_htngrt'] + ret['lw_htngrt']

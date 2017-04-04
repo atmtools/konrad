@@ -6,7 +6,6 @@ This module defines the class `ConRad` only.
 import logging
 
 import numpy as np
-from typhon import atmosphere
 
 from . import utils
 from . import plots
@@ -40,32 +39,28 @@ class ConRad():
         >>> c = ConRad(data=pands.DataFrame(...))
         >>> c.run()
     """
-    def __init__(self, sounding=None, surface=None, fix_rel_humidity=True,
-                 outfile=None, dt=1, max_iterations=5000, delta=0.03):
+    def __init__(self, atmosphere, surface, outfile=None, dt=1, delta=0.01,
+                 max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
-            sounding (pd.DataFrame): pandas DataFrame representing an
-                atmospheric sounding.
+            atmosphere (Atmosphere): `conrad.atmosphere.Atmosphere`.
             surface (Surface): An surface object inherited from
                 `conrad.surface.Surface`.
-            fix_rel_humidity (bool): Adjust the water vapor mixing ratio to
-                keep the relative humidity constant.
             outfile (str): netCDF4 file to store output.
             dt (float): Time step in days.
             max_iterations (int): Maximum number of iterations.
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
         """
+        self.atmosphere = atmosphere
         self.converged = False
         self.delta = delta
         self.dt = dt
-        self.outfile = outfile
-        self.fix_rel_humidity = fix_rel_humidity
+        self.heatingrates = None
         self.max_iterations = max_iterations
         self.niter = 0
-        self.heatingrates = None
-        self.sounding = sounding
+        self.outfile = outfile
         self.surface = surface
 
         logging.info('Created ConRad object:\n{}'.format(self))
@@ -75,7 +70,6 @@ class ConRad():
         repr_attrs = [
             'delta',
             'dt',
-            'fix_rel_humidity',
             'max_iterations',
             'niter',
             ]
@@ -89,15 +83,15 @@ class ConRad():
 
     def plot_sounding_p(self, variable, ax=None, **kwargs):
         return plots.atmospheric_profile_p(
-                self.sounding.index, self.sounding[variable], **kwargs)
+                self.atmosphere.index, self.atmosphere[variable], **kwargs)
 
     def plot_sounding_z(self, variable, ax=None, **kwargs):
         return plots.atmospheric_profile_z(
-                self.sounding['Z'], self.sounding[variable], **kwargs)
+                self.atmosphere['Z'], self.atmosphere[variable], **kwargs)
 
     def plot_overview_z(self, axes=None, **kwargs):
         return plots.plot_overview_z(
-            self.sounding,
+            self.atmosphere,
             self.heatingrates['lw_htngrt'],
             self.heatingrates['sw_htngrt'],
             axes,
@@ -105,7 +99,7 @@ class ConRad():
 
     def plot_overview_p(self, axes=None, **kwargs):
         return plots.plot_overview_z(
-            self.sounding,
+            self.atmosphere,
             self.heatingrates['lw_htngrt'],
             self.heatingrates['sw_hrngrt'],
             axes,
@@ -121,40 +115,9 @@ class ConRad():
         from . import psrad
 
         self.heatingrates = psrad.psrad_heatingrates(
-                self.sounding,
+                self.atmosphere,
                 self.surface,
                 )
-
-    def adjust_temperature(self):
-        """Adjust the temperature profile.
-
-        This methods calls `self.calculate_heatingsrates` and applies the
-        simulated heatingrates to the current atmospheric state.
-        """
-        # Caculate shortwave, longwave and net heatingrates.
-        self.calculate_heatingrates()
-
-        # Apply heatingrates to temperature profile...
-        self.sounding['T'] += self.dt * self.heatingrates['net_htngrt']
-
-        # and the surface.
-        self.surface.adjust(self.dt * self.heatingrates['net_htngrt'].values[0])
-
-    def adjust_vmr(self):
-        """Adjust water vapor mixing ratio to preserve relative humidity."""
-        logger.debug('Adjust VMR to preserve relative humidity.')
-        self.sounding['Q'] = atmosphere.vmr(
-                                    self.sounding['RH'],
-                                    self.sounding['P'],
-                                    self.sounding['T'])
-
-    def adjust_relative_humidity(self):
-        """Adjust relative humidity to preserve water vapor mixing ratio."""
-        logger.debug('Adjust relative humidity to preserve VMR.')
-        self.sounding['RH'] = atmosphere.relative_humidity(
-                                    self.sounding['Q'],
-                                    self.sounding['P'],
-                                    self.sounding['T'])
 
     def is_converged(self):
         """Check if equilibirum is reached.
@@ -164,31 +127,21 @@ class ConRad():
         """
         return np.all(np.abs(self.heatingrates['net_htngrt']) < self.delta)
 
-    # TODO: Consider writing a decent export framework. Including a
-    # get_netcdf_vars() function and the possibility to pass such a dict to
-    # the writing method.
     def create_outfile(self):
         """Create netCDF4 file to store simulation results."""
-        utils.create_netcdf(
-            filename=self.outfile,
-            pressure=self.sounding['P'],
-            description='Radiative-convective equilibrium simulation.',
-            variable_description=_netcdf_vars,
-            )
+        self.atmosphere.to_netcdf(self.outfile,
+                                  mode='w',
+                                  unlimited_dims=['time'],
+                                  )
 
-    def to_netcdf(self):
-        """Store the current atmospheric state to the netCDF4 file specified in
-        `self.outfile`. If the file does not exist, create it.
-
-        New timesteps are appended to existing files.
+    def append_to_netcdf(self):
+        """Append the current atmospheric state to the netCDF4 file specified
+        in `self.outfile`.
         """
-        # Export all variables porperly specified with longname and unit.
-        export_vars = {v: self.sounding[v].values for v in _netcdf_vars}
-
         # Append variables to netCDF4 file.
         utils.append_timestep_netcdf(
             filename=self.outfile,
-            data=export_vars,
+            data=self.atmosphere,
             timestamp=self.get_datetime(),
             )
 
@@ -202,22 +155,22 @@ class ConRad():
         if self.outfile is not None:
             self.create_outfile()
 
-        # Calculate the relative humidity for given atmosphere.
-        self.adjust_relative_humidity()
-
         while self.niter < self.max_iterations:
             self.niter += 1
             logger.debug('Enter iteration {}.'.format(self.niter))
 
-            self.adjust_temperature()
+            # Caculate shortwave, longwave and net heatingrates.
+            self.calculate_heatingrates()
 
-            if self.fix_rel_humidity:
-                self.adjust_vmr()
-            else:
-                self.adjust_relative_humidity()
+            # Apply heatingrates to temperature profile...
+            self.atmosphere.adjust(self.dt * self.heatingrates['net_htngrt'])
+
+            # and the surface.
+            self.surface.adjust(
+                self.dt * self.heatingrates['net_htngrt'].values[0])
 
             if self.outfile is not None:
-                self.to_netcdf()
+                self.append_to_netcdf()
 
             if self.is_converged():
                 logger.info('Converged after %s iterations.' % self.niter)

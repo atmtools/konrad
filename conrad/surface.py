@@ -31,6 +31,12 @@ class Surface(metaclass=abc.ABCMeta):
         """Adjust the surface according to given heatingrate."""
         pass
 
+    @classmethod
+    def from_atmosphere(cls, atmosphere):
+        """Initialize a Surface object using the lowest atmosphere layer."""
+        return cls(temperature=atmosphere['T'].values[0, 0],
+                   pressure=atmosphere['plev'].values[0])
+
 
 class SurfaceFixedTemperature(Surface):
     """Describes a surface with fixed temperature."""

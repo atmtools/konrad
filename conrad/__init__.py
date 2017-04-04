@@ -3,6 +3,7 @@
 """
 import logging
 
+from . import atmosphere
 from . import plots
 from . import surface
 from . import utils
@@ -11,7 +12,9 @@ from .conrad import ConRad
 
 __all__ = [
     'ConRad',
+    'atmosphere',
     'plots',
+    'surface',
     'utils',
 ]
 

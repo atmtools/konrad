@@ -4,52 +4,42 @@
 #
 # Distributed under terms of the MIT license.
 
-"""
-
+"""Perform radiative-equilibirum simulations for the FASCOD atmospheres.
 """
 import conrad
-import matplotlib.pyplot as plt
+from conrad import (atmosphere, surface)
 import typhon
-from typhon.arts import xml
 
 
 fascod_seasons = [
-    'subarctic-winter',
-    'subarctic-summer',
-    'midlatitude-winter',
-    'midlatitude-summer',
+    # 'subarctic-winter',
+    # 'subarctic-summer',
+    # 'midlatitude-winter',
+    # 'midlatitude-summer',
     'tropical',
 ]
 
 for season in fascod_seasons:
-    gf = xml.load('data/{}.xml'.format(season))
+    # Load the FASCOD atmosphere.
+    gf = typhon.arts.xml.load('data/{}.xml'.format(season))
 
-    # Refine original pressure grid to 200 levels.
+    # Refine original pressure grid.
     p = typhon.math.nlogspace(1100e2, 0.1e2, 75)
     gf.refine_grid(p, axis=1)
 
-    data = conrad.utils.atmfield2pandas(gf)
-    data['O3'] *= 0.01
+    # Create an atmosphere model.
+    atmosphere = atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+    atmosphere['O3'] *= 0.01  # TODO: Dirty workaround!
 
-    surface = conrad.surface.SurfaceAdjustableTemperature(
-        temperature=data['T'].values[0],
-        pressure=data['P'].values[0],
-        )
+    # Create a sufrace model.
+    surface = surface.SurfaceAdjustableTemperature.from_atmosphere(atmosphere)
 
-    c = conrad.ConRad(
-        sounding=data,
-        surface=surface,
-        dt=1,
-        max_iterations=500,
-        fix_rel_humidity=True,
-        outfile='results/{}.nc'.format(season)
-        )
-    c.run()
+    # Combine atmosphere and surface model into an RCE framework.
+    c = conrad.ConRad(atmosphere=atmosphere,
+                      surface=surface,
+                      dt=1,
+                      max_iterations=500,
+                      outfile='results/{}.nc'.format(season)
+                      )
 
-# Plot final result.
-# fig, axes = plt.subplots(1, 3, sharey=True, figsize=(8, 6))
-# c.plot_overview_z(axes)
-# for ax in axes:
-#     ax.set_ylim(0, 30)
-
-# plt.show()
+    c.run()  # Start simulation.
