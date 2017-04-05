@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Python wrapper for the PSRAD radiation scheme.
+"""Module containing classes describing different radiation models.
 """
 import abc
 
@@ -10,7 +10,8 @@ from . import utils
 
 
 __all__ = [
-    'psrad_heatingrates',
+    'Radiation',
+    'PSRAD',
 ]
 
 
@@ -28,10 +29,12 @@ class Radiation(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_heatingrates(self):
+        """Returns the shortwave, longwave and net heatingrates."""
         pass
 
 
 class PSRAD(Radiation):
+    """Radiation model using the ICON PSRAD radiation scheme."""
     def _extract_psrad_args(self, atmosphere):
         """Returns tuple of mixing ratios to use with psrad.
 
@@ -61,15 +64,15 @@ class PSRAD(Radiation):
 
     @utils.with_psrad_symlinks
     def get_heatingrates(self, atmosphere, surface):
-        """Computes the heating rates for a given atmosphere.
+        """Returns the shortwave, longwave and net heatingrates.
 
         Parameters:
-            atmosphere (conrad.surface.Atmosphere): Atmosphere model inherited
-                from abstract class `conrad.atmosphere.Atmosphere`.
+            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model
+                inherited from abstract class `conrad.atmosphere.Atmosphere`.
             surface (conrad.surface.Surface): Surface model inherited from
                 abstract class `conrad.surface.Surface`.
         Returns:
-            pd.DataFrame: Containing pd.Series for the simulated heating rates.
+            xarray.Dataset: Dataset containing for the simulated heating rates.
                 The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
         """
         from . import psrad

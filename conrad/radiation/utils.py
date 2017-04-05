@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Common utility functions.
+"""Utility functions related to radiation models.
 """
 import os
 import logging
@@ -23,7 +23,10 @@ class PsradSymlinks():
         []
         >>> with PsradSymlinks():
         ...     print(os.listdir())
-        ['ECHAM6_CldOptProps.nc', 'rrtmg_lw.nc', 'rrtmg_sw.nc', 'libpsrad.so.1']
+        ['ECHAM6_CldOptProps.nc',
+         'rrtmg_lw.nc',
+         'rrtmg_sw.nc',
+         'libpsrad.so.1']
 
     """
     def __init__(self):

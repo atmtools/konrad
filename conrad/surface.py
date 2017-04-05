@@ -13,9 +13,9 @@ import abc
 
 
 class Surface(metaclass=abc.ABCMeta):
-    """Abstract base class to define common requirements for surface models."""
+    """Abstract base class to define requirements for surface models."""
     def __init__(self, albedo=0.3, temperature=288, pressure=101325):
-        """Create an surface model object.
+        """Initialize a surface model.
 
         Parameters:
             albedo (float): Surface albedo.
@@ -28,31 +28,42 @@ class Surface(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def adjust(self, heatingrate):
-        """Adjust the surface according to given heatingrate."""
+        """Adjust the surface according to given heatingrate.
+
+        Paramters:
+            """
         pass
 
     @classmethod
-    def from_atmosphere(cls, atmosphere):
-        """Initialize a Surface object using the lowest atmosphere layer."""
+    def from_atmosphere(cls, atmosphere, **kwargs):
+        """Initialize a Surface object using the lowest atmosphere layer.
+
+        Paramters:
+            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+        """
         return cls(temperature=atmosphere['T'].values[0, 0],
-                   pressure=atmosphere['plev'].values[0])
+                   pressure=atmosphere['plev'].values[0],
+                   **kwargs,
+                   )
 
 
 class SurfaceFixedTemperature(Surface):
-    """Describes a surface with fixed temperature."""
+    """Surface model with fixed temperature."""
     def adjust(self, heatingrate):
-        """Dummy function to fulfill abstract class requirements.
+        """Do not adjust anything for fixed temperature surfaces.
 
-        Do not adjust anything for fixed temperature surfaces.
+        Notes:
+            Dummy function to fulfill abstract class requirements.
         """
-        return
+        pass
 
 
 class SurfaceAdjustableTemperature(Surface):
-    """Describes a surface with adjustable temperature."""
+    """Surface model with adjustable temperature."""
     def adjust(self, heatingrate):
         """Increase the surface temperature by given heatingrate.
 
-        The surface is assmued to have no heat capacity.
+        Notes:
+            The surface is assmued to have no heat capacity.
         """
         self.temperature += heatingrate

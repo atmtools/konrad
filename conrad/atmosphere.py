@@ -19,6 +19,9 @@ from xarray import Dataset, DataArray
 
 logger = logging.getLogger()
 
+# Dictionary containing information on atmospheric constituents.
+# Variables listed in this dictionary are **required** parts of every
+# atmosphere model!
 variable_description = {
     'T': {'units': 'K',
           'standard_name': 'air_temperature',
@@ -56,22 +59,26 @@ variable_description = {
 
 
 class Atmosphere(Dataset, metaclass=abc.ABCMeta):
-    """Abstract base class to define common requirements for atmosphere models.
-    """
+    """Abstract base class to define requirements for atmosphere models."""
     @abc.abstractmethod
     def adjust(self, heatingrate):
         """Adjust atmosphere according to given heatingrate."""
 
     @classmethod
     def from_atm_fields_compact(cls, atmfield):
-        """Convert an atm_fields_compact into an atmosphere.
+        """Convert an ARTS atm_fields_compact [0] into an atmosphere.
+
+        [0] http://arts.mi.uni-hamburg.de/docserver-trunk/variables/atm_fields_compact
 
         Parameters:
-            atmfield (typhon.arts.types.GriddedField4): Atmosphere field.
+            atmfield (typhon.arts.types.GriddedField4): A compact set of
+                atmospheric fields.
         """
         # Create a Dataset with time and pressure dimension.
         d = cls(coords={'plev': atmfield.grids[1], 'time': [0]})
 
+        # TODO: Maybe introduce another variables `required_vars` to not loop
+        # over all variable descriptions. This would allow unused descriptions.
         for var, desc in variable_description.items():
             atmfield_data = typhon.arts.atm_fields_compact_get(
                 [desc['arts_name']], atmfield).squeeze()
@@ -91,20 +98,42 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
 
 class AtmosphereFixedVMR(Atmosphere):
-    """Describes an atmosphere with fixed volume mixing ratio."""
+    """Atmosphere model with fixed volume mixing ratio."""
     def adjust(self, heatingrate):
-        """Adjust the temperature."""
+        """Adjust the temperature.
+
+        Adjust the atmospheric temperature profile by simply adding the given
+        heatingrates.
+
+        Parameters:
+            heatingrate (float or ndarray):
+                Heatingrate (already scaled with timestep) [K].
+        """
         self['T'] += heatingrate
 
 
 class AtmosphereFixedRH(Atmosphere):
-    """Describes an atmosphere with fixed relative humidity."""
+    """Atmosphere model with fixed relative humidity.
+
+    This atmosphere model preserves the initial relative humidity profile by
+    adjusting the water vapor volume mixing ratio.
+    """
     def adjust_vmr(self, RH):
+        """Set the water vapor mixing ratio to match given relative humidity.
+
+        Parameters:
+            RH (ndarray or float): Relative humidity.
+        """
         logger.debug('Adjust VMR to preserve relative humidity.')
         self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
 
     def adjust(self, heatingrate):
-        """Adjust the temperature while and preserve relative humidity."""
+        """Adjust the temperature and preserve relative humidity.
+
+        Parameters:
+            heatingrate (float or ndarray):
+                Heatingrate (already scaled with timestep) [K].
+        """
         # Store initial relative humidty profile.
         RH = typhon.atmosphere.relative_humidity(self['H2O'],
                                                  self['plev'],

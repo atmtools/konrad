@@ -6,15 +6,15 @@
 
 """Perform radiative-equilibirum simulations for the FASCOD atmospheres.
 """
-import conrad as c
+import conrad
 import typhon
 
 
 fascod_seasons = [
-    # 'subarctic-winter',
-    # 'subarctic-summer',
-    # 'midlatitude-winter',
-    # 'midlatitude-summer',
+    'subarctic-winter',
+    'subarctic-summer',
+    'midlatitude-winter',
+    'midlatitude-summer',
     'tropical',
 ]
 
@@ -27,24 +27,26 @@ for season in fascod_seasons:
     gf.refine_grid(p, axis=1)
 
     # Create an atmosphere model.
-    atmosphere = c.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-    atmosphere['O3'] *= 0.01  # TODO: Dirty workaround!
+    a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+    a['O3'] *= 0.01  # TODO: Dirty workaround!
 
-    # # Create a sufrace model.
-    # surface = c.surface.SurfaceAdjustableTemperature.from_atmosphere(
-    #     atmosphere)
+    # Create a sufrace model.
+    s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
 
-    # # Create a sufrace model.
-    # radiation = c.radiation.PSRAD(atmosphere, surface)
+    # Create a sufrace model.
+    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
 
     # Combine atmosphere and surface model into an RCE framework.
-    model = c.ConRad(atmosphere=atmosphere,
-                     # surface=surface,
-                     # radiation=radiation,
-                     dt=1,
-                     max_iterations=500,
-                     outfile='results/{}.nc'.format(season)
-                     )
+    rce = conrad.RCE(
+        atmosphere=a,
+        surface=s,
+        radiation=r,
+        timestep=1,
+        max_iterations=500,
+        outfile='results/{}.nc'.format(season)
+        )
 
-    with c.radiation.utils.PsradSymlinks():
-        model.run()  # Start simulation.
+    # The with block is not required for the model to run but prevents
+    # creating and removing of symlinks during each iteration.
+    with conrad.radiation.utils.PsradSymlinks():
+        rce.run()  # Start simulation.
