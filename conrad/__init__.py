@@ -5,6 +5,7 @@ import logging
 
 from . import atmosphere
 from . import plots
+from . import radiation
 from . import surface
 from . import utils
 from .conrad import ConRad

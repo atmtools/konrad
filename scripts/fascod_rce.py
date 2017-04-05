@@ -6,8 +6,7 @@
 
 """Perform radiative-equilibirum simulations for the FASCOD atmospheres.
 """
-import conrad
-from conrad import (atmosphere, surface)
+import conrad as c
 import typhon
 
 
@@ -28,18 +27,24 @@ for season in fascod_seasons:
     gf.refine_grid(p, axis=1)
 
     # Create an atmosphere model.
-    atmosphere = atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+    atmosphere = c.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
     atmosphere['O3'] *= 0.01  # TODO: Dirty workaround!
 
-    # Create a sufrace model.
-    surface = surface.SurfaceAdjustableTemperature.from_atmosphere(atmosphere)
+    # # Create a sufrace model.
+    # surface = c.surface.SurfaceAdjustableTemperature.from_atmosphere(
+    #     atmosphere)
+
+    # # Create a sufrace model.
+    # radiation = c.radiation.PSRAD(atmosphere, surface)
 
     # Combine atmosphere and surface model into an RCE framework.
-    c = conrad.ConRad(atmosphere=atmosphere,
-                      surface=surface,
-                      dt=1,
-                      max_iterations=500,
-                      outfile='results/{}.nc'.format(season)
-                      )
+    model = c.ConRad(atmosphere=atmosphere,
+                     # surface=surface,
+                     # radiation=radiation,
+                     dt=1,
+                     max_iterations=500,
+                     outfile='results/{}.nc'.format(season)
+                     )
 
-    c.run()  # Start simulation.
+    with c.radiation.utils.PsradSymlinks():
+        model.run()  # Start simulation.

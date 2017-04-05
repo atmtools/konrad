@@ -9,6 +9,8 @@ import numpy as np
 
 from . import utils
 from . import plots
+from .radiation import PSRAD
+from .surface import SurfaceAdjustableTemperature
 
 
 logger = logging.getLogger()
@@ -39,8 +41,8 @@ class ConRad():
         >>> c = ConRad(data=pands.DataFrame(...))
         >>> c.run()
     """
-    def __init__(self, atmosphere, surface, outfile=None, dt=1, delta=0.01,
-                 max_iterations=5000):
+    def __init__(self, atmosphere, surface=None, radiation=None, outfile=None,
+                 dt=1, delta=0.01, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -53,15 +55,34 @@ class ConRad():
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
         """
+        # Sub-models.
         self.atmosphere = atmosphere
-        self.converged = False
+
+        if surface is None:
+            self.surface = SurfaceAdjustableTemperature.from_atmosphere(
+                atmosphere)
+        else:
+            self.surface = surface
+
+        if radiation is None:
+            self.radiation = PSRAD(atmosphere=self.atmosphere,
+                                   surface=self.surface,
+                                   )
+        else:
+            self.radiation = radiation
+
+        # Control the model run.
         self.delta = delta
         self.dt = dt
-        self.heatingrates = None
         self.max_iterations = max_iterations
+
+        # TODO: Maybe delete.
+        self.heatingrates = None
+
+        # Internal variables.
+        self.converged = False
         self.niter = 0
         self.outfile = outfile
-        self.surface = surface
 
         logging.info('Created ConRad object:\n{}'.format(self))
 
@@ -109,15 +130,12 @@ class ConRad():
         """Return the timestamp for the current iteration."""
         return self.niter * 24 * self.dt
 
-    @utils.with_psrad_symlinks
     def calculate_heatingrates(self):
-        """Use PSRAD to calculate shortwave, longwave and net heatingsrates."""
-        from . import psrad
-
-        self.heatingrates = psrad.psrad_heatingrates(
-                self.atmosphere,
-                self.surface,
-                )
+        """Use the radiation model to calculate heatingrates."""
+        self.heatingrates = self.radiation.get_heatingrates(
+            atmosphere=self.atmosphere,
+            surface=self.surface,
+            )
 
     def is_converged(self):
         """Check if equilibirum is reached.
@@ -145,9 +163,6 @@ class ConRad():
             timestamp=self.get_datetime(),
             )
 
-    # The decorator prevents that the symlinks are created and removed during
-    # each iteration.
-    @utils.with_psrad_symlinks
     def run(self):
         """Run the radiative-convective equilibirum model."""
         logger.info('Start RCE model run.')
