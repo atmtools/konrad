@@ -96,23 +96,43 @@ class PSRAD(Radiation):
                                 albedo, P_sfc, T_sfc,
                                 *self._extract_psrad_args(atmosphere))
 
-        ret = Dataset()  # Create xarray.Dataset for return values.
+        self.psrad.advance_lrtm()  # Longwave simulations.
+        (lw_hr, lw_hr_clr, lw_flxd,
+         lw_flxd_clr, lw_flxu, lw_flxu_clr) = self.psrad.get_lw_fluxes()
 
-        # Shortwave heating rate.
-        self.psrad.advance_lrtm()  # Perform PSRAD simulation.
-        hr = self.psrad.get_lw_fluxes()[0]  # Ignore additional output.
-        ret['lw_htngrt'] = DataArray(hr.ravel(),
-                                     coords=[atmosphere['plev']],
-                                     dims=['plev'])
+        self.psrad.advance_srtm()  # Shortwave simulations.
 
-        # Longwave heating rate.
-        self.psrad.advance_srtm()
-        hr = self.psrad.get_sw_fluxes()[0]
-        ret['sw_htngrt'] = DataArray(hr.ravel(),
-                                     coords=[atmosphere['plev']],
-                                     dims=['plev'])
+        (sw_hr, sw_hr_clr, sw_flxd,
+         sw_flxd_clr, sw_flxu, sw_flxu_clr,
+         vis_frc, par_dn, nir_dff, vis_diff,
+         par_diff) = self.psrad.get_sw_fluxes()
 
-        # Net heating rate.
-        ret['net_htngrt'] = ret['sw_htngrt'] + ret['lw_htngrt']
+        ret = Dataset({
+            # General atmospheric properties.
+            'z': atmosphere['z'],
+            'T': atmosphere['T'],
+            'H2O': atmosphere['H2O'],
+            # Longwave fluxes and heatingrates.
+            'lw_htngrt': (['plev'], lw_hr[0, :]),
+            'lw_htngrt_clr': (['plev'], lw_hr_clr[0, :]),
+            'lw_flxu': (['plev'], lw_flxu[0, :-1]),
+            'lw_flxd': (['plev'], lw_flxd[0, :-1]),
+            'lw_flxu_clr': (['plev'], lw_flxu_clr[0, :-1]),
+            'lw_flxd_clr': (['plev'], lw_flxd_clr[0, :-1]),
+            # Shortwave fluxes and heatingrates.
+            # Note: The shortwave fluxes and heatingrates calculated by PSRAD
+            # are **inverted**. Therefore, they are flipped to make the input
+            # and output of this function consistent.
+            'sw_htngrt': (['plev'], sw_hr[0, ::-1]),
+            'sw_htngrt_clr': (['plev'], sw_hr_clr[0, ::-1]),
+            'sw_flxu': (['plev'], sw_flxu[0, :-1][::-1]),
+            'sw_flxd': (['plev'], sw_flxd[0, :-1][::-1]),
+            'sw_flxu_clr': (['plev'], sw_flxu_clr[0, :-1][::-1]),
+            'sw_flxd_clr': (['plev'], sw_flxd_clr[0, :-1][::-1]),
+            # Net heatingrate.
+            'net_htngrt': (['plev'], lw_hr[0, :] + sw_hr[0, ::-1]),
+            },
+            coords={'plev': atmosphere['plev'].values}
+            )
 
         return ret

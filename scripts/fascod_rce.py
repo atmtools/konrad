@@ -23,12 +23,11 @@ for season in fascod_seasons:
     gf = typhon.arts.xml.load('data/{}.xml'.format(season))
 
     # Refine original pressure grid.
-    p = typhon.math.nlogspace(1100e2, 0.1e2, 75)
+    p = typhon.math.nlogspace(1100e2, 0.1e2, 150)
     gf.refine_grid(p, axis=1)
 
     # Create an atmosphere model.
     a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-    a['O3'] *= 0.01  # TODO: Dirty workaround!
 
     # Create a sufrace model.
     s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
@@ -41,8 +40,9 @@ for season in fascod_seasons:
         atmosphere=a,
         surface=s,
         radiation=r,
-        timestep=1,
-        max_iterations=500,
+        delta=0.01,
+        timestep=0.3,
+        max_iterations=1000,
         outfile='results/{}.nc'.format(season)
         )
 
