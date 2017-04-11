@@ -10,6 +10,7 @@ __all__ = [
 
 
 import abc
+import collections
 import logging
 
 import typhon
@@ -95,6 +96,19 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         d['time'].attrs['calender'] = 'gregorian'
 
         return d
+
+    def set(self, variable, value):
+        """Set the values of a variable.
+
+        Parameters:
+            variable (str): Variable key.
+            value (float or ndarray): Value to assign to the variable.
+                If a float is given, all values are filled with it.
+        """
+        if isinstance(value, collections.Container):
+            self[variable].values = value
+        else:
+            self[variable].values.fill(value)
 
 
 class AtmosphereFixedVMR(Atmosphere):
