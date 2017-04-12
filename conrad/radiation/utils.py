@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Utility functions related to radiation models.
 """
+import contextlib
 import os
 import logging
 from functools import wraps
@@ -14,7 +15,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class PsradSymlinks():
+class PsradSymlinks(contextlib.ContextDecorator):
     """Defines a with-block to ensure that all files needed to run PSRAD are
     symlinked.
 
@@ -56,15 +57,15 @@ class PsradSymlinks():
             os.remove(f)
 
 
-def with_psrad_symlinks(func):
-    """Wrapper for all functions that import the psrad module.
-
-    The decorator asures that ´libpsrad.so.1´ and the requied *.nc files are
-    symlinked in the current working directory. This allows a more flexible
-    usage of the psrad module.
-    """
-    @wraps(func)
-    def func_wrapper(*args, **kwargs):
-        with PsradSymlinks():
-            return func(*args, **kwargs)
-    return func_wrapper
+# def with_psrad_symlinks(func):
+#     """Wrapper for all functions that import the psrad module.
+#
+#     The decorator asures that ´libpsrad.so.1´ and the requied *.nc files are
+#     symlinked in the current working directory. This allows a more flexible
+#     usage of the psrad module.
+#     """
+#     @wraps(func)
+#     def func_wrapper(*args, **kwargs):
+#         with PsradSymlinks():
+#             return func(*args, **kwargs)
+#     return func_wrapper

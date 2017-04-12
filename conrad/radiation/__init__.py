@@ -62,7 +62,7 @@ class PSRAD(Radiation):
 
         return tuple(ret)
 
-    @utils.with_psrad_symlinks
+    @utils.PsradSymlinks()
     def get_heatingrates(self, atmosphere, surface):
         """Returns the shortwave, longwave and net heatingrates.
 

@@ -110,6 +110,19 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         else:
             self[variable].values.fill(value)
 
+    def adjust_vmr(self, RH):
+        """Set the water vapor mixing ratio to match given relative humidity.
+
+        Parameters:
+            RH (ndarray or float): Relative humidity.
+        """
+        logger.debug('Adjust VMR to preserve relative humidity.')
+        self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
+
+    def convective_adjustment(self):
+        """Adjusted the vertical temperature profile to the dry adiatie."""
+        pass
+
 
 class AtmosphereFixedVMR(Atmosphere):
     """Atmosphere model with fixed volume mixing ratio."""
@@ -132,15 +145,6 @@ class AtmosphereFixedRH(Atmosphere):
     This atmosphere model preserves the initial relative humidity profile by
     adjusting the water vapor volume mixing ratio.
     """
-    def adjust_vmr(self, RH):
-        """Set the water vapor mixing ratio to match given relative humidity.
-
-        Parameters:
-            RH (ndarray or float): Relative humidity.
-        """
-        logger.debug('Adjust VMR to preserve relative humidity.')
-        self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
-
     def adjust(self, heatingrate):
         """Adjust the temperature and preserve relative humidity.
 
@@ -154,5 +158,31 @@ class AtmosphereFixedRH(Atmosphere):
                                                  self['T'])
 
         self['T'] += heatingrate  # adjust temperature profile.
+
+        self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
+
+
+class AtmosphereConvective(Atmosphere):
+    """Atmosphere model with preserved RH and fixed temperature lapse rate.
+
+    This atmosphere model preserves the initial relative humidity profile by
+    adjusting the water vapor volume mixing ratio. In addition, a simple
+    convection parameterization is used.
+    """
+    def adjust(self, heatingrate):
+        """Adjust the temperature and preserve relative humidity.
+
+        Parameters:
+            heatingrate (float or ndarray):
+                Heatingrate (already scaled with timestep) [K].
+        """
+        # Store initial relative humidty profile.
+        RH = typhon.atmosphere.relative_humidity(self['H2O'],
+                                                 self['plev'],
+                                                 self['T'])
+
+        self['T'] += heatingrate  # adjust temperature profile.
+
+        self.convective_adjustment()  # adjust temperature lapse rate.
 
         self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
