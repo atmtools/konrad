@@ -67,3 +67,38 @@ class SurfaceAdjustableTemperature(Surface):
             The surface is assmued to have no heat capacity.
         """
         self.temperature += heatingrate
+
+
+class SurfaceCoupled(Surface):
+    def __init__(self, albedo=0.3, temperature=288, pressure=101325,
+                 atmosphere=None):
+        """Initialize a surface model.
+
+        Parameters:
+            albedo (float): Surface albedo.
+            temperature (float): Surface temperature [K].
+            pressure (float): Surface pressure [Pa].
+        """
+        self.albedo = albedo
+        self.temperature = temperature
+        self.pressure = pressure
+        self.atmosphere = atmosphere
+
+    @classmethod
+    def from_atmosphere(cls, atmosphere, **kwargs):
+        """Initialize a Surface object using the lowest atmosphere layer.
+
+        Paramters:
+            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+        """
+        return cls(temperature=atmosphere['T'].values[0, 0],
+                   pressure=atmosphere['plev'].values[0],
+                   atmosphere=atmosphere,
+                   **kwargs,
+                   )
+
+    def adjust(self, heatingrates):
+        self.temperature = self.atmosphere['T'].values[0, 0]
+        self.pressure = self.atmosphere['plev'].values[0]
+
+        print(self.temperature)

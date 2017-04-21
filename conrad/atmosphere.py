@@ -118,10 +118,26 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         """
         logger.debug('Adjust VMR to preserve relative humidity.')
         self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
+        self['H2O'][0, self['H2O'][0, :] < 3e-6] = 3e-6
+        self['H2O'][0, self['plev'] < 5e2] = 3e-6
 
-    def convective_adjustment(self):
-        """Adjusted the vertical temperature profile to the dry adiatie."""
-        pass
+    def find_first_unstable_layer(self, critical_lapse_rate=-0.0065,
+                                  pmin=10e2):
+        lapse_rate = np.diff(self['T'][0, :]) / np.diff(self['z'][0, :])
+        # lapse_rate = typhon.math.interpolate_halflevels(lapse_rate)
+        for n in range(len(lapse_rate) - 1, 1, -1):
+            if lapse_rate[n] < critical_lapse_rate and self['plev'][n] > pmin:
+                return n + 1
+
+    def convective_adjustment(self, critical_lapse_rate=-0.0065, pmin=10e2):
+        i = self.find_first_unstable_layer(
+                critical_lapse_rate=critical_lapse_rate,
+                pmin=pmin)
+
+        if i is not None:
+            self['T'][0, :i] = (self['T'][0, i] + critical_lapse_rate
+                                * (self['z'][0, :i] - self['z'][0, i]))
+
 
 
 class AtmosphereFixedVMR(Atmosphere):

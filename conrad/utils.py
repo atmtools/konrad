@@ -3,11 +3,14 @@
 """
 import logging
 
+import numpy as np
+
 from netCDF4 import Dataset
 
 
 __all__ = [
     'append_timestep_netcdf',
+    'create_relative_humidity_profile',
 ]
 
 logger = logging.getLogger(__name__)
@@ -42,3 +45,16 @@ def append_timestep_netcdf(filename, data, timestamp):
                     nc.variables[var][t, :] = data[var].values
                 else:
                     nc.variables[var][t, :] = data[var]
+
+
+def create_relative_humidity_profile(p, RH_s=0.75):
+    """Create an exponential relative humidity profile.
+
+    Parameters:
+        p (ndarray): Pressure.
+        RH_s (float): Relative humidity at first pressure level.
+
+    Returns:
+        ndarray: Relative humidtiy."""
+    rh = RH_s / (np.exp(1) - 1) * (np.exp(p / p[0]) - 1)
+    return np.round(rh, decimals=4)

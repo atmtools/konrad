@@ -24,10 +24,14 @@ p = typhon.math.nlogspace(1100e2, 0.1e2, 150)
 gf.refine_grid(p, axis=1)
 
 # Create an atmosphere model.
-a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
+
+# Create synthetic relative humidity profile.
+a.adjust_vmr(conrad.utils.create_relative_humidity_profile(p, 0.75))
 
 # Create a sufrace model.
-s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
+# s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
+s = conrad.surface.SurfaceCoupled.from_atmosphere(a)
 
 # Create a sufrace model.
 r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
@@ -39,8 +43,8 @@ rce = conrad.RCE(
     radiation=r,
     delta=0.01,
     timestep=0.3,
-    max_iterations=1,
-    outfile='results/test.nc'
+    max_iterations=3000,
+    outfile='results/test-convective.nc'
     )
 
 # The with block is not required for the model to run but prevents
@@ -58,10 +62,10 @@ conrad.plots.plot_overview_p_log(
         sw_htngrt=rce.heatingrates['sw_htngrt'],
         axes=axes,
         )
-fig.suptitle('FASCOD tropical')
+fig.suptitle('Iteration {}'.format(rce.niter))
 
 for ax in axes:
     ax.set_ylim(p.max(), p.min())
     ax.grid('on')
 
-fig.savefig('plots/heatingrates.pdf')
+fig.savefig('plots/test-convective.pdf')
