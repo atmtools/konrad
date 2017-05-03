@@ -6,6 +6,7 @@ __all__ = [
     'Atmosphere',
     'AtmosphereFixedVMR',
     'AtmosphereFixedRH',
+    'AtmosphereSally',
 ]
 
 
@@ -202,3 +203,39 @@ class AtmosphereConvective(Atmosphere):
         self.convective_adjustment()  # adjust temperature lapse rate.
 
         self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
+
+
+class AtmosphereSally(Atmosphere):
+    """Implementation of Sally's convection scheme."""
+    def convective_adjustment(self, lapse=0.0065):
+       p = self['plev']
+       z = self['z'][0, :]
+       T_rad = self['T'][0, :]
+       density = typhon.physics.density(p, T_rad)
+       Cp = 1003.5
+
+       ############ Fixed lapse rate case ################
+       for a in range(1, len(z)):
+           term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
+           term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
+           if (term1 - term2) > 0:
+               # print(z[a])
+               break
+       #a += 1
+          
+       T_con = T_rad.copy()
+       for level in range(0, a):
+           T_con[level] = T_rad[a] - (z[level]-z[a])*lapse
+
+       self['T'].values = T_con.values[np.newaxis, :]
+
+    def adjust(self, heatingrates):
+       RH = typhon.atmosphere.relative_humidity(self['H2O'],
+                                                self['plev'],
+                                                self['T'])
+       self['T'] += heatingrates
+
+       self.convective_adjustment()
+
+       self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
+      
