@@ -6,7 +6,7 @@ __all__ = [
     'Atmosphere',
     'AtmosphereFixedVMR',
     'AtmosphereFixedRH',
-    'AtmosphereSally',
+    'AtmosphereConvective',
 ]
 
 
@@ -120,15 +120,21 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         logger.debug('Adjust VMR to preserve relative humidity.')
         self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
         self['H2O'][0, self['H2O'][0, :] < 3e-6] = 3e-6
-        self['H2O'][0, self['plev'] < 5e2] = 3e-6
+        self['H2O'][0, self['plev'] < 50e2] = 3e-6
+
+    def get_lapse_rates(self):
+        """Calculate the temperature lapse rate at each level."""
+        lapse_rate = np.diff(self['T'][0, :]) / np.diff(self['z'][0, :])
+        lapse_rate = typhon.math.interpolate_halflevels(lapse_rate)
+        lapse_rate = np.append(lapse_rate[0], lapse_rate)
+        return np.append(lapse_rate, lapse_rate[-1])
 
     def find_first_unstable_layer(self, critical_lapse_rate=-0.0065,
                                   pmin=10e2):
-        lapse_rate = np.diff(self['T'][0, :]) / np.diff(self['z'][0, :])
-        # lapse_rate = typhon.math.interpolate_halflevels(lapse_rate)
+        lapse_rate = self.get_lapse_rates()
         for n in range(len(lapse_rate) - 1, 1, -1):
             if lapse_rate[n] < critical_lapse_rate and self['plev'][n] > pmin:
-                return n + 1
+                return n - 2
 
     def convective_adjustment(self, critical_lapse_rate=-0.0065, pmin=10e2):
         i = self.find_first_unstable_layer(
@@ -138,7 +144,6 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         if i is not None:
             self['T'][0, :i] = (self['T'][0, i] + critical_lapse_rate
                                 * (self['z'][0, :i] - self['z'][0, i]))
-
 
 
 class AtmosphereFixedVMR(Atmosphere):
@@ -185,57 +190,35 @@ class AtmosphereConvective(Atmosphere):
     This atmosphere model preserves the initial relative humidity profile by
     adjusting the water vapor volume mixing ratio. In addition, a simple
     convection parameterization is used.
-    """
-    def adjust(self, heatingrate):
-        """Adjust the temperature and preserve relative humidity.
 
-        Parameters:
-            heatingrate (float or ndarray):
-                Heatingrate (already scaled with timestep) [K].
-        """
-        # Store initial relative humidty profile.
+    Implementation of Sally's convection scheme.
+    """
+    def convective_adjustment(self, lapse=0.0065):
+        p = self['plev']
+        z = self['z'][0, :]
+        T_rad = self['T'][0, :]
+        density = typhon.physics.density(p, T_rad)
+        Cp = 1003.5
+
+        # Fixed lapse rate case
+        for a in range(1, len(z)):
+            term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
+            term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
+            if (term1 - term2) > 0:
+                break
+
+        T_con = T_rad.copy()
+        for level in range(0, a):
+            T_con[level] = T_rad[a] - (z[level]-z[a])*lapse
+
+        self['T'].values = T_con.values[np.newaxis, :]
+
+    def adjust(self, heatingrates):
         RH = typhon.atmosphere.relative_humidity(self['H2O'],
                                                  self['plev'],
                                                  self['T'])
+        self['T'] += heatingrates
 
-        self['T'] += heatingrate  # adjust temperature profile.
-
-        self.convective_adjustment()  # adjust temperature lapse rate.
+        self.convective_adjustment()
 
         self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
-
-
-class AtmosphereSally(Atmosphere):
-    """Implementation of Sally's convection scheme."""
-    def convective_adjustment(self, lapse=0.0065):
-       p = self['plev']
-       z = self['z'][0, :]
-       T_rad = self['T'][0, :]
-       density = typhon.physics.density(p, T_rad)
-       Cp = 1003.5
-
-       ############ Fixed lapse rate case ################
-       for a in range(1, len(z)):
-           term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
-           term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
-           if (term1 - term2) > 0:
-               # print(z[a])
-               break
-       #a += 1
-          
-       T_con = T_rad.copy()
-       for level in range(0, a):
-           T_con[level] = T_rad[a] - (z[level]-z[a])*lapse
-
-       self['T'].values = T_con.values[np.newaxis, :]
-
-    def adjust(self, heatingrates):
-       RH = typhon.atmosphere.relative_humidity(self['H2O'],
-                                                self['plev'],
-                                                self['T'])
-       self['T'] += heatingrates
-
-       self.convective_adjustment()
-
-       self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
-      

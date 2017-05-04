@@ -24,6 +24,7 @@ p = typhon.math.nlogspace(1100e2, 0.1e2, 150)
 gf.refine_grid(p, axis=1)
 
 # Create an atmosphere model.
+# a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
 a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
 
 # Create synthetic relative humidity profile.
@@ -41,9 +42,10 @@ rce = conrad.RCE(
     atmosphere=a,
     surface=s,
     radiation=r,
-    delta=0.01,
-    timestep=0.3,
-    max_iterations=3000,
+    delta=0.001,
+    timestep=0.2,
+    writeevery=1,
+    max_iterations=5000,
     outfile='results/test-convective.nc'
     )
 
@@ -58,8 +60,8 @@ fig, axes = plt.subplots(1, 3, sharey=True,
                          figsize=typhon.plots.figsize(10, portrait=False))
 conrad.plots.plot_overview_p_log(
         data=rce.atmosphere,
-        lw_htngrt=rce.heatingrates['lw_htngrt'],
-        sw_htngrt=rce.heatingrates['sw_htngrt'],
+        lw_htngrt=rce.heatingrates['lw_htngrt'][0, :],
+        sw_htngrt=rce.heatingrates['sw_htngrt'][0, :],
         axes=axes,
         )
 fig.suptitle('Iteration {}'.format(rce.niter))

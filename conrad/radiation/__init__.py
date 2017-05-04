@@ -110,27 +110,25 @@ class PSRAD(Radiation):
         ret = Dataset({
             # General atmospheric properties.
             'z': atmosphere['z'],
-            'T': atmosphere['T'],
-            'H2O': atmosphere['H2O'],
             # Longwave fluxes and heatingrates.
-            'lw_htngrt': (['plev'], lw_hr[0, :]),
-            'lw_htngrt_clr': (['plev'], lw_hr_clr[0, :]),
-            'lw_flxu': (['plev'], lw_flxu[0, :-1]),
-            'lw_flxd': (['plev'], lw_flxd[0, :-1]),
-            'lw_flxu_clr': (['plev'], lw_flxu_clr[0, :-1]),
-            'lw_flxd_clr': (['plev'], lw_flxd_clr[0, :-1]),
+            'lw_htngrt': (['time', 'plev'], lw_hr[:, :]),
+            'lw_htngrt_clr': (['time', 'plev'], lw_hr_clr[:, :]),
+            'lw_flxu': (['time', 'plev'], lw_flxu[:, :-1]),
+            'lw_flxd': (['time', 'plev'], lw_flxd[:, :-1]),
+            'lw_flxu_clr': (['time', 'plev'], lw_flxu_clr[:, :-1]),
+            'lw_flxd_clr': (['time', 'plev'], lw_flxd_clr[:, :-1]),
             # Shortwave fluxes and heatingrates.
             # Note: The shortwave fluxes and heatingrates calculated by PSRAD
             # are **inverted**. Therefore, they are flipped to make the input
             # and output of this function consistent.
-            'sw_htngrt': (['plev'], sw_hr[0, ::-1]),
-            'sw_htngrt_clr': (['plev'], sw_hr_clr[0, ::-1]),
-            'sw_flxu': (['plev'], sw_flxu[0, :-1][::-1]),
-            'sw_flxd': (['plev'], sw_flxd[0, :-1][::-1]),
-            'sw_flxu_clr': (['plev'], sw_flxu_clr[0, :-1][::-1]),
-            'sw_flxd_clr': (['plev'], sw_flxd_clr[0, :-1][::-1]),
+            'sw_htngrt': (['time', 'plev'], sw_hr[:, ::-1]),
+            'sw_htngrt_clr': (['time', 'plev'], sw_hr_clr[:, ::-1]),
+            'sw_flxu': (['time', 'plev'], sw_flxu[:, :-1][::-1]),
+            'sw_flxd': (['time', 'plev'], sw_flxd[:, :-1][::-1]),
+            'sw_flxu_clr': (['time', 'plev'], sw_flxu_clr[:, :-1][::-1]),
+            'sw_flxd_clr': (['time', 'plev'], sw_flxd_clr[:, :-1][::-1]),
             # Net heatingrate.
-            'net_htngrt': (['plev'], lw_hr[0, :] + sw_hr[0, ::-1]),
+            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + sw_hr[:, ::-1]),
             },
             coords={'plev': atmosphere['plev'].values}
             )
