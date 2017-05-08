@@ -98,6 +98,9 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         return d
 
+    # TODO: This function could handle the nasty time dimension in the future.
+    # Allowing to set two-dimensional variables using a 1d-array, if one
+    # coordinate has the dimension one.
     def set(self, variable, value):
         """Set the values of a variable.
 
@@ -111,7 +114,14 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         else:
             self[variable].values.fill(value)
 
-    def adjust_vmr(self, RH):
+    @property
+    def relative_humidity(self):
+        """Return the relative humidity of the current atmospheric state."""
+        vmr, p, T = self['H2O'], self['plev'], self['T']
+        return typhon.atmosphere.relative_humidity(vmr, p, T)
+
+    @relative_humidity.setter
+    def relative_humidity(self, RH):
         """Set the water vapor mixing ratio to match given relative humidity.
 
         Parameters:
@@ -134,16 +144,16 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         lapse_rate = self.get_lapse_rates()
         for n in range(len(lapse_rate) - 1, 1, -1):
             if lapse_rate[n] < critical_lapse_rate and self['plev'][n] > pmin:
-                return n - 2
+                return n
 
-    def convective_adjustment(self, critical_lapse_rate=-0.0065, pmin=10e2):
-        i = self.find_first_unstable_layer(
-                critical_lapse_rate=critical_lapse_rate,
-                pmin=pmin)
+    # def convective_adjustment(self, critical_lapse_rate=-0.0065, pmin=10e2):
+    #     i = self.find_first_unstable_layer(
+    #             critical_lapse_rate=critical_lapse_rate,
+    #             pmin=pmin)
 
-        if i is not None:
-            self['T'][0, :i] = (self['T'][0, i] + critical_lapse_rate
-                                * (self['z'][0, :i] - self['z'][0, i]))
+    #     if i is not None:
+    #         self['T'][0, :i] = (self['T'][0, i] + critical_lapse_rate
+    #                             * (self['z'][0, :i] - self['z'][0, i]))
 
 
 class AtmosphereFixedVMR(Atmosphere):
@@ -175,13 +185,11 @@ class AtmosphereFixedRH(Atmosphere):
                 Heatingrate (already scaled with timestep) [K].
         """
         # Store initial relative humidty profile.
-        RH = typhon.atmosphere.relative_humidity(self['H2O'],
-                                                 self['plev'],
-                                                 self['T'])
+        RH = self.relative_humidity
 
         self['T'] += heatingrate  # adjust temperature profile.
 
-        self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
+        self.relative_humidity = RH  # reset original RH profile.
 
 
 class AtmosphereConvective(Atmosphere):
@@ -201,7 +209,12 @@ class AtmosphereConvective(Atmosphere):
         Cp = 1003.5
 
         # Fixed lapse rate case
-        for a in range(1, len(z)):
+        start_index = 1
+        start_index = self.find_first_unstable_layer()
+        if start_index is None:
+            return
+
+        for a in range(start_index, len(z)):
             term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
             term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
             if (term1 - term2) > 0:
@@ -214,11 +227,10 @@ class AtmosphereConvective(Atmosphere):
         self['T'].values = T_con.values[np.newaxis, :]
 
     def adjust(self, heatingrates):
-        RH = typhon.atmosphere.relative_humidity(self['H2O'],
-                                                 self['plev'],
-                                                 self['T'])
+        RH = self.relative_humidity
+
         self['T'] += heatingrates
 
         self.convective_adjustment()
 
-        self.adjust_vmr(RH)  # adjust VMR to preserve original RH profile.
+        self.relative_humidity = RH  # reset original RH profile.

@@ -11,6 +11,8 @@ __all__ = [
 
 import abc
 
+import numpy as np
+
 
 class Surface(metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for surface models."""
@@ -41,8 +43,16 @@ class Surface(metaclass=abc.ABCMeta):
         Paramters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
         """
-        return cls(temperature=atmosphere['T'].values[0, 0],
-                   pressure=atmosphere['plev'].values[0],
+
+        # Copy temperature of lowst atmosphere layer.
+        T_sfc = atmosphere['T'].values[0, 0]
+
+        # Extrapolate surface pressure from last two atmosphere layers.
+        p = atmosphere['plev'].values
+        p_sfc = p[0] - np.diff(p)[0]
+
+        return cls(temperature=T_sfc,
+                   pressure=p_sfc,
                    **kwargs,
                    )
 
@@ -91,14 +101,20 @@ class SurfaceCoupled(Surface):
         Paramters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
         """
-        return cls(temperature=atmosphere['T'].values[0, 0],
-                   pressure=atmosphere['plev'].values[0],
+        # Copy temperature of lowst atmosphere layer.
+        T_sfc = atmosphere['T'].values[0, 0]
+
+        # Extrapolate surface pressure from last two atmosphere layers.
+        p = atmosphere['plev'].values
+        p_sfc = p[0] - np.diff(p)[0]
+
+        return cls(temperature=T_sfc,
+                   pressure=p_sfc,
                    atmosphere=atmosphere,
                    **kwargs,
                    )
 
     def adjust(self, heatingrates):
         self.temperature = self.atmosphere['T'].values[0, 0]
-        self.pressure = self.atmosphere['plev'].values[0]
 
         print(self.temperature)
