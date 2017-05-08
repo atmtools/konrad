@@ -98,6 +98,33 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         return d
 
+    @classmethod
+    def from_dict(cls, dict):
+        """Create an atmosphere model from dictionary values.
+
+        Parameters:
+            d (dict): Dictionary containing ndarrays.
+        """
+        # TODO: Currently working for good-natured dictionaries.
+        # Consider allowing a more flexibel user interface.
+
+        # Create a Dataset with time and pressure dimension.
+        d = cls(coords={'plev': dict['plev'], 'time': [0]})
+
+        for var, desc in variable_description.items():
+            darray = DataArray(dict[var], dims=('time', 'plev',))
+            darray.attrs['standard_name'] = desc['standard_name']
+            darray.attrs['units'] = desc['units']
+            d[var] = darray
+
+        d['plev'].attrs['standard_name'] = 'air_pressure'
+        d['plev'].attrs['units'] = 'Pa'
+        d['time'].attrs['standard_name'] = 'time'
+        d['time'].attrs['units'] = 'hours since 0001-01-01 00:00:00.0'
+        d['time'].attrs['calender'] = 'gregorian'
+
+        return d
+
     # TODO: This function could handle the nasty time dimension in the future.
     # Allowing to set two-dimensional variables using a 1d-array, if one
     # coordinate has the dimension one.
