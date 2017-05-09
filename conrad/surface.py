@@ -116,5 +116,3 @@ class SurfaceCoupled(Surface):
 
     def adjust(self, heatingrates):
         self.temperature = self.atmosphere['T'].values[0, 0]
-
-        print(self.temperature)

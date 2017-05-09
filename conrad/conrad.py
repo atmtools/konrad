@@ -100,7 +100,7 @@ class RCE():
         Returns:
             bool: ``True`` if converged, else ``False``.
         """
-        return np.all(np.abs(self.heatingrates['net_htngrt']) < self.delta)
+        return np.all(np.abs(self.atmosphere['deltaT']) < self.delta)
 
     def check_if_write(self):
         """Check if current timestep should be appended to output netCDF.
@@ -154,21 +154,27 @@ class RCE():
             # Caculate shortwave, longwave and net heatingrates.
             self.calculate_heatingrates()
 
-            # Apply heatingrates to temperature profile...
+            # Apply heatingrates to the temperature profile.
+            T = self.atmosphere['T'].values.copy()  # save old T profile.
             self.atmosphere.adjust(
                 self.timestep * self.heatingrates['net_htngrt']
             )
 
-            # and the surface.
+            # Calculate temperature change for convegence check.
+            self.atmosphere['deltaT'] = self.atmosphere['T'] - T
+
+            # Apply heatingrates to the the surface.
             self.surface.adjust(
                 self.timestep * self.heatingrates['net_htngrt'].values[0]
+            )
+            logger.debug(
+                f'Surface temperature: {self.surface.temperature:.4f} K'
             )
 
             if self.check_if_write():
                 if self.niter == 0:
                     self.create_outfile()
                 self.append_to_netcdf()
-
 
             if self.is_converged():
                 logger.info('Converged after %s iterations.' % self.niter)
