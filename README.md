@@ -3,12 +3,12 @@
 The goal of ``conrad`` is to provide a simple framework to run
 radiative-convective equilibrium (RCE) simulations. It is build in an object
 oriented structure to allow simple modifications of the model setup
-(see [Structure](structure)).
+(see [Structure](#structure)).
 
 The package requires Python 3.5.1 or higher and a compiled version of the
-radiaitve transfer model PSRAD (see [Requirements](requirements)).
+radiaitve transfer model PSRAD (see [Requirements](#requirements)).
 Further information about installation can be found in the section
-[Installation](intallation).
+[Installation](#installation).
 
 # Requirements
 ## Python 3.5+
