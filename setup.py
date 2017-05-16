@@ -27,9 +27,10 @@ setup(
     include_package_data=True,
     install_requires=[
         'matplotlib>=2.0.0',
-        'numpy>=1.12.0',
-        'xarray>=0.9.1',
-        'typhon>=0.3.6',
         'netcdf4>=1.2.7',
+        'numpy>=1.12.0',
+        'scipy>=0.19.0',
+        'typhon>=0.3.6',
+        'xarray>=0.9.1',
     ],
 )

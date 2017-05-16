@@ -20,6 +20,8 @@ import typhon
 import numpy as np
 from xarray import Dataset, DataArray
 
+from . import constants
+
 
 logger = logging.getLogger()
 
@@ -235,7 +237,7 @@ class AtmosphereConvective(Atmosphere):
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
         density = typhon.physics.density(p, T_rad)
-        Cp = 1003.5
+        Cp = constants.isobaric_mass_heat_capacity
 
         # Fixed lapse rate case
         start_index = self.find_first_unstable_layer()
@@ -281,7 +283,7 @@ class AtmosphereMoistConvective(Atmosphere):
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
         density = typhon.physics.density(p, T_rad)
-        Cp = 1003.5
+        Cp = constants.isobaric_mass_heat_capacity
 
         for a in range(10, len(z)):
             term2b = np.trapz((density*Cp*T_rad)[:a], z[:a])
@@ -367,8 +369,9 @@ class AtmosphereConUp(AtmosphereConvective):
             ctop (float): ...
             w (float): ...
         """
-        Cp = 1003.5
-        g = 9.8076
+        Cp = constants.isobaric_mass_heat_capacity
+        g = constants.earth_standard_gravity
+
         actuallapse = self.get_lapse_rates()
 
         Q = -w * (-actuallapse + g / Cp)
