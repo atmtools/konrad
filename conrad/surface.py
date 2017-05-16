@@ -29,11 +29,8 @@ class Surface(metaclass=abc.ABCMeta):
         self.pressure = pressure
 
     @abc.abstractmethod
-    def adjust(self, heatingrate):
-        """Adjust the surface according to given heatingrate.
-
-        Paramters:
-            """
+    def adjust(self, heatingrate, timestep):
+        """Adjust the surface according to given heatingrate."""
         pass
 
     @classmethod
@@ -59,7 +56,7 @@ class Surface(metaclass=abc.ABCMeta):
 
 class SurfaceFixedTemperature(Surface):
     """Surface model with fixed temperature."""
-    def adjust(self, heatingrate):
+    def adjust(self, heatingrate, timestep):
         """Do not adjust anything for fixed temperature surfaces.
 
         Notes:
@@ -70,13 +67,13 @@ class SurfaceFixedTemperature(Surface):
 
 class SurfaceAdjustableTemperature(Surface):
     """Surface model with adjustable temperature."""
-    def adjust(self, heatingrate):
+    def adjust(self, heatingrate, timestep):
         """Increase the surface temperature by given heatingrate.
 
         Notes:
             The surface is assmued to have no heat capacity.
         """
-        self.temperature += heatingrate
+        self.temperature += heatingrate * timestep
 
 
 class SurfaceCoupled(Surface):
@@ -114,5 +111,5 @@ class SurfaceCoupled(Surface):
                    **kwargs,
                    )
 
-    def adjust(self, heatingrates):
+    def adjust(self, heatingrates, timestep):
         self.temperature = self.atmosphere['T'].values[0, 0]

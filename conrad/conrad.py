@@ -157,16 +157,18 @@ class RCE():
             # Apply heatingrates to the temperature profile.
             T = self.atmosphere['T'].values.copy()  # save old T profile.
             self.atmosphere.adjust(
-                self.timestep * self.heatingrates['net_htngrt']
-            )
+                self.heatingrates['net_htngrt'],
+                self.timestep
+                )
 
             # Calculate temperature change for convegence check.
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T
 
             # Apply heatingrates to the the surface.
             self.surface.adjust(
-                self.timestep * self.heatingrates['net_htngrt'].values[0]
-            )
+                self.heatingrates['net_htngrt'].values[0],
+                self.timestep
+                )
             logger.debug(
                 f'Surface temperature: {self.surface.temperature:.4f} K'
             )

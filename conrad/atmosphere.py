@@ -65,7 +65,7 @@ variable_description = {
 class Atmosphere(Dataset, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for atmosphere models."""
     @abc.abstractmethod
-    def adjust(self, heatingrate):
+    def adjust(self, heatingrate, timestep):
         """Adjust atmosphere according to given heatingrate."""
 
     @classmethod
@@ -187,7 +187,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
 class AtmosphereFixedVMR(Atmosphere):
     """Atmosphere model with fixed volume mixing ratio."""
-    def adjust(self, heatingrate):
+    def adjust(self, heatingrate, timestep):
         """Adjust the temperature.
 
         Adjust the atmospheric temperature profile by simply adding the given
@@ -197,7 +197,7 @@ class AtmosphereFixedVMR(Atmosphere):
             heatingrate (float or ndarray):
                 Heatingrate (already scaled with timestep) [K].
         """
-        self['T'] += heatingrate
+        self['T'] += heatingrate * timestep
 
 
 class AtmosphereFixedRH(Atmosphere):
@@ -206,7 +206,7 @@ class AtmosphereFixedRH(Atmosphere):
     This atmosphere model preserves the initial relative humidity profile by
     adjusting the water vapor volume mixing ratio.
     """
-    def adjust(self, heatingrate):
+    def adjust(self, heatingrate, timestep):
         """Adjust the temperature and preserve relative humidity.
 
         Parameters:
@@ -216,7 +216,7 @@ class AtmosphereFixedRH(Atmosphere):
         # Store initial relative humidty profile.
         RH = self.relative_humidity
 
-        self['T'] += heatingrate  # adjust temperature profile.
+        self['T'] += heatingrate * timestep  # adjust temperature profile.
 
         self.relative_humidity = RH  # reset original RH profile.
 
@@ -258,10 +258,10 @@ class AtmosphereConvective(Atmosphere):
 
         self['T'].values = T_con.values[np.newaxis, :]
 
-    def adjust(self, heatingrates):
+    def adjust(self, heatingrates, timestep):
         RH = self.relative_humidity
 
-        self['T'] += heatingrates
+        self['T'] += heatingrates * timestep
         con_top = self.convective_top()
         self.convective_adjustment(con_top)
 
@@ -300,7 +300,7 @@ class AtmosphereMoistConvective(Atmosphere):
 
         self['T'].values = T_con.values[np.newaxis, :]
 
-    def adjust(self, heatingrates):
+    def adjust(self, heatingrates, timestep):
 
         # TODO: Calculate moist lapse rates instead of hardcoding them.
         # # calculate lapse rate based on previous con-rad state.
@@ -349,7 +349,7 @@ class AtmosphereMoistConvective(Atmosphere):
 
         RH = self.relative_humidity
 
-        self['T'] += heatingrates
+        self['T'] += heatingrates * timestep
         self.convective_adjustment(lapse)
 
         self.relative_humidity = RH
@@ -359,7 +359,14 @@ class AtmosphereConUp(AtmosphereConvective):
     """Atmosphere model with preserved RH and fixed temperature lapse rate,
     that includes a cooling term due to upwelling in the statosphere.
     """
+    # TODO (Sally): Please fill-in the docstring ;)
     def upwelling_adjustment(self, ctop, w=0.0005):
+        """Stratospheric cooling term parameterizing large-scale upwelling.
+
+        Parameters:
+            ctop (float): ...
+            w (float): ...
+        """
         Cp = 1003.5
         g = 9.8076
         actuallapse = self.get_lapse_rates()
@@ -369,10 +376,10 @@ class AtmosphereConUp(AtmosphereConvective):
         # NEED TO NORMALISE WITH TIMESTEP
         self['T'] += Q
 
-    def adjust(self, heatingrates, w=5):
+    def adjust(self, heatingrates, timestep, w=5):
         RH = self.relative_humidity
 
-        self['T'] += heatingrates
+        self['T'] += heatingrates * timestep
 
         con_top = self.convective_top()
         self.upwelling_adjustment(con_top, w)
