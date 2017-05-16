@@ -7,6 +7,8 @@ __all__ = [
     'AtmosphereFixedVMR',
     'AtmosphereFixedRH',
     'AtmosphereConvective',
+    'AtmosphereMoistConvective',
+    'AtmosphereConUp',
 ]
 
 
@@ -246,7 +248,7 @@ class AtmosphereConvective(Atmosphere):
             if (term1 - term2) > 0:
                 break
         return a
-    
+
     def convective_adjustment(self, ctop, lapse=0.0065):
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
@@ -255,7 +257,6 @@ class AtmosphereConvective(Atmosphere):
             T_con[level] = T_rad[ctop] - (z[level]-z[ctop])*lapse
 
         self['T'].values = T_con.values[np.newaxis, :]
-        
 
     def adjust(self, heatingrates):
         RH = self.relative_humidity
@@ -264,8 +265,9 @@ class AtmosphereConvective(Atmosphere):
         con_top = self.convective_top()
         self.convective_adjustment(con_top)
 
-        self.relative_humidity = RH  # adjust VMR to preserve original RH profile.
-        
+        self.relative_humidity = RH  # adjust VMR to preserve RH profile.
+
+
 class AtmosphereMoistConvective(Atmosphere):
     """Atmosphere model with preserved RH and a temperature and humidity
     -dependent lapse rate.
@@ -274,15 +276,13 @@ class AtmosphereMoistConvective(Atmosphere):
     adjusting the water vapor volume mixing ratio. In addition, a convection
     parameterization is used, which sets the lapse rate to the moist adiabat.
     """
-    
     def convective_adjustment(self, lapse):
-        
         p = self['plev']
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
         density = typhon.physics.density(p, T_rad)
         Cp = 1003.5
-        
+
         for a in range(10, len(z)):
             term2b = np.trapz((density*Cp*T_rad)[:a], z[:a])
             term1 = T_rad[a]*np.trapz((density*Cp)[:a], z[:a])
@@ -292,87 +292,88 @@ class AtmosphereMoistConvective(Atmosphere):
             term3 = np.trapz((density*Cp)[:a]*inintegral, z[:a])
             if (term1 + term3 - term2b) > 0:
                 break
-        
+
         T_con = T_rad.copy()
         for level in range(0, a):
             lapse_sum = np.trapz(lapse[level:a], z[level:a])
             T_con[level] = T_rad[a] + lapse_sum
-        
+
         self['T'].values = T_con.values[np.newaxis, :]
-    
+
     def adjust(self, heatingrates):
 
-        # calculate lapse rate based on previous con-rad state.        
-#        g = 9.8076
-#        Lv = 2501000
-#        R = 287
-#        eps = 0.62197
-#        Cp = 1003.5
-#        VMR = self['H2O'][0, :]
-#        T = self['T'][0, :]
-#        
-#        lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
-        lapse = np.array([0.003498,  0.003498,  0.003598,  0.003777,  0.003924,  
-                         0.004085,  0.004514,  0.005101,  0.005637,  0.006281,  
-                         0.006493,  0.006739, 0.007079,  0.007453,  0.007753,  
-                         0.00808 ,  0.008324,  0.008585, 0.008792,  0.009   ,  
-                         0.009169,  0.009321,  0.009447,  0.009537, 0.009624,  
-                         0.009661,  0.009698,  0.00972 ,  0.009736,  0.00975 , 
-                         0.009753,  0.009757,  0.009759,  0.009761,  0.009762,  
-                         0.009763,  0.009764,  0.009764,  0.009765,  0.009765,  
-                         0.009765,  0.009765, 0.009765,  0.009766,  0.009766,  
-                         0.009766,  0.009766,  0.009766, 0.009766,  0.009767,  
-                         0.009767,  0.009767,  0.009767,  0.009766, 0.009766,  
-                         0.009766,  0.009766,  0.009766,  0.009766,  0.009766,
-                         0.009766,  0.009766,  0.009766,  0.009766,  0.009766,  
-                         0.009766, 0.009766,  0.009765,  0.009765,  0.009765,  
-                         0.009765,  0.009765, 0.009765,  0.009765,  0.009765,  
-                         0.009765,  0.009765,  0.009765, 0.009765,  0.009765,  
-                         0.009765,  0.009765,  0.009765,  0.009765, 0.009765,  
-                         0.009765,  0.009765,  0.009765,  0.009765,  0.009765, 
-                         0.009765,  0.009765,  0.009765,  0.009765,  0.009765,  
-                         0.009764,  0.009764,  0.009764,  0.009764,  0.009764,  
-                         0.009764,  0.009764, 0.009764,  0.009764,  0.009764,  
-                         0.009764,  0.009765,  0.009765, 0.009765,  0.009765,  
-                         0.009765,  0.009765,  0.009764,  0.009764, 0.009764,  
-                         0.009764,  0.009764,  0.009764,  0.009764,  0.009764,
-                         0.009764,  0.009764,  0.009764,  0.009764,  0.009764,  
-                         0.009764, 0.009764,  0.009764,  0.009764,  0.009764,  
-                         0.009763,  0.009763, 0.009763,  0.009763,  0.009763,  
-                         0.009763,  0.009763,  0.009763, 0.009763,  0.009763,  
-                         0.009763,  0.009763,  0.009763,  0.009763, 0.009763,  
-                         0.009763,  0.009763,  0.009763,  0.009763,  0.009763])
-        
+        # TODO: Calculate moist lapse rates instead of hardcoding them.
+        # # calculate lapse rate based on previous con-rad state.
+        # g = 9.8076
+        # Lv = 2501000
+        # R = 287
+        # eps = 0.62197
+        # Cp = 1003.5
+        # VMR = self['H2O'][0, :]
+        # T = self['T'][0, :]
+        # lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
+
+        # Hardcoded moist adiabatic lapse rate.
+        lapse = np.array([
+            0.003498,  0.003498,  0.003598,  0.003777,  0.003924,
+            0.004085,  0.004514,  0.005101,  0.005637,  0.006281,
+            0.006493,  0.006739, 0.007079,  0.007453,  0.007753,
+            0.00808,  0.008324,  0.008585, 0.008792,  0.009,
+            0.009169,  0.009321,  0.009447,  0.009537, 0.009624,
+            0.009661,  0.009698,  0.00972,  0.009736,  0.00975,
+            0.009753,  0.009757,  0.009759,  0.009761,  0.009762,
+            0.009763,  0.009764,  0.009764,  0.009765,  0.009765,
+            0.009765,  0.009765, 0.009765,  0.009766,  0.009766,
+            0.009766,  0.009766,  0.009766, 0.009766,  0.009767,
+            0.009767,  0.009767,  0.009767,  0.009766, 0.009766,
+            0.009766,  0.009766,  0.009766,  0.009766,  0.009766,
+            0.009766,  0.009766,  0.009766,  0.009766,  0.009766,
+            0.009766, 0.009766,  0.009765,  0.009765,  0.009765,
+            0.009765,  0.009765, 0.009765,  0.009765,  0.009765,
+            0.009765,  0.009765,  0.009765, 0.009765,  0.009765,
+            0.009765,  0.009765,  0.009765,  0.009765, 0.009765,
+            0.009765,  0.009765,  0.009765,  0.009765,  0.009765,
+            0.009765,  0.009765,  0.009765,  0.009765,  0.009765,
+            0.009764,  0.009764,  0.009764,  0.009764,  0.009764,
+            0.009764,  0.009764, 0.009764,  0.009764,  0.009764,
+            0.009764,  0.009765,  0.009765, 0.009765,  0.009765,
+            0.009765,  0.009765,  0.009764,  0.009764, 0.009764,
+            0.009764,  0.009764,  0.009764,  0.009764,  0.009764,
+            0.009764,  0.009764,  0.009764,  0.009764,  0.009764,
+            0.009764, 0.009764,  0.009764,  0.009764,  0.009764,
+            0.009763,  0.009763, 0.009763,  0.009763,  0.009763,
+            0.009763,  0.009763,  0.009763, 0.009763,  0.009763,
+            0.009763,  0.009763,  0.009763,  0.009763, 0.009763,
+            0.009763,  0.009763,  0.009763,  0.009763,  0.009763
+            ])
+
         RH = self.relative_humidity
-        
+
         self['T'] += heatingrates
         self.convective_adjustment(lapse)
-        
+
         self.relative_humidity = RH
-        
+
+
 class AtmosphereConUp(AtmosphereConvective):
     """Atmosphere model with preserved RH and fixed temperature lapse rate,
     that includes a cooling term due to upwelling in the statosphere.
-
     """
-
-        
     def upwelling_adjustment(self, ctop, w=0.0005):
         Cp = 1003.5
         g = 9.8076
         actuallapse = self.get_lapse_rates()
-        
-        Q = -w*(-actuallapse + g/Cp)
+
+        Q = -w * (-actuallapse + g / Cp)
         Q[:ctop] = 0
-        #NEED TO NORMALISE WITH TIMESTEP
+        # NEED TO NORMALISE WITH TIMESTEP
         self['T'] += Q
-        
-        
+
     def adjust(self, heatingrates, w=5):
         RH = self.relative_humidity
-        
+
         self['T'] += heatingrates
-        
+
         con_top = self.convective_top()
         self.upwelling_adjustment(con_top, w)
 
