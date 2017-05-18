@@ -20,48 +20,22 @@ import typhon
 import numpy as np
 from xarray import Dataset, DataArray
 
-from . import constants
+from conrad import constants
+from conrad import utils
 
 
 logger = logging.getLogger()
 
-# Dictionary containing information on atmospheric constituents.
-# Variables listed in this dictionary are **required** parts of every
-# atmosphere model!
-variable_description = {
-    'T': {'units': 'K',
-          'standard_name': 'air_temperature',
-          'arts_name': 'T',
-          },
-    'z': {'units': 'm',
-          'standard_name': 'height',
-          'arts_name': 'z',
-          },
-    'H2O': {'units': '1',
-            'standard_name': 'humidity_mixing_ratio',
-            'arts_name': 'abs_species-H2O',
-            },
-    'N2O': {'units': '1',
-            'standard_name': 'nitrogene_mixing_ratio',
-            'arts_name': 'abs_species-N2O',
-            },
-    'O3': {'units': '1',
-           'standard_name': 'ozone_mixing_ratio',
-           'arts_name': 'abs_species-O3',
-           },
-    'CO2': {'units': '1',
-            'standard_name': 'carbon_dioxide_mixing_ratio',
-            'arts_name': 'abs_species-CO2',
-            },
-    'CO': {'units': '1',
-           'standard_name': 'carbon_monoxide_mixing_ratio',
-           'arts_name': 'abs_species-CO',
-           },
-    'CH4': {'units': '1',
-            'standard_name': 'methane_mixing_ratio',
-            'arts_name': 'abs_species-CH4',
-            },
-}
+atmosphere_variables = [
+    'T',
+    'z',
+    'H2O',
+    'N2O',
+    'O3',
+    'CO2',
+    'CO',
+    'CH4',
+]
 
 
 class Atmosphere(Dataset, metaclass=abc.ABCMeta):
@@ -83,51 +57,44 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         # Create a Dataset with time and pressure dimension.
         d = cls(coords={'plev': atmfield.grids[1], 'time': [0]})
 
-        # TODO: Maybe introduce another variables `required_vars` to not loop
-        # over all variable descriptions. This would allow unused descriptions.
-        for var, desc in variable_description.items():
-            atmfield_data = typhon.arts.atm_fields_compact_get(
-                [desc['arts_name']], atmfield).squeeze()
-            darray = DataArray(atmfield_data[np.newaxis, :],
-                               dims=('time', 'plev',))
-            darray.attrs['standard_name'] = desc['standard_name']
-            darray.attrs['units'] = desc['units']
-            d[var] = darray
+        for var in atmosphere_variables:
+            # Get ARTS variable name from variable description.
+            arts_key = constants.variable_description[var].get('arts_name')
 
-        d['plev'].attrs['standard_name'] = 'air_pressure'
-        d['plev'].attrs['units'] = 'Pa'
-        d['time'].attrs['standard_name'] = 'time'
-        d['time'].attrs['units'] = 'hours since 0001-01-01 00:00:00.0'
-        d['time'].attrs['calender'] = 'gregorian'
+            # Extract profile from atm_fields_compact
+            profile = typhon.arts.atm_fields_compact_get(
+                [arts_key], atmfield).squeeze()
+
+            d[var] = DataArray(profile[np.newaxis, :], dims=('time', 'plev',))
+
+        d.append_description()  # Append variable descriptions.
 
         return d
 
     @classmethod
-    def from_dict(cls, dict):
+    def from_dict(cls, dictionary):
         """Create an atmosphere model from dictionary values.
 
         Parameters:
-            d (dict): Dictionary containing ndarrays.
+            dictionary (dict): Dictionary containing ndarrays.
         """
         # TODO: Currently working for good-natured dictionaries.
         # Consider allowing a more flexibel user interface.
 
         # Create a Dataset with time and pressure dimension.
-        d = cls(coords={'plev': dict['plev'], 'time': [0]})
+        d = cls(coords={'plev': dictionary['plev'], 'time': [0]})
 
-        for var, desc in variable_description.items():
-            darray = DataArray(dict[var], dims=('time', 'plev',))
-            darray.attrs['standard_name'] = desc['standard_name']
-            darray.attrs['units'] = desc['units']
-            d[var] = darray
+        for var, desc in atmosphere_variables:
+            d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
 
-        d['plev'].attrs['standard_name'] = 'air_pressure'
-        d['plev'].attrs['units'] = 'Pa'
-        d['time'].attrs['standard_name'] = 'time'
-        d['time'].attrs['units'] = 'hours since 0001-01-01 00:00:00.0'
-        d['time'].attrs['calender'] = 'gregorian'
+        d.append_description()  # Append variable descriptions.
 
         return d
+
+    def append_description(self):
+        """Append variable attributes to dataset."""
+        for key in self.keys():
+            self[key].attrs = constants.variable_description.get(key, None)
 
     # TODO: This function could handle the nasty time dimension in the future.
     # Allowing to set two-dimensional variables using a 1d-array, if one
@@ -141,7 +108,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
                 If a float is given, all values are filled with it.
         """
         if isinstance(value, collections.Container):
-            self[variable].values = value
+            self[variable].values[0, :] = value
         else:
             self[variable].values.fill(value)
 
@@ -161,7 +128,8 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         logger.debug('Adjust VMR to preserve relative humidity.')
         self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
         self['H2O'][0, self['H2O'][0, :] < 3e-6] = 3e-6
-        self['H2O'][0, self['plev'] < 50e2] = 3e-6
+        # self['H2O'][0, self['plev'] < 50e2] = 3e-6
+        self.set('H2O', utils.ensure_decrease(self['H2O'][0, :]))
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""

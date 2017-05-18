@@ -3,10 +3,11 @@
 """
 import abc
 
-from xarray import DataArray, Dataset
+from xarray import Dataset
 import numpy as np
 
 from . import utils
+from conrad import constants
 
 
 __all__ = [
@@ -132,5 +133,9 @@ class PSRAD(Radiation):
             },
             coords={'plev': atmosphere['plev'].values}
             )
+
+        # Append variable descriptions.
+        for key in ret.keys():
+            ret[key].attrs = constants.variable_description.get(key, None)
 
         return ret

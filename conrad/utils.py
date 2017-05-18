@@ -11,6 +11,7 @@ from netCDF4 import Dataset
 __all__ = [
     'append_timestep_netcdf',
     'create_relative_humidity_profile',
+    'ensure_decrease',
 ]
 
 logger = logging.getLogger(__name__)
@@ -58,3 +59,18 @@ def create_relative_humidity_profile(p, RH_s=0.75):
         ndarray: Relative humidtiy."""
     rh = RH_s / (np.exp(1) - 1) * (np.exp(p / p[0]) - 1)
     return np.round(rh, decimals=4)
+
+
+def ensure_decrease(array):
+    """Ensure that a given array is decreasing.
+
+    Parameters:
+        array (ndarray): Input array.
+
+    Returns:
+        ndarray: Monotonously decreasing array.
+    """
+    for i in range(1, np.size(array)):
+        if array[i] > array[i-1]:
+            array[i] = array[i-1]
+    return array
