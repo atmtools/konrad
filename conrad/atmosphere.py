@@ -112,6 +112,22 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         else:
             self[variable].values.fill(value)
 
+    def get_values(self, variable, keepdims=True):
+        """Get values of a given variable.
+        
+        Parameters:
+            variable (str): Variable key.
+            keepdims (bool): If this is set to False, single-dimensions are
+                removed. Otherwise dimensions are keppt (default).
+        
+        Returns:
+            ndarray: Array containing the values assigned to the variable.
+        """
+        if keepdims:
+            return self[variable].values
+        else:
+            return self[variable].values.ravel()
+
     @property
     def relative_humidity(self):
         """Return the relative humidity of the current atmospheric state."""
@@ -238,6 +254,41 @@ class AtmosphereConvective(Atmosphere):
         self.relative_humidity = RH  # adjust VMR to preserve RH profile.
 
 
+class AtmosphereConUp(AtmosphereConvective):
+    """Atmosphere model with preserved RH and fixed temperature lapse rate,
+    that includes a cooling term due to upwelling in the statosphere.
+    """
+    # TODO (Sally): Please fill-in the docstring ;)
+    def upwelling_adjustment(self, ctop, w=0.0005):
+        """Stratospheric cooling term parameterizing large-scale upwelling.
+
+        Parameters:
+            ctop (float): ...
+            w (float): ...
+        """
+        Cp = constants.isobaric_mass_heat_capacity
+        g = constants.earth_standard_gravity
+
+        actuallapse = self.get_lapse_rates()
+
+        Q = -w * (-actuallapse + g / Cp)
+        Q[:ctop] = 0
+        # NEED TO NORMALISE WITH TIMESTEP
+        self['T'] += Q
+
+    def adjust(self, heatingrates, timestep, w=5):
+        RH = self.relative_humidity
+
+        self['T'] += heatingrates * timestep
+
+        con_top = self.convective_top()
+        self.upwelling_adjustment(con_top, w)
+
+        self.convective_adjustment(con_top)
+
+        self.relative_humidity = RH  # reset original RH profile.
+
+
 class AtmosphereMoistConvective(Atmosphere):
     """Atmosphere model with preserved RH and a temperature and humidity
     -dependent lapse rate.
@@ -323,38 +374,3 @@ class AtmosphereMoistConvective(Atmosphere):
         self.convective_adjustment(lapse)
 
         self.relative_humidity = RH
-
-
-class AtmosphereConUp(AtmosphereConvective):
-    """Atmosphere model with preserved RH and fixed temperature lapse rate,
-    that includes a cooling term due to upwelling in the statosphere.
-    """
-    # TODO (Sally): Please fill-in the docstring ;)
-    def upwelling_adjustment(self, ctop, w=0.0005):
-        """Stratospheric cooling term parameterizing large-scale upwelling.
-
-        Parameters:
-            ctop (float): ...
-            w (float): ...
-        """
-        Cp = constants.isobaric_mass_heat_capacity
-        g = constants.earth_standard_gravity
-
-        actuallapse = self.get_lapse_rates()
-
-        Q = -w * (-actuallapse + g / Cp)
-        Q[:ctop] = 0
-        # NEED TO NORMALISE WITH TIMESTEP
-        self['T'] += Q
-
-    def adjust(self, heatingrates, timestep, w=5):
-        RH = self.relative_humidity
-
-        self['T'] += heatingrates * timestep
-
-        con_top = self.convective_top()
-        self.upwelling_adjustment(con_top, w)
-
-        self.convective_adjustment(con_top)
-
-        self.relative_humidity = RH  # reset original RH profile.
