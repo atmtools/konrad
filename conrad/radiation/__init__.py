@@ -114,20 +114,20 @@ class PSRAD(Radiation):
             # Longwave fluxes and heatingrates.
             'lw_htngrt': (['time', 'plev'], lw_hr[:, :]),
             'lw_htngrt_clr': (['time', 'plev'], lw_hr_clr[:, :]),
-            'lw_flxu': (['time', 'plev'], lw_flxu[:, :-1]),
-            'lw_flxd': (['time', 'plev'], lw_flxd[:, :-1]),
-            'lw_flxu_clr': (['time', 'plev'], lw_flxu_clr[:, :-1]),
-            'lw_flxd_clr': (['time', 'plev'], lw_flxd_clr[:, :-1]),
+            'lw_flxu': (['time', 'phlev'], lw_flxu[:, :]),
+            'lw_flxd': (['time', 'phlev'], lw_flxd[:, :]),
+            'lw_flxu_clr': (['time', 'phlev'], lw_flxu_clr[:, :]),
+            'lw_flxd_clr': (['time', 'phlev'], lw_flxd_clr[:, :]),
             # Shortwave fluxes and heatingrates.
             # Note: The shortwave fluxes and heatingrates calculated by PSRAD
             # are **inverted**. Therefore, they are flipped to make the input
             # and output of this function consistent.
             'sw_htngrt': (['time', 'plev'], sw_hr[:, ::-1]),
             'sw_htngrt_clr': (['time', 'plev'], sw_hr_clr[:, ::-1]),
-            'sw_flxu': (['time', 'plev'], sw_flxu[:, :-1][::-1]),
-            'sw_flxd': (['time', 'plev'], sw_flxd[:, :-1][::-1]),
-            'sw_flxu_clr': (['time', 'plev'], sw_flxu_clr[:, :-1][::-1]),
-            'sw_flxd_clr': (['time', 'plev'], sw_flxd_clr[:, :-1][::-1]),
+            'sw_flxu': (['time', 'phlev'], sw_flxu[::-1]),
+            'sw_flxd': (['time', 'phlev'], sw_flxd[::-1]),
+            'sw_flxu_clr': (['time', 'phlev'], sw_flxu_clr[::-1]),
+            'sw_flxd_clr': (['time', 'phlev'], sw_flxd_clr[::-1]),
             # Net heatingrate.
             'net_htngrt': (['time', 'plev'], lw_hr[:, :] + sw_hr[:, ::-1]),
             },

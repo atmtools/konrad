@@ -14,6 +14,10 @@ variable_description = {
         'units': 'Pa',
         'standard_name': 'air_pressure',
         },
+    'phlev': {
+        'units': 'Pa',
+        'standard_name': 'air_pressure_at_halflevel',
+    },
     'time': {
         'standard_name': 'time',
         'units': 'hours since 0001-01-01 00:00:00.0',

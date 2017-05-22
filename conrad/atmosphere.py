@@ -55,7 +55,12 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
                 atmospheric fields.
         """
         # Create a Dataset with time and pressure dimension.
-        d = cls(coords={'plev': atmfield.grids[1], 'time': [0]})
+        plev = atmfield.grids[1]
+        phlev = utils.calculate_halflevels(plev)
+        d = cls(coords={'plev': plev,  # pressure level
+                        'time': [0],  # time dimension
+                        'phlev': phlev,  # pressure at halflevels
+                        })
 
         for var in atmosphere_variables:
             # Get ARTS variable name from variable description.
@@ -94,7 +99,8 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
     def append_description(self):
         """Append variable attributes to dataset."""
         for key in self.keys():
-            self[key].attrs = constants.variable_description.get(key, None)
+            if key in constants.variable_description:
+                self[key].attrs = constants.variable_description[key]
 
     # TODO: This function could handle the nasty time dimension in the future.
     # Allowing to set two-dimensional variables using a 1d-array, if one

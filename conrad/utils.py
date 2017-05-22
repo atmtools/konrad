@@ -12,6 +12,7 @@ __all__ = [
     'append_timestep_netcdf',
     'create_relative_humidity_profile',
     'ensure_decrease',
+    'calculate_halflevels',
 ]
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,9 @@ def append_timestep_netcdf(filename, data, timestamp):
         # Append data for each variable in ``data`` that has the
         # dimensions ``time`` and ``plev``.
         for var in data:
-            if nc[var].dimensions == ('time', 'plev'):
+            # Append variable if it has a `time` dimension and is no
+            # dimension itself.
+            if 'time' in nc[var].dimensions and var not in nc.dimensions:
                 if hasattr(data[var], 'values'):
                     nc.variables[var][t, :] = data[var].values
                 else:
@@ -74,3 +77,22 @@ def ensure_decrease(array):
         if array[i] > array[i-1]:
             array[i] = array[i-1]
     return array
+
+
+def calculate_halflevels(level):
+    """Returns the linear inteprolated halflevels for given array.
+
+    Parameters:
+        level (ndarray): Data array.
+
+    Returns:
+        ndarray: Coordinates at halflevel.
+
+    Examples:
+        >>> interpolate_halflevels([0, 1, 2, 4])
+        array([ 0.5,  1.5,  3. ])
+    """
+    inter = (level[1:] + level[:-1]) / 2
+    bottom = level[0] - (level[1] - level[0])
+    top = level[-1] / 2
+    return np.hstack((bottom, inter, top))
