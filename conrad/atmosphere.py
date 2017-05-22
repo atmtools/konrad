@@ -87,7 +87,12 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         # Consider allowing a more flexibel user interface.
 
         # Create a Dataset with time and pressure dimension.
-        d = cls(coords={'plev': dictionary['plev'], 'time': [0]})
+        plev = atmfield.grids[1]
+        phlev = utils.calculate_halflevels(plev)
+        d = cls(coords={'plev': plev,  # pressure level
+                        'time': [0],  # time dimension
+                        'phlev': phlev,  # pressure at halflevels
+                        })
 
         for var, desc in atmosphere_variables:
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))

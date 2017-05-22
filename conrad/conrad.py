@@ -64,16 +64,9 @@ class RCE():
         logging.info('Created ConRad object:\n{}'.format(self))
 
     def __repr__(self):
-        # List of attributes to include in __repr__ output.
-        repr_attrs = [
-            'delta',
-            'timestep',
-            'max_iterations',
-            'niter',
-            ]
-
         retstr = '{}(\n'.format(self.__class__.__name__)
-        for a in repr_attrs:
+        # Loop over all public object attributes.
+        for a in filter(lambda k: not k.startswith('_'), self.__dict__):
             retstr += '    {}={},\n'.format(a, getattr(self, a))
         retstr += ')'
 
