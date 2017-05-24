@@ -228,6 +228,11 @@ class AtmosphereConvective(Atmosphere):
     Implementation of Sally's convection scheme.
     """
     def convective_top(self, lapse=0.0065):
+        """Find the top of the convective layer, so that energy is conserved.
+        
+        Parameters:
+            lapse (float): lapse rate value to adjust to
+        """
         p = self['plev']
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
@@ -247,6 +252,14 @@ class AtmosphereConvective(Atmosphere):
         return a
 
     def convective_adjustment(self, ctop, lapse=0.0065):
+        """Apply the convective adjustment.
+        
+        Parameters:
+            ctop (float): array index,
+                the top level for the convective adjustment
+            lapse (float):
+                adjust to this lapse rate value
+        """
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
         T_con = T_rad.copy()
@@ -269,13 +282,14 @@ class AtmosphereConUp(AtmosphereConvective):
     """Atmosphere model with preserved RH and fixed temperature lapse rate,
     that includes a cooling term due to upwelling in the statosphere.
     """
-    # TODO (Sally): Please fill-in the docstring ;)
-    def upwelling_adjustment(self, ctop, w=0.0005):
+    def upwelling_adjustment(self, ctop, timestep, w=0.0005):
         """Stratospheric cooling term parameterizing large-scale upwelling.
 
         Parameters:
-            ctop (float): ...
-            w (float): ...
+            ctop (float): array index,
+                the bottom level for the upwelling
+                at and above this level, the upwelling is constant with height
+            w (float): upwelling velocity
         """
         Cp = constants.isobaric_mass_heat_capacity
         g = constants.earth_standard_gravity
@@ -284,8 +298,8 @@ class AtmosphereConUp(AtmosphereConvective):
 
         Q = -w * (-actuallapse + g / Cp)
         Q[:ctop] = 0
-        # NEED TO NORMALISE WITH TIMESTEP
-        self['T'] += Q
+
+        self['T'] += Q * timestep
 
     def adjust(self, heatingrates, timestep, w=5):
         RH = self.relative_humidity
@@ -293,7 +307,7 @@ class AtmosphereConUp(AtmosphereConvective):
         self['T'] += heatingrates * timestep
 
         con_top = self.convective_top()
-        self.upwelling_adjustment(con_top, w)
+        self.upwelling_adjustment(con_top, timestep, w)
 
         self.convective_adjustment(con_top)
 

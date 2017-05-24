@@ -67,4 +67,4 @@ for ax in axes:
     ax.set_ylim(p.max(), p.min())
     ax.grid('on')
 
-fig.savefig('plots/heatingrates.pdf')
+fig.savefig('plots/heatingrates_conup5_fixedrh.pdf')
