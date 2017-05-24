@@ -154,7 +154,7 @@ class RCE():
                 self.timestep
                 )
 
-            # Calculate temperature change for convegence check.
+            # Calculate temperature change for convergence check.
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T
 
             # Apply heatingrates to the the surface.
