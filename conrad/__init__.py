@@ -37,5 +37,5 @@ logging.basicConfig(
     level=logging.DEBUG,
     datefmt='%Y-%m-%d %H:%M:%S',
     style='{',
-    format='{asctime} {levelname}:{name}:{message}',
+    format='{asctime} {processName}:{levelname}:{name}:{message}',
     )
