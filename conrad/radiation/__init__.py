@@ -124,10 +124,10 @@ class PSRAD(Radiation):
             # and output of this function consistent.
             'sw_htngrt': (['time', 'plev'], sw_hr[:, ::-1]),
             'sw_htngrt_clr': (['time', 'plev'], sw_hr_clr[:, ::-1]),
-            'sw_flxu': (['time', 'phlev'], sw_flxu[::-1]),
-            'sw_flxd': (['time', 'phlev'], sw_flxd[::-1]),
-            'sw_flxu_clr': (['time', 'phlev'], sw_flxu_clr[::-1]),
-            'sw_flxd_clr': (['time', 'phlev'], sw_flxd_clr[::-1]),
+            'sw_flxu': (['time', 'phlev'], sw_flxu[:, ::-1]),
+            'sw_flxd': (['time', 'phlev'], sw_flxd[:, ::-1]),
+            'sw_flxu_clr': (['time', 'phlev'], sw_flxu_clr[:, ::-1]),
+            'sw_flxd_clr': (['time', 'phlev'], sw_flxd_clr[:, ::-1]),
             # Net heatingrate.
             'net_htngrt': (['time', 'plev'], lw_hr[:, :] + sw_hr[:, ::-1]),
             },
