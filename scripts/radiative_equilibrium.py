@@ -11,9 +11,10 @@ Note:
     as an example, as it might include functionality which is under
     development.
 """
-import conrad
 import matplotlib.pyplot as plt
 import typhon
+
+import conrad
 
 
 # Load the FASCOD atmosphere.
@@ -21,13 +22,11 @@ gf = typhon.arts.xml.load('data/tropical.xml')
 gf = gf.extract_slice(slice(1, None), axis=1)  # omit bottom level.
 
 # Refine original pressure grid.
-p = typhon.math.nlogspace(1013e2, 0.1e2, 150)
+p = typhon.math.nlogspace(1013e2, 0.1e2, 200)
 gf.refine_grid(p, axis=1)
 
 # Create an atmosphere model.
-# a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
-# a['CO2'] *= 0.5
+a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
 
 # Create synthetic relative humidity profile.
 a.relative_humidity = conrad.utils.create_relative_humidity_profile(p, 0.75)
@@ -45,9 +44,9 @@ rce = conrad.RCE(
     surface=s,
     radiation=r,
     delta=0.001,
-    timestep=0.2,
-    writeevery=1,
-    max_iterations=1000,
+    timestep=0.0625,
+    writeevery=1.,
+    max_iterations=3,
     outfile='results/test.nc'
     )
 
