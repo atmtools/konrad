@@ -87,14 +87,14 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         # Consider allowing a more flexibel user interface.
 
         # Create a Dataset with time and pressure dimension.
-        plev = atmfield.grids[1]
+        plev = dictionary['plev']
         phlev = utils.calculate_halflevels(plev)
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
                         })
 
-        for var, desc in atmosphere_variables:
+        for var in atmosphere_variables:
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
 
         d.append_description()  # Append variable descriptions.
@@ -125,12 +125,12 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
     def get_values(self, variable, keepdims=True):
         """Get values of a given variable.
-        
+
         Parameters:
             variable (str): Variable key.
             keepdims (bool): If this is set to False, single-dimensions are
                 removed. Otherwise dimensions are keppt (default).
-        
+
         Returns:
             ndarray: Array containing the values assigned to the variable.
         """
@@ -229,7 +229,7 @@ class AtmosphereConvective(Atmosphere):
     """
     def convective_top(self, lapse=0.0065):
         """Find the top of the convective layer, so that energy is conserved.
-        
+
         Parameters:
             lapse (float): lapse rate value to adjust to
         """
@@ -253,7 +253,7 @@ class AtmosphereConvective(Atmosphere):
 
     def convective_adjustment(self, ctop, lapse=0.0065):
         """Apply the convective adjustment.
-        
+
         Parameters:
             ctop (float): array index,
                 the top level for the convective adjustment
