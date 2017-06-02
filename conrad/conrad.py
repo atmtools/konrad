@@ -158,10 +158,10 @@ class RCE():
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T
 
             # Apply heatingrates to the the surface.
-            self.surface.adjust(
-                self.heatingrates['net_htngrt'].values[0],
-                self.timestep
-                )
+            s = (self.heatingrates['sw_flxd'].values[0, 0]
+                 - self.heatingrates['sw_flxu'].values[0, 0])
+            ir = self.heatingrates['lw_flxd'].values[0, 0]
+            self.surface.adjust(s, ir)
             logger.debug(
                 f'Surface temperature: {self.surface.temperature:.4f} K'
             )
@@ -169,7 +169,8 @@ class RCE():
             if self.check_if_write():
                 if self.niter == 0:
                     self.create_outfile()
-                self.append_to_netcdf()
+                else:
+                    self.append_to_netcdf()
 
             if self.is_converged():
                 logger.info('Converged after %s iterations.' % self.niter)

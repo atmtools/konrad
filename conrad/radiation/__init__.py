@@ -122,14 +122,14 @@ class PSRAD(Radiation):
             # Note: The shortwave fluxes and heatingrates calculated by PSRAD
             # are **inverted**. Therefore, they are flipped to make the input
             # and output of this function consistent.
-            'sw_htngrt': (['time', 'plev'], sw_hr[:, ::-1]),
-            'sw_htngrt_clr': (['time', 'plev'], sw_hr_clr[:, ::-1]),
-            'sw_flxu': (['time', 'phlev'], sw_flxu[:, ::-1]),
-            'sw_flxd': (['time', 'phlev'], sw_flxd[:, ::-1]),
-            'sw_flxu_clr': (['time', 'phlev'], sw_flxu_clr[:, ::-1]),
-            'sw_flxd_clr': (['time', 'phlev'], sw_flxd_clr[:, ::-1]),
+            'sw_htngrt': (['time', 'plev'], 0.5 * sw_hr[:, ::-1]),
+            'sw_htngrt_clr': (['time', 'plev'], 0.5 * sw_hr_clr[:, ::-1]),
+            'sw_flxu': (['time', 'phlev'], 0.5 * sw_flxu[:, ::-1]),
+            'sw_flxd': (['time', 'phlev'], 0.5 * sw_flxd[:, ::-1]),
+            'sw_flxu_clr': (['time', 'phlev'], 0.5 * sw_flxu_clr[:, ::-1]),
+            'sw_flxd_clr': (['time', 'phlev'], 0.5 * sw_flxd_clr[:, ::-1]),
             # Net heatingrate.
-            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + sw_hr[:, ::-1]),
+            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + 0.5 * sw_hr[:, ::-1]),
             },
             coords={'plev': atmosphere['plev'].values}
             )

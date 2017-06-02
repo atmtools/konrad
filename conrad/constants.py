@@ -7,6 +7,7 @@ import scipy.constants as spc
 # Phyiscal constants
 Cp = isobaric_mass_heat_capacity = 1003.5  # J kg^-1 K^-1
 g = earth_standard_gravity = spc.g  # m s^-2
+stefan_boltzmann = 5.67e-8  # W m^-2 K^-4
 
 # Variable descriptions
 variable_description = {
