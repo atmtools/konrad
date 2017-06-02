@@ -17,6 +17,7 @@ import collections
 import logging
 
 import typhon
+import netCDF4
 import numpy as np
 from xarray import Dataset, DataArray
 
@@ -96,6 +97,32 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         for var in atmosphere_variables:
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
+
+        d.append_description()  # Append variable descriptions.
+
+        return d
+
+    @classmethod
+    def from_netcdf(cls, ncfile, timestep=-1):
+        """Create an atmosphere model from a netCDF file.
+
+        Parameters:
+            ncfile (str): Path to netCDF file.
+            timestep (int): Timestep to read (default is last timestep).
+        """
+        data = netCDF4.Dataset(ncfile).variables
+
+        # Create a Dataset with time and pressure dimension.
+        plev = data['plev'][:]
+        phlev = utils.calculate_halflevels(plev)
+        time = data['time'][[timestep]]
+        d = cls(coords={'plev': plev,  # pressure level
+                        'time': [0],  # time dimension
+                        'phlev': phlev,  # pressure at halflevels
+                        })
+
+        for var in atmosphere_variables:
+            d[var] = DataArray(data[var][[timestep], :], dims=('time', 'plev',))
 
         d.append_description()  # Append variable descriptions.
 
