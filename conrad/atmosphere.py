@@ -180,10 +180,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
             RH (ndarray or float): Relative humidity.
         """
         logger.debug('Adjust VMR to preserve relative humidity.')
-        self['H2O'] = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
-        self['H2O'][0, self['H2O'][0, :] < 3e-6] = 3e-6
-        # self['H2O'][0, self['plev'] < 50e2] = 3e-6
-        self.set('H2O', utils.ensure_decrease(self['H2O'][0, :]))
+        self['H2O'].values = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
@@ -199,14 +196,15 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
             if lapse_rate[n] < critical_lapse_rate and self['plev'][n] > pmin:
                 return n
 
-    # def convective_adjustment(self, critical_lapse_rate=-0.0065, pmin=10e2):
-    #     i = self.find_first_unstable_layer(
-    #             critical_lapse_rate=critical_lapse_rate,
-    #             pmin=pmin)
+    @property
+    def cold_point_index(self):
+        """Return the pressure index of the cold point tropopause."""
+        return int(np.argmin(self['T']))
 
-    #     if i is not None:
-    #         self['T'][0, :i] = (self['T'][0, i] + critical_lapse_rate
-    #                             * (self['z'][0, :i] - self['z'][0, i]))
+    def adjust_vmr(self):
+        """Adjust water vapor VMR values above the colod point tropopause."""
+        i = self.cold_point_index
+        self['H2O'].values[0, i:] = self['H2O'][0, i]
 
 
 class AtmosphereFixedVMR(Atmosphere):
@@ -237,12 +235,14 @@ class AtmosphereFixedRH(Atmosphere):
             heatingrate (float or ndarray):
                 Heatingrate (already scaled with timestep) [K].
         """
-        # Store initial relative humidty profile.
-        RH = self.relative_humidity
+        RH = self.relative_humidity  # Store initial relative humidity profile.
 
         self['T'] += heatingrate * timestep  # adjust temperature profile.
 
         self.relative_humidity = RH  # reset original RH profile.
+
+        self.adjust_vmr()  # adjust stratospheric VMR values.
+
 
 class AtmosphereFixedSurfaceTemperature(Atmosphere):
     """ Atmosphere model with fixed surface temperature and fixed tropospheric
@@ -348,6 +348,8 @@ class AtmosphereConvective(Atmosphere):
 
         self.relative_humidity = RH  # adjust VMR to preserve RH profile.
 
+        self.adjust_vmr()  # adjust stratospheric VMR values.
+
 
 class AtmosphereConUp(AtmosphereConvective):
     """Atmosphere model with preserved RH and fixed temperature lapse rate,
@@ -384,6 +386,8 @@ class AtmosphereConUp(AtmosphereConvective):
         self.convective_adjustment(con_top)
 
         self.relative_humidity = RH  # reset original RH profile.
+
+        self.adjust_vmr()  # adjust stratospheric VMR values.
 
 
 class AtmosphereFixedMoistConvective(AtmosphereConUp):
@@ -443,6 +447,8 @@ class AtmosphereFixedMoistConvective(AtmosphereConUp):
 
         self.relative_humidity = RH # reset original RH profile.
 
+        self.adjust_vmr()  # adjust stratospheric VMR values.
+
 class AtmosphereMoistConvective(AtmosphereConUp):
     """Atmosphere model with preserved RH and a temperature and humidity
     -dependent lapse rate.
@@ -477,3 +483,4 @@ class AtmosphereMoistConvective(AtmosphereConUp):
 
         self.relative_humidity = RH # reset original RH profile.
 
+        self.adjust_vmr()  # adjust stratospheric VMR values.
