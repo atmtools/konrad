@@ -28,6 +28,7 @@ setup(
     install_requires=[
         'matplotlib>=2.0.0',
         'netcdf4>=1.2.7',
+        'numba>=0.33.0',
         'numpy>=1.12.0',
         'scipy>=0.19.0',
         'typhon>=0.3.6',

@@ -4,6 +4,7 @@
 import logging
 
 import numpy as np
+import numba
 
 from netCDF4 import Dataset
 
@@ -64,6 +65,7 @@ def create_relative_humidity_profile(p, RH_s=0.75):
     return np.round(rh, decimals=4)
 
 
+# @numba.jit()
 def ensure_decrease(array):
     """Ensure that a given array is decreasing.
 
@@ -73,7 +75,7 @@ def ensure_decrease(array):
     Returns:
         ndarray: Monotonously decreasing array.
     """
-    for i in range(1, np.size(array)):
+    for i in range(1, len(array)):
         if array[i] > array[i-1]:
             array[i] = array[i-1]
     return array
