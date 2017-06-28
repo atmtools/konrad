@@ -11,6 +11,7 @@ stefan_boltzmann = 5.67e-8  # W m^-2 K^-4
 
 # Variable descriptions
 variable_description = {
+    # Atmospheric variables
     'plev': {
         'units': 'Pa',
         'standard_name': 'air_pressure',
@@ -64,6 +65,7 @@ variable_description = {
         'standard_name': 'methane_mixing_ratio',
         'arts_name': 'abs_species-CH4',
         },
+    # Radiative quantities
     'lw_htngrt': {
         'units': 'K / day',
         'standard_name': 'tendency_of_air_temperature_due_to_longwave_heating',
@@ -127,4 +129,29 @@ variable_description = {
         'units': 'K / day',
         'standard_name': 'tendency_of_air_temperature',
         },
+    # Surface parameters
+    'albedo': {
+        'units': '1',
+        'standard_name': 'surface_albedo',
+    },
+    'pressure': {
+        'units': 'Pa',
+        'standard_name': 'surface_pressure',
+    },
+    'temperature': {
+        'units': 'K',
+        'standard_name': 'surface_temperature',
+    },
+    'cp': {
+        'units': 'J / kg / K',
+        'standard_name': 'surface_heat_capacity',
+    },
+    'rho': {
+        'units': 'kg / m**3',
+        'standard_name': 'soil_density',
+    },
+    'dz': {
+        'units': 'm',
+        'standard_name': 'surface_thickness',
+    },
 }

@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-class RCE():
+class RCE:
     """Implementation of a radiative-convective equilibrium model.
 
     Examples:
@@ -32,7 +32,7 @@ class RCE():
             surface (Surface): An surface object inherited from
                 `conrad.surface.Surface`.
             outfile (str): netCDF4 file to store output.
-            writevery(int or float): Set frequency in which to write output.
+            writeevery(int or float): Set frequency in which to write output.
                 int: Every nth timestep is written.
                 float: Every nth day is written.
             timestep (float): Iteration time step in days.
@@ -116,11 +116,13 @@ class RCE():
         else:
             raise TypeError('Only except input of type `float` or `int`.')
 
-    # TODO: Consider implementing a more powerful netCDF usage. Currently
-    # storing values from different sub-modules will be difficult.
+    # TODO: Consider implementing netCDF writing in a cleaner way. Currently
+    # variables from different Datasets are hard to distinguish. Maybe
+    # dive into the group mechanism in netCDF.
     def create_outfile(self):
         """Create netCDF4 file to store simulation results."""
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
+        data.merge(self.surface, inplace=True)
         data.to_netcdf(self.outfile,
                        mode='w',
                        unlimited_dims=['time'],
@@ -130,15 +132,17 @@ class RCE():
         """Append the current atmospheric state to the netCDF4 file specified
         in ``self.outfile``.
         """
+        data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
+        data.merge(self.surface, inplace=True)
+
         utils.append_timestep_netcdf(
             filename=self.outfile,
-            data=self.atmosphere.merge(self.heatingrates,
-                                       overwrite_vars='H2O'),
+            data=data,
             timestamp=self.get_hours_passed(),
             )
 
     def run(self):
-        """Run the radiative-convective equilibirum model."""
+        """Run the radiative-convective equilibrium model."""
         logger.info('Start RCE model run.')
 
         while self.niter < self.max_iterations:
@@ -157,13 +161,13 @@ class RCE():
             # Calculate temperature change for convergence check.
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T
 
-            # Apply heatingrates to the the surface.
-            s = (self.heatingrates['sw_flxd'].values[0, 0]
-                 - self.heatingrates['sw_flxu'].values[0, 0])
-            ir = self.heatingrates['lw_flxd'].values[0, 0]
-            self.surface.adjust(s, ir)
-            logger.debug(
-                f'Surface temperature: {self.surface.temperature:.4f} K'
+            # Apply heatingrates/fluxes to the the surface.
+            self.surface.adjust(
+                sw_down=self.heatingrates['sw_flxd'].values[0, 0],
+                sw_up=self.heatingrates['sw_flxu'].values[0, 0],
+                lw_down=self.heatingrates['lw_flxd'].values[0, 0],
+                lw_up=self.heatingrates['lw_flxu'].values[0, 0],
+                timestep=self.timestep,
             )
 
             if self.check_if_write():
@@ -173,7 +177,7 @@ class RCE():
                     self.append_to_netcdf()
 
             if self.is_converged():
-                logger.info('Converged after %s iterations.' % self.niter)
+                logger.info(f'Converged after {self.niter} iterations.')
                 break
             else:
                 self.niter += 1

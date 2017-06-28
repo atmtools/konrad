@@ -73,7 +73,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
             d[var] = DataArray(profile[np.newaxis, :], dims=('time', 'plev',))
 
-        d.append_description()  # Append variable descriptions.
+        utils.append_description(d)  # Append variable descriptions.
 
         return d
 
@@ -98,7 +98,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         for var in atmosphere_variables:
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
 
-        d.append_description()  # Append variable descriptions.
+        utils.append_description(d)  # Append variable descriptions.
 
         return d
 
@@ -124,15 +124,9 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         for var in atmosphere_variables:
             d[var] = DataArray(data[var][[timestep], :], dims=('time', 'plev',))
 
-        d.append_description()  # Append variable descriptions.
+        utils.append_description(d)  # Append variable descriptions.
 
         return d
-
-    def append_description(self):
-        """Append variable attributes to dataset."""
-        for key in self.keys():
-            if key in constants.variable_description:
-                self[key].attrs = constants.variable_description[key]
 
     # TODO: This function could handle the nasty time dimension in the future.
     # Allowing to set two-dimensional variables using a 1d-array, if one

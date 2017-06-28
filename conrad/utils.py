@@ -4,9 +4,9 @@
 import logging
 
 import numpy as np
-import numba
-
 from netCDF4 import Dataset
+
+from conrad import constants
 
 
 __all__ = [
@@ -14,6 +14,7 @@ __all__ = [
     'create_relative_humidity_profile',
     'ensure_decrease',
     'calculate_halflevels',
+    'append_description',
 ]
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def append_timestep_netcdf(filename, data, timestamp):
         data (dict{ndarray}): Dict-like object containing the data arrays.
             The key is the variable name and the value is an ``ndarray``, a
             ``pandas.Series`` or an ``xarray.DataArray`` e.g.:
-                >>> data = {'T': np.array(290, 295, 300)}
+                >>> data = {'T': np.array([290, 295, 300])}
 
         timestamp (float): Timestamp of values appended.
     """
@@ -40,32 +41,37 @@ def append_timestep_netcdf(filename, data, timestamp):
         t = nc.dimensions['time'].size  # get index to store data.
         nc.variables['time'][t] = timestamp  # append timestamp.
 
-        # Append data for each variable in ``data`` that has the
-        # dimensions ``time`` and ``plev``.
+        # Append data for each variable in ``data``.
         for var in data:
             # Append variable if it has a `time` dimension and is no
             # dimension itself.
             if 'time' in nc[var].dimensions and var not in nc.dimensions:
-                if hasattr(data[var], 'values'):
-                    nc.variables[var][t, :] = data[var].values
+                # TODO: Find a cleaner way to handle different data dimensions.
+                if 'plev' in nc[var].dimensions:
+                    if hasattr(data[var], 'values'):
+                        nc.variables[var][t, :] = data[var].values
+                    else:
+                        nc.variables[var][t, :] = data[var]
                 else:
-                    nc.variables[var][t, :] = data[var]
+                    if hasattr(data[var], 'values'):
+                        nc.variables[var][t] = data[var].values
+                    else:
+                        nc.variables[var][t] = data[var]
 
 
-def create_relative_humidity_profile(p, RH_s=0.75):
+def create_relative_humidity_profile(p, rh_s=0.75):
     """Create an exponential relative humidity profile.
 
     Parameters:
         p (ndarray): Pressure.
-        RH_s (float): Relative humidity at first pressure level.
+        rh_s (float): Relative humidity at first pressure level.
 
     Returns:
         ndarray: Relative humidtiy."""
-    rh = RH_s / (np.exp(1) - 1) * (np.exp(p / p[0]) - 1)
+    rh = rh_s / (np.exp(1) - 1) * (np.exp(p / p[0]) - 1)
     return np.round(rh, decimals=4)
 
 
-# @numba.jit()
 def ensure_decrease(array):
     """Ensure that a given array is decreasing.
 
@@ -82,7 +88,7 @@ def ensure_decrease(array):
 
 
 def calculate_halflevels(level):
-    """Returns the linear inteprolated halflevels for given array.
+    """Returns the linear interpolated halflevels for given array.
 
     Parameters:
         level (ndarray): Data array.
@@ -91,10 +97,29 @@ def calculate_halflevels(level):
         ndarray: Coordinates at halflevel.
 
     Examples:
-        >>> interpolate_halflevels([0, 1, 2, 4])
+        >>> calculate_halflevels([0, 1, 2, 4])
         array([ 0.5,  1.5,  3. ])
     """
     inter = (level[1:] + level[:-1]) / 2
     bottom = level[0] - (level[1] - level[0])
     top = level[-1] / 2
     return np.hstack((bottom, inter, top))
+
+
+def append_description(dataset, description=None):
+    """Append variable attributes to a given dataset.
+
+    Parameters:
+          dataset (xarray.Dataset): Dataset including variables to describe.
+          description (dict): Dictionary containing variable descriptions.
+            The keys are the variable keys used in the Dataset.
+            The values are dictionaries themselves containing attributes
+            and their names as keys, e.g.:
+                desc = {'T': {'units': 'K', 'standard_name': 'temperature'}}
+    """
+    if description is None:
+        description = constants.variable_description
+
+    for key in dataset.keys():
+        if key in description:
+            dataset[key].attrs = constants.variable_description[key]

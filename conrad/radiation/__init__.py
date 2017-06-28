@@ -7,7 +7,7 @@ from xarray import Dataset
 import numpy as np
 
 from . import utils
-from conrad import constants
+from conrad.utils import append_description
 
 
 __all__ = [
@@ -22,7 +22,9 @@ class Radiation(metaclass=abc.ABCMeta):
         """Return a radiation model.
 
         Parameters:
-            zenith (float): Zenith angle of the sun.
+            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            surface (conrad.surface.Surface): Surface model.
+            zenith_angle (float): Zenith angle of the sun.
         """
         self.atmosphere = atmosphere
         self.surface = surface
@@ -59,7 +61,7 @@ class PSRAD(Radiation):
             if gas in atmosphere:
                 ret.append(atmosphere[gas].values * 1e6)  # Append gas in ppm.
             else:
-                ret.append(np.zeros(p.size))
+                ret.append(np.zeros(np.size(p)))
 
         return tuple(ret)
 
@@ -134,8 +136,6 @@ class PSRAD(Radiation):
             coords={'plev': atmosphere['plev'].values}
             )
 
-        # Append variable descriptions.
-        for key in ret.keys():
-            ret[key].attrs = constants.variable_description.get(key, None)
+        append_description(ret)  # Append variable descriptions.
 
         return ret
