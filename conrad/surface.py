@@ -102,10 +102,12 @@ class SurfaceNoHeatCapacity(Surface):
         Notes:
             The surface is assumed to have no heat capacity.
         """
-        net_down_flux = (sw_down - sw_up) + sw_down
-        self['temperature'] = (net_down_flux / constants.stefan_boltzmann)**0.25
+        net_down_flux = (sw_down - sw_up) + lw_down
+        t_new = (net_down_flux / constants.stefan_boltzmann)**0.25
 
-        logger.debug(f'Surface temperature: {self.temperature.values[0]:.4f} K')
+        self['temperature'].values[0] = t_new
+
+        logger.debug(f'Surface temperature: {t_new:.4f} K')
 
 
 class SurfaceHeatCapacity(Surface):
@@ -123,6 +125,8 @@ class SurfaceHeatCapacity(Surface):
         self['rho'] = rho
         self['dz'] = dz
 
+        utils.append_description(self)
+
     def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
         """Increase the surface temperature by given heatingrate.
 
@@ -132,9 +136,6 @@ class SurfaceHeatCapacity(Surface):
             lw_down (float): Longwave downward flux [W / m**2].
             lw_up (float): Longwave upward flux [W / m**2].
             timestep (float): Timestep in days.
-
-        Notes:
-            The surface is assumed to have no heat capacity.
         """
         timestep *= 24 * 60 * 60  # Convert timestep to seconds.
 
