@@ -21,6 +21,8 @@ import netCDF4
 import numpy as np
 from xarray import Dataset, DataArray
 
+import copy
+
 from conrad import constants
 from conrad import utils
 
@@ -238,31 +240,6 @@ class AtmosphereFixedRH(Atmosphere):
         self.adjust_vmr()  # adjust stratospheric VMR values.
 
 
-class AtmosphereFixedSurfaceTemperature(Atmosphere):
-    """ Atmosphere model with fixed surface temperature and fixed tropospheric
-    lapse rate.
-    """
-    def convective_adjustment(self, lapse=0.0065, temperature=288):
-        
-        heights = self['z'][0, :]
-        fixedT = np.zeros(heights.shape)
-        for lev in range(0, len(fixedT)):
-            fixedT[lev] = temperature - lapse * (heights[lev]-heights[0])
-        
-        #r_lapse = self.get_lapse_rates()
-        
-        alev = len(fixedT) - 1
-        while fixedT[alev] < self['T'][0, alev]:
-            alev -= 1
-        self['T'][0, :alev] = fixedT[:alev]
-        
-    def adjust(self, heatingrate, timestep):
-        
-        self['T'] += heatingrate * timestep
-        
-        self.convective_adjustment(lapse=0.0065, temperature=305)
-
-
 class AtmosphereConvective(Atmosphere):
     """Atmosphere model with preserved RH and fixed temperature lapse rate.
 
@@ -272,6 +249,15 @@ class AtmosphereConvective(Atmosphere):
 
     Implementation of Sally's convection scheme.
     """
+    def energy_excess(self, T_rad):
+        p = self['plev']
+        z = self['z'][0, :]
+        T = self['T'][0, :]
+        density = typhon.physics.density(p, T)
+        Cp = constants.isobaric_mass_heat_capacity
+        excess = np.trapz(density*Cp*(T-T_rad), z)
+        return excess
+    
     def convective_top(self, lapse):
         """Find the top of the convective layer, so that energy is conserved.
 
@@ -289,14 +275,17 @@ class AtmosphereConvective(Atmosphere):
         
             start_index = self.find_first_unstable_layer()
             if start_index is None:
-                return
+                return None, None
 
+            termdiff = 0
             for a in range(start_index, len(z)):
                 term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
                 term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
                 if (term1 - term2) > 0:
                     break
-            return a
+                termdiff = term1 - term2
+            frac = -termdiff / ((term1-term2)-termdiff)
+            return a, frac
         
         # Lapse rate varies with height
         else:
@@ -332,19 +321,47 @@ class AtmosphereConvective(Atmosphere):
                 T_con[level] = T_rad[ctop] + lapse_sum
 
         self['T'].values = T_con.values[np.newaxis, :]
+    
+    def convective_adjustmenttop(self, ctop, energydiff):
+        """
+        Make the convective adjustment closer to energy conserving.
+        
+        Parameters:
+            ctop (float): array index,
+                the level to be adjusted
+            energydiff (float):
+                the amount of energy to put into this layer
+        """
+        Cp = constants.isobaric_mass_heat_capacity
+        p = self['plev'][ctop]
+        T = self['T'][0, ctop]
+        density = typhon.physics.density(p, T)
+        layerthickness = self['z'][0, ctop+1]-self['z'][0, ctop-1]
+        Tchange = -2*energydiff / (layerthickness * density * Cp)
+        
+        self['T'][0, ctop] += Tchange/1000
 
     def adjust(self, heatingrates, timestep):
         RH = self.relative_humidity
 
         self['T'] += heatingrates * timestep
-        con_top = self.convective_top(lapse=0.0065)
-        self.convective_adjustment(con_top, lapse=0.0065)
+
+        T_rad = copy.copy(self['T'][0, :])
+        ct, frct = self.convective_top(lapse=0.0065)
+        ct -= 1
+        z = self['z'][0, :]
+        levelup_T_at_ct = self['T'][0, ct+1] - 0.0065*(z[ct] - z[ct+1])
+        self['T'][0, ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
+        self.convective_adjustment(ct, lapse=0.0065)
+        
+        td = self.energy_excess(T_rad)
+        self.convective_adjustmenttop(ct+1, td)
 
         self.relative_humidity = RH  # adjust VMR to preserve RH profile.
 
         self.adjust_vmr()  # adjust stratospheric VMR values.
 
-
+        
 class AtmosphereConUp(AtmosphereConvective):
     """Atmosphere model with preserved RH and fixed temperature lapse rate,
     that includes a cooling term due to upwelling in the statosphere.

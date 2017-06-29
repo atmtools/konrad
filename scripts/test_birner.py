@@ -18,18 +18,19 @@ import typhon
 
 # Load the FASCOD atmosphere.
 gf = typhon.arts.xml.load('data/tropical.xml')
+#gf = gf.extract_slice(slice(1, None), axis=1)  # omit bottom level
 
 # Refine original pressure grid.
-p = typhon.math.nlogspace(1100e2, 0.1e2, 150)
+p = typhon.math.nlogspace(1100e2, 0.1e2, 300)
 gf.refine_grid(p, axis=1)
 
 # Create an atmosphere model.
-# a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-a = conrad.atmosphere.AtmosphereConUp.from_atm_fields_compact(gf)
+#a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
+#a['CO2'] *= 2
 
 # Create a sufrace model.
-# s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
-s = conrad.surface.SurfaceCoupled.from_atmosphere(a)
+s = conrad.surface.SurfaceNoHeatCapacity.from_atmosphere(a)
 
 # Create a sufrace model.
 r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
@@ -39,11 +40,11 @@ rce = conrad.RCE(
     atmosphere=a,
     surface=s,
     radiation=r,
-    delta=0.001,
+    delta=0,#0.001,
     timestep=0.2,
     writeevery=1,
-    max_iterations=800,
-    outfile='results/test.nc'
+    max_iterations=6000,
+    outfile='results/convectivenew_300layers_longrun3.nc'
     )
 
 # The with block is not required for the model to run but prevents
@@ -67,4 +68,4 @@ for ax in axes:
     ax.set_ylim(p.max(), p.min())
     ax.grid('on')
 
-fig.savefig('plots/heatingrates_conup5_fixedrh.pdf')
+fig.savefig('plots/heatingrates.pdf')
