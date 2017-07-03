@@ -154,4 +154,8 @@ variable_description = {
         'units': 'm',
         'standard_name': 'surface_thickness',
     },
+    'height': {
+        'units': 'm',
+        'standard_name': 'surface_height',
+    },
 }

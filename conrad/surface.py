@@ -13,7 +13,6 @@ from . import (constants, utils)
 __all__ = [
     'Surface',
     'SurfaceFixedTemperature',
-    'SurfaceAdjustableTemperature',
     'SurfaceNoHeatCapacity',
     'SurfaceHeatCapacity',
 ]
@@ -24,19 +23,24 @@ logger = logging.getLogger()
 
 class Surface(Dataset, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for surface models."""
-    def __init__(self, albedo=0.3, temperature=288., pressure=101325.):
+    def __init__(self, albedo=0.3, temperature=288., pressure=101325.,
+                 height=0.):
         """Initialize a surface model.
 
         Parameters:
             albedo (float): Surface albedo.
             temperature (float): Surface temperature [K].
             pressure (float): Surface pressure [Pa].
+            height (float): Surface height [m].
         """
         super().__init__()
         self['albedo'] = albedo
         self['pressure'] = pressure
         self['time'] = [0]
-        self['temperature'] = DataArray(np.array([temperature]), dims=('time',))
+        self['height'] = height
+        self['temperature'] = DataArray(np.array([temperature]),
+                                        dims=('time',),
+                                        )
 
         utils.append_description(self)
 
@@ -60,15 +64,20 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         Parameters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
         """
-        # Copy temperature of lowst atmosphere layer.
+        # Copy temperature of lowest atmosphere layer.
         t_sfc = atmosphere['T'].values[0, 0]
 
         # Extrapolate surface pressure from last two atmosphere layers.
         p = atmosphere['plev'].values
         p_sfc = p[0] - np.diff(p)[0]
 
+        # Extrapolate surface pressure from last two atmosphere layers.
+        z = atmosphere['z'].values[0, :]
+        z_sfc = z[0] - np.diff(z)[0]
+
         return cls(temperature=t_sfc,
                    pressure=p_sfc,
+                   height=z_sfc,
                    **kwargs,
                    )
 
@@ -119,8 +128,8 @@ class SurfaceHeatCapacity(Surface):
           dz (float): Surface thickness [m].
           **kwargs: Additional keyword arguments are passed to `Surface`.
     """
-    def __init__(self, cp=1000, rho=1000, dz=100, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *args, cp=1000, rho=1000, dz=100, **kwargs):
+        super().__init__(*args, **kwargs)
         self['cp'] = cp
         self['rho'] = rho
         self['dz'] = dz
@@ -146,4 +155,5 @@ class SurfaceHeatCapacity(Surface):
         self['temperature'] += (timestep * net_flux /
                                 (self.cp * self.rho * self.dz))
 
-        logger.debug(f'Surface temperature: {self.temperature.values[0]:.4f} K')
+        logger.debug('Surface temperature: '
+                     f'{self.temperature.values[0]:.4f} K')
