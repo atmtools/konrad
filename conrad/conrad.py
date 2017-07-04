@@ -151,16 +151,6 @@ class RCE:
             # Caculate shortwave, longwave and net heatingrates.
             self.calculate_heatingrates()
 
-            # Apply heatingrates to the temperature profile.
-            T = self.atmosphere['T'].values.copy()  # save old T profile.
-            self.atmosphere.adjust(
-                self.heatingrates['net_htngrt'],
-                self.timestep
-                )
-
-            # Calculate temperature change for convergence check.
-            self.atmosphere['deltaT'] = self.atmosphere['T'] - T
-
             # Apply heatingrates/fluxes to the the surface.
             self.surface.adjust(
                 sw_down=self.heatingrates['sw_flxd'].values[0, 0],
@@ -169,6 +159,17 @@ class RCE:
                 lw_up=self.heatingrates['lw_flxu'].values[0, 0],
                 timestep=self.timestep,
             )
+
+            # Apply heatingrates to the temperature profile.
+            T = self.atmosphere['T'].values.copy()  # save old T profile.
+            self.atmosphere.adjust(
+                self.heatingrates['net_htngrt'],
+                self.timestep,
+                surface=self.surface,
+                )
+
+            # Calculate temperature change for convergence check.
+            self.atmosphere['deltaT'] = self.atmosphere['T'] - T
 
             if self.check_if_write():
                 if self.niter == 0:
