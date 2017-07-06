@@ -254,17 +254,8 @@ class AtmosphereConvective(Atmosphere):
         self['lapse'] = lapse
         
         utils.append_description(self)  # Append variable descriptions.
-        
-    def energy_excess(self, T_rad):
-        p = self['plev']
-        z = self['z'][0, :]
-        T = self['T'][0, :]
-        density = typhon.physics.density(p, T)
-        Cp = constants.isobaric_mass_heat_capacity
-        excess = np.trapz(density*Cp*(T-T_rad), z)
-        return excess
     
-    def convective_top(self, lapse, surface):
+    def convective_top(self, surface):
         """Find the top of the convective layer, so that energy is conserved.
 
         Parameters:
@@ -275,6 +266,7 @@ class AtmosphereConvective(Atmosphere):
         T_rad = self['T'][0, :]
         density = typhon.physics.density(p, T_rad)
         Cp = constants.isobaric_mass_heat_capacity
+        lapse = self.lapse
         
         z_s = surface.height
         density_s = surface.rho
@@ -291,86 +283,82 @@ class AtmosphereConvective(Atmosphere):
 
             termdiff = 0
             for a in range(start_index, len(z)):
-                term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
                 term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
+                term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
                 term_s = dz_s*density_s*Cp_s*(T_rad[a]-(z_s-z[a])*lapse-T_rad_s)
-                if (term1 - term2 + term_s) > 0: #(term1 - term2) > 0:
+                if (term1 - term2 + term_s) > 0:
                     break
-                termdiff = float(term1 - term2 + term_s)
-            frac = -termdiff / ((term1-term2+term_s)-termdiff)
-            return a, float(frac)
+                termdiff = term1 - term2 + term_s
+            frct = -termdiff / ((term1-term2+term_s)-termdiff)
+            return a-1, float(frct)
         
         # Lapse rate varies with height
         else:
             for a in range(10, len(z)):
-                term2b = np.trapz((density*Cp*T_rad)[:a], z[:a])
                 term1 = T_rad[a]*np.trapz((density*Cp)[:a], z[:a])
+                term3 = np.trapz((density*Cp*T_rad)[:a], z[:a])
+                term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.trapz(lapse[0:a], z[0:a])-T_rad_s)
                 inintegral = np.zeros((a,))
                 for b in range(0, a):
                     inintegral[b] = np.trapz(lapse[b:a], z[b:a])
-                term3 = np.trapz((density*Cp)[:a]*inintegral, z[:a])
-                if (term1 + term3 - term2b) > 0:
+                term2 = np.trapz((density*Cp)[:a]*inintegral, z[:a])
+                if (term1 + term2 - term3 + term_s) > 0:
                     break
-            return a
+                termdiff = term1 + term2 - term3 + term_s
+            frct = -termdiff / ((term1+term2-term3+term_s)-termdiff)
+            return a-1, float(frct)
 
-    def convective_adjustment(self, ctop, lapse, surface):
+    def convective_adjustment(self, ct, frct, surface):
         """Apply the convective adjustment.
 
         Parameters:
-            ctop (float): array index,
+            ct (float): array index,
                 the top level for the convective adjustment
+            frct (float):
+                fraction: energy imbalance over energy difference between 
+                two convective profiles
             lapse (float):
                 adjust to this lapse rate value
         """
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
         T_con = T_rad.copy()
+        lapse = self.lapse
         z_s = surface.height
+        
+        # Fixed lapse rate case
         if isinstance(lapse, float):
-            surface['temperature'][0] = T_rad[ctop] - (z_s-z[ctop])*lapse
-            for level in range(0, ctop):
-                T_con[level] = T_rad[ctop] - (z[level]-z[ctop])*lapse
+            # adjust temperature at convective top
+            levelup_T_at_ct = self['T'][0, ct+1] - lapse*(z[ct] - z[ct+1])
+            T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
+            # adjust surface temperature
+            surface['temperature'][0] = T_con[ct] - (z_s-z[ct])*lapse
+            # adjust temperature of other atmospheric layers
+            for level in range(0, ct):
+                T_con[level] = T_con[ct] - (z[level]-z[ct])*lapse
+        
+        # Lapse rate varies with height
         else:
-            for level in range(0, ctop):
-                lapse_sum = np.trapz(lapse[level:ctop], z[level:ctop])
-                T_con[level] = T_rad[ctop] + lapse_sum
+            # adjust temperature at convective top
+            # TODO: What index do I need for lapse here?
+            levelup_T_at_ct = self['T'][0, ct+1] - lapse[ct+1]*(z[ct]-z[ct+1])
+            T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
+            # adjust surface temperature
+            surface['temperature'][0] = T_con[ct] + np.trapz(lapse[0:ct], z[0:ct])
+            # adjust temperature of other atmospheric layers
+            for level in range(0, ct):
+                lapse_sum = np.trapz(lapse[level:ct], z[level:ct])
+                T_con[level] = T_rad[ct] + lapse_sum
 
         self['T'].values = T_con.values[np.newaxis, :]
-    
-    def convective_adjustmenttop(self, ctop, energydiff):
-        """
-        Make the convective adjustment closer to energy conserving.
-        
-        Parameters:
-            ctop (float): array index,
-                the level to be adjusted
-            energydiff (float):
-                the amount of energy to put into this layer
-        """
-        Cp = constants.isobaric_mass_heat_capacity
-        p = self['plev'][ctop]
-        T = self['T'][0, ctop]
-        density = typhon.physics.density(p, T)
-        layerthickness = self['z'][0, ctop+1]-self['z'][0, ctop-1]
-        Tchange = -2*energydiff / (layerthickness * density * Cp)
-        
-        self['T'][0, ctop] += Tchange/1000
 
     def adjust(self, heatingrates, timestep, surface):
         RH = self.relative_humidity
 
         self['T'] += heatingrates * timestep
 
-        T_rad = copy.copy(self['T'][0, :])
-        ct, frct = self.convective_top(lapse=0.0065, surface=surface)
-        ct -= 1
-        z = self['z'][0, :]
-        levelup_T_at_ct = self['T'][0, ct+1] - 0.0065*(z[ct] - z[ct+1])
-        self['T'][0, ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
-        self.convective_adjustment(ct, lapse=0.0065, surface=surface)
-        
-#        td = self.energy_excess(T_rad)
-#        self.convective_adjustmenttop(ct+1, td)
+        ct, frct = self.convective_top(surface=surface)
+        self.convective_adjustment(ct, frct, surface=surface)
 
         self.relative_humidity = RH  # adjust VMR to preserve RH profile.
 
