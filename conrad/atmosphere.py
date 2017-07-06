@@ -23,6 +23,7 @@ from xarray import Dataset, DataArray
 
 import copy
 
+import conrad
 from conrad import constants
 from conrad import utils
 
@@ -255,7 +256,7 @@ class AtmosphereConvective(Atmosphere):
         
         utils.append_description(self)  # Append variable descriptions.
     
-    def convective_top(self, surface):
+    def convective_top(self, surface, timestep):
         """Find the top of the convective layer, so that energy is conserved.
 
         Parameters:
@@ -267,25 +268,31 @@ class AtmosphereConvective(Atmosphere):
         density = typhon.physics.density(p, T_rad)
         Cp = constants.isobaric_mass_heat_capacity
         lapse = self.lapse
-        
         z_s = surface.height
-        density_s = surface.rho
-        Cp_s = surface.cp
-        dz_s = surface.dz
         T_rad_s = surface.temperature
         
-        # Fixed lapse rate case
-        if isinstance(lapse, float):
+        if type(surface) is conrad.surface.SurfaceHeatCapacity:
+            density_s = surface.rho
+            Cp_s = surface.cp
+            dz_s = surface.dz    
         
+        # Fixed lapse rate case
+        if lapse.shape == ():
+            lp = float(lapse)
             start_index = self.find_first_unstable_layer()
             if start_index is None:
                 return None, None
 
             termdiff = 0
             for a in range(start_index, len(z)):
-                term1 = (T_rad[a]+z[a]*lapse)*np.trapz((density*Cp)[:a], z[:a])
-                term2 = np.trapz((density*Cp*(T_rad+z*lapse))[:a], z[:a])
-                term_s = dz_s*density_s*Cp_s*(T_rad[a]-(z_s-z[a])*lapse-T_rad_s)
+                term1 = (T_rad[a]+z[a]*lp)*np.trapz((density*Cp)[:a], z[:a])
+                term2 = np.trapz((density*Cp*(T_rad+z*lp))[:a], z[:a])
+                if type(surface) is conrad.surface.SurfaceHeatCapacity:
+                    term_s = dz_s*density_s*Cp_s*(T_rad[a]-(z_s-z[a])*lp-T_rad_s)
+                else:
+                    sigma = constants.stefan_boltzmann
+                    T_adj_s = T_rad[a] - (z_s-z[a])*lp
+                    term_s = sigma*(T_adj_s**4 - T_rad_s**4)*timestep
                 if (term1 - term2 + term_s) > 0:
                     break
                 termdiff = term1 - term2 + term_s
@@ -327,15 +334,16 @@ class AtmosphereConvective(Atmosphere):
         z_s = surface.height
         
         # Fixed lapse rate case
-        if isinstance(lapse, float):
+        if lapse.shape == ():
+            lp = float(lapse)
             # adjust temperature at convective top
-            levelup_T_at_ct = self['T'][0, ct+1] - lapse*(z[ct] - z[ct+1])
+            levelup_T_at_ct = self['T'][0, ct+1] - lp*(z[ct] - z[ct+1])
             T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
             # adjust surface temperature
-            surface['temperature'][0] = T_con[ct] - (z_s-z[ct])*lapse
+            surface['temperature'][0] = T_con[ct] - (z_s-z[ct])*lp
             # adjust temperature of other atmospheric layers
             for level in range(0, ct):
-                T_con[level] = T_con[ct] - (z[level]-z[ct])*lapse
+                T_con[level] = T_con[ct] - (z[level]-z[ct])*lp
         
         # Lapse rate varies with height
         else:
@@ -357,7 +365,7 @@ class AtmosphereConvective(Atmosphere):
 
         self['T'] += heatingrates * timestep
 
-        ct, frct = self.convective_top(surface=surface)
+        ct, frct = self.convective_top(surface=surface, timestep=timestep)
         self.convective_adjustment(ct, frct, surface=surface)
 
         self.relative_humidity = RH  # adjust VMR to preserve RH profile.
