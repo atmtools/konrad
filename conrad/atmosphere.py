@@ -47,7 +47,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         """Adjust atmosphere according to given heatingrate."""
 
     @classmethod
-    def from_atm_fields_compact(cls, atmfield):
+    def from_atm_fields_compact(cls, atmfield, **kwargs):
         """Convert an ARTS atm_fields_compact [0] into an atmosphere.
 
         [0] http://arts.mi.uni-hamburg.de/docserver-trunk/variables/atm_fields_compact
@@ -62,7 +62,9 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
-                        })
+                        },
+                **kwargs,
+                )
 
         for var in atmosphere_variables:
             # Get ARTS variable name from variable description.
@@ -79,7 +81,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         return d
 
     @classmethod
-    def from_dict(cls, dictionary):
+    def from_dict(cls, dictionary, **kwargs):
         """Create an atmosphere model from dictionary values.
 
         Parameters:
@@ -94,7 +96,9 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
-                        })
+                        },
+                **kwargs,
+                )
 
         for var in atmosphere_variables:
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
@@ -104,7 +108,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         return d
 
     @classmethod
-    def from_netcdf(cls, ncfile, timestep=-1):
+    def from_netcdf(cls, ncfile, timestep=-1, **kwargs):
         """Create an atmosphere model from a netCDF file.
 
         Parameters:
@@ -120,7 +124,9 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
-                        })
+                        },
+                **kwargs,
+                )
 
         for var in atmosphere_variables:
             d[var] = DataArray(data[var][[timestep], :], dims=('time', 'plev',))

@@ -35,6 +35,10 @@ variable_description = {
         'standard_name': 'height',
         'arts_name': 'z',
         },
+    'lapse': {
+        'units': 'K / m',
+        'standard_name': 'air_temperature_lapse_rate',
+    },
     'H2O': {
         'units': '1',
         'standard_name': 'humidity_mixing_ratio',
