@@ -21,8 +21,6 @@ import netCDF4
 import numpy as np
 from xarray import Dataset, DataArray
 
-import copy
-
 import conrad
 from conrad import constants
 from conrad import utils
@@ -252,7 +250,10 @@ class AtmosphereConvective(Atmosphere):
     """
     def __init__(self, *args, lapse=0.0065, **kwargs):
         super().__init__(*args, **kwargs)
-        self['lapse'] = lapse
+        if isinstance(lapse, float):
+            self['lapse'] = lapse
+        elif isinstance(lapse, np.ndarray):
+            self['lapse'] = DataArray(lapse, dims=('time', 'plev'))
         
         utils.append_description(self)  # Append variable descriptions.
     
@@ -273,19 +274,27 @@ class AtmosphereConvective(Atmosphere):
         T_con[np.where(T_con < T_rad)] = T_rad[np.where(T_con < T_rad)]
         self['T'].values = T_con.values[np.newaxis, :]
         
-        return np.min(np.where(T_con < T_rad)) - 1
+        #return np.min(np.where(T_con < T_rad)) - 1
     
     def convective_top(self, surface, timestep):
         """Find the top of the convective layer, so that energy is conserved.
 
         Parameters:
             lapse (float or array): lapse rate value to adjust to
+            timestep (float): for the case of a surface with no heat capacity,
+                to calculate the energy emitted in that time
         """
         p = self['plev']
         z = self['z'][0, :]
         T_rad = self['T'][0, :]
         density = typhon.physics.density(p, T_rad)
         Cp = constants.isobaric_mass_heat_capacity
+        
+        #TODO
+        #tau = np.zeros(z.shape)
+        #tau[round(len(z)/8):] = np.arange(0, len(tau[round(len(z)/8):])/20, 0.05)
+        #Cp *= np.exp(-tau/timestep) # effective heat capacity
+        
         lapse = self.lapse
         z_s = surface.height
         T_rad_s = surface.temperature
@@ -296,7 +305,7 @@ class AtmosphereConvective(Atmosphere):
             dz_s = surface.dz    
         
         # Fixed lapse rate case
-        if lapse.shape == ():
+        if np.size(lapse) == 1:
             lp = float(lapse)
             start_index = self.find_first_unstable_layer()
             if start_index is None:
@@ -319,6 +328,7 @@ class AtmosphereConvective(Atmosphere):
             return a-1, float(frct)
         
         # Lapse rate varies with height
+        # TODO: add case for surface with no heat capacity
         else:
             for a in range(10, len(z)):
                 term1 = T_rad[a]*np.trapz((density*Cp)[:a], z[:a])
@@ -334,7 +344,7 @@ class AtmosphereConvective(Atmosphere):
             frct = -termdiff / ((term1+term2-term3+term_s)-termdiff)
             return a-1, float(frct)
 
-    def convective_adjustment(self, ct, frct, surface):
+    def convective_adjustment(self, ct, frct, surface, timestep):
         """Apply the convective adjustment.
 
         Parameters:
@@ -343,7 +353,7 @@ class AtmosphereConvective(Atmosphere):
             frct (float):
                 fraction: energy imbalance over energy difference between 
                 two convective profiles
-            lapse (float):
+            lapse (float or array):
                 adjust to this lapse rate value
         """
         z = self['z'][0, :]
@@ -352,8 +362,10 @@ class AtmosphereConvective(Atmosphere):
         lapse = self.lapse
         z_s = surface.height
         
+        #tau = np.zeros(z.shape)
+        #tau[round(len(z)/8):] = np.arange(0, len(tau[round(len(z)/8):])/20, 0.05)
         # Fixed lapse rate case
-        if lapse.shape == ():
+        if np.size(lapse) == 1:
             lp = float(lapse)
             # adjust temperature at convective top
             levelup_T_at_ct = self['T'][0, ct+1] - lp*(z[ct] - z[ct+1])
@@ -361,8 +373,11 @@ class AtmosphereConvective(Atmosphere):
             # adjust surface temperature
             surface['temperature'][0] = T_con[ct] - (z_s-z[ct])*lp
             # adjust temperature of other atmospheric layers
-            for level in range(0, ct):
-                T_con[level] = T_con[ct] - (z[level]-z[ct])*lp
+            T_con[:ct] = T_con[ct] - (z[:ct]-z[ct])*lp
+            
+            #TODO
+            #expo = np.exp(-tau/timestep)
+            #T_con[:ct] = T_con[:ct]*expo[:ct] + T_rad[:ct]*(1-expo[:ct])
         
         # Lapse rate varies with height
         else:
@@ -388,7 +403,7 @@ class AtmosphereConvective(Atmosphere):
             self.convective_adjustment_fixed_surface_temperature(surface=surface)
         else:
             ct, frct = self.convective_top(surface=surface, timestep=timestep)
-            self.convective_adjustment(ct, frct, surface=surface)
+            self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
 
         self.relative_humidity = RH  # adjust VMR to preserve RH profile.
 
@@ -445,21 +460,33 @@ class AtmosphereMoistConvective(AtmosphereConUp):
 
     This atmosphere model preserves the initial relative humidity profile by
     adjusting the water vapor volume mixing ratio. In addition, a convection
-    parameterization is used, which sets the lapse rate to the moist adiabat.
+    parameterization is used, which sets the lapse rate to the moist adiabat,
+    calculated from the previous temperature and humidity profiles.
     """     
-    def adjust(self, heatingrates, timestep, surface, w=0, **kwargs):
-
-        # TODO: Calculate moist lapse rates instead of hardcoding them.
-        # calculate lapse rate based on previous con-rad state.
+    
+    def moistlapse(self):
+        """ 
+        Calculates the moist lapse rate from the atmospheric temperature and 
+            humidity profiles 
+        Parameters:
+            a: atmosphere
+        """
         g = constants.g
         Lv = 2501000
         R = 287
         eps = 0.62197
-        Cp = constants.isobaric_mass_heat_capacity
+        Cp = conrad.constants.isobaric_mass_heat_capacity
         VMR = self['H2O'][0, :]
         T = self['T'][0, :]
         lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
-        self.lapse = lapse # set lapse rate
+        self.lapse = lapse
+    
+    def adjust(self, heatingrates, timestep, surface, w=0, **kwargs):
+
+        # TODO: Calculate moist lapse rates instead of hardcoding them.
+        # calculate lapse rate based on previous con-rad state.
+
+        self.moistlapse # set lapse rate
         
         RH = self.relative_humidity
 
