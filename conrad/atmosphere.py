@@ -198,14 +198,20 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
                 return n
 
     @property
-    def cold_point_index(self):
+    def cold_point_index(self, pmin=1e2):
         """Return the pressure index of the cold point tropopause."""
-        return int(np.argmin(self['T']))
+        return int(np.argmin(self['T'][:, self['plev'] > pmin]))
 
-    def adjust_vmr(self):
-        """Adjust water vapor VMR values above the colod point tropopause."""
+    def apply_H2O_limits(self):
+        """Adjust water vapor VMR values to follow physical limitations."""
+        # Keep water vapor VMR values above the cold point tropopause constant.
         i = self.cold_point_index
         self['H2O'].values[0, i:] = self['H2O'][0, i]
+
+        # TODO: Set an upper VMR value at some point.
+        # # Do not allow mixing ratios above 8 percent.
+        # too_high =  self['H2O'].values > 0.05
+        # self['H2O'].values[too_high] = 0.05
 
 
 class AtmosphereFixedVMR(Atmosphere):
@@ -236,13 +242,12 @@ class AtmosphereFixedRH(Atmosphere):
             heatingrate (float or ndarray):
                 Heatingrate (already scaled with timestep) [K].
         """
-        RH = self.relative_humidity  # Store initial relative humidity profile.
-
         self['T'] += heatingrate * timestep  # adjust temperature profile.
 
-        self.relative_humidity = RH  # reset original RH profile.
+        # Preserve the initial relative humidity profile.
+        self.relative_humidity = self['initial_rel_humid'].values
 
-        self.adjust_vmr()  # adjust stratospheric VMR values.
+        self.apply_H2O_limits()  # adjust stratospheric VMR values.
 
 
 class AtmosphereConvective(Atmosphere):
@@ -401,8 +406,6 @@ class AtmosphereConvective(Atmosphere):
         self['T'].values = T_con.values[np.newaxis, :]
 
     def adjust(self, heatingrates, timestep, surface):
-        RH = self.relative_humidity
-
         self['T'] += heatingrates * timestep
         
         if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
@@ -411,9 +414,10 @@ class AtmosphereConvective(Atmosphere):
             ct, frct = self.convective_top(surface=surface, timestep=timestep)
             self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
 
-        self.relative_humidity = RH  # adjust VMR to preserve RH profile.
+        # Preserve the initial relative humidity profile.
+        self.relative_humidity = self['initial_rel_humid'].values
 
-        self.adjust_vmr()  # adjust stratospheric VMR values.
+        self.apply_H2O_limits()  # adjust stratospheric VMR values.
 
         
 class AtmosphereConUp(AtmosphereConvective):
@@ -441,8 +445,6 @@ class AtmosphereConUp(AtmosphereConvective):
         self['T'] += Q * timestep
 
     def adjust(self, heatingrates, timestep, surface, w=0.0001, **kwargs):
-        RH = self.relative_humidity
-
         self['T'] += heatingrates * timestep
 
         if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
@@ -455,9 +457,10 @@ class AtmosphereConUp(AtmosphereConvective):
         if not isinstance(surface, conrad.surface.SurfaceFixedTemperature):
             self.convective_adjustment(ct, frct, surface=surface)
 
-        self.relative_humidity = RH  # reset original RH profile.
+        # Preserve the initial relative humidity profile.
+        self.relative_humidity = self['initial_rel_humid'].values
 
-        self.adjust_vmr()  # adjust stratospheric VMR values.
+        self.apply_H2O_limits()  # adjust stratospheric VMR values.
 
 
 class AtmosphereMoistConvective(AtmosphereConUp):
@@ -494,8 +497,6 @@ class AtmosphereMoistConvective(AtmosphereConUp):
 
         self.moistlapse # set lapse rate
         
-        RH = self.relative_humidity
-
         self['T'] += heatingrates * timestep
         
         if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
@@ -509,6 +510,7 @@ class AtmosphereMoistConvective(AtmosphereConUp):
         if not isinstance(surface, conrad.surface.SurfaceFixedTemperature):
             self.convective_adjustment(ct, frct, surface=surface)
 
-        self.relative_humidity = RH # reset original RH profile.
+        # Preserve the initial relative humidity profile.
+        self.relative_humidity = self['initial_rel_humid'].values
 
-        self.adjust_vmr()  # adjust stratospheric VMR values.
+        self.apply_H2O_limits()  # adjust stratospheric VMR values.

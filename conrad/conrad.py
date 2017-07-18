@@ -4,6 +4,8 @@
 import logging
 
 import numpy as np
+import xarray as xr
+from typhon.atmosphere import relative_humidity
 
 from . import utils
 
@@ -144,6 +146,17 @@ class RCE:
     def run(self):
         """Run the radiative-convective equilibrium model."""
         logger.info('Start RCE model run.')
+
+        # TODO: Omit 'time' dim, as initial values are constant by definition.
+        logger.debug('Store initial relative humidity profile.')
+        self.atmosphere['initial_rel_humid'] = xr.DataArray(
+            relative_humidity(
+                self.atmosphere['H2O'].values,
+                self.atmosphere['plev'].values,
+                self.atmosphere['T'].values,
+                ),
+            dims=('time', 'plev'),
+            )
 
         while self.niter < self.max_iterations:
             logger.debug('Enter iteration {}.'.format(self.niter))
