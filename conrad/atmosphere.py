@@ -315,17 +315,18 @@ class AtmosphereConvective(Atmosphere):
             Cp_s = surface.cp
             dz_s = surface.dz    
         
+        start_index = self.find_first_unstable_layer()
+        if start_index is None:
+            return None, None
+
         # Fixed lapse rate case
         if np.size(lapse) == 1:
             lp = float(lapse)
-            start_index = self.find_first_unstable_layer()
-            if start_index is None:
-                return None, None
-
+            
             termdiff = 0
             for a in range(start_index, len(z)):
-                term1 = (T_rad[a]+z[a]*lp)*np.trapz((density*Cp)[:a], z[:a])
-                term2 = np.trapz((density*Cp*(T_rad+z*lp))[:a], z[:a])
+                term1 = (T_rad[a]+z[a]*lp)*np.trapz((density*Cp)[:a+1], z[:a+1])
+                term2 = np.trapz((density*Cp*(T_rad+z*lp))[:a+1], z[:a+1])
                 if isinstance(surface, conrad.surface.SurfaceHeatCapacity):
                     term_s = dz_s*density_s*Cp_s*(T_rad[a]-(z_s-z[a])*lp-T_rad_s)
                 elif isinstance(surface, conrad.surface.SurfaceNoHeatCapacity):
@@ -341,14 +342,17 @@ class AtmosphereConvective(Atmosphere):
         # Lapse rate varies with height
         # TODO: add case for surface with no heat capacity
         else:
-            for a in range(10, len(z)):
-                term1 = T_rad[a]*np.trapz((density*Cp)[:a], z[:a])
-                term3 = np.trapz((density*Cp*T_rad)[:a], z[:a])
-                term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.trapz(lapse[0:a], z[0:a])-T_rad_s)
-                inintegral = np.zeros((a,))
-                for b in range(0, a):
-                    inintegral[b] = np.trapz(lapse[b:a], z[b:a])
-                term2 = np.trapz((density*Cp)[:a]*inintegral, z[:a])
+            termdiff = 0
+            lp = lapse[0, :]
+            for a in range(start_index, len(z)):
+                term1 = T_rad[a]*np.trapz((density*Cp)[:a+1], z[:a+1])
+                term3 = np.trapz((density*Cp*T_rad)[:a+1], z[:a+1])
+                term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.trapz(lp[0:a+1], z[0:a+1])-T_rad_s)
+                #term_s = 0
+                inintegral = np.zeros((a+1,))
+                for b in range(0, a+1):
+                    inintegral[b] = np.trapz(lp[b:a+1], z[b:a+1])
+                term2 = np.trapz((density*Cp)[:a+1]*inintegral, z[:a+1])
                 if (term1 + term2 - term3 + term_s) > 0:
                     break
                 termdiff = term1 + term2 - term3 + term_s
@@ -392,16 +396,17 @@ class AtmosphereConvective(Atmosphere):
         
         # Lapse rate varies with height
         else:
+            lp = lapse[0, :]
             # adjust temperature at convective top
             # TODO: What index do I need for lapse here?
-            levelup_T_at_ct = self['T'][0, ct+1] - lapse[ct+1]*(z[ct]-z[ct+1])
+            levelup_T_at_ct = self['T'][0, ct+1] - lp[ct+1]*(z[ct]-z[ct+1])
             T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
             # adjust surface temperature
-            surface['temperature'][0] = T_con[ct] + np.trapz(lapse[0:ct], z[0:ct])
+            surface['temperature'][0] = T_con[ct] + np.trapz(lp[0:ct+1], z[0:ct+1])
             # adjust temperature of other atmospheric layers
             for level in range(0, ct):
-                lapse_sum = np.trapz(lapse[level:ct], z[level:ct])
-                T_con[level] = T_rad[ct] + lapse_sum
+                lapse_sum = np.trapz(lp[level:ct+1], z[level:ct+1])
+                T_con[level] = T_con[ct] + lapse_sum
 
         self['T'].values = T_con.values[np.newaxis, :]
 
