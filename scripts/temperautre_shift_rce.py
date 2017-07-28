@@ -25,7 +25,8 @@ for shift in range(-30, 31, 15):
     # Make isothermal atmosphere.
     rh = typhon.atmosphere.relative_humidity(a['H2O'], a['plev'], a['T'])
     a['T'] += shift
-    a.adjust_vmr(rh)
+    a.relative_humidity = rh
+    a.apply_H2O_limits()
 
     # Create a sufrace model.
     s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
