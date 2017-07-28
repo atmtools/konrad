@@ -2,6 +2,7 @@
 """Module containing classes describing different radiation models.
 """
 import abc
+import logging
 
 from xarray import Dataset
 import numpy as np
@@ -9,6 +10,8 @@ import numpy as np
 from . import utils
 from conrad.utils import append_description
 
+
+logger = logging.getLogger()
 
 __all__ = [
     'Radiation',
@@ -18,22 +21,50 @@ __all__ = [
 
 class Radiation(metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, atmosphere, surface, zenith_angle=42.):
+    def __init__(self, atmosphere, surface, zenith_angle=45., daytime=0.4,
+                 diurnal_cycle=False):
         """Return a radiation model.
 
         Parameters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
             surface (conrad.surface.Surface): Surface model.
             zenith_angle (float): Zenith angle of the sun.
+            daytime (float): Fraction of daytime [day/day].
+                If ``diurnal_cycle`` is True, this keyword has no effect.
+            diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
         """
         self.atmosphere = atmosphere
         self.surface = surface
         self.zenith_angle = zenith_angle
+        self.angle = 0
+        self.diurnal_cycle = diurnal_cycle
+        self.daytime = 1 if diurnal_cycle else daytime
 
     @abc.abstractmethod
     def get_heatingrates(self):
         """Returns the shortwave, longwave and net heatingrates."""
         pass
+
+    def adjust_solar_angle(self, time):
+        """Adjust the zenith angle of the sun according to time of day.
+
+        Parameters:
+            time (float): Current time [days].
+        """
+        # When the diurnal cycle is disabled, use the constant zenith angle.
+        if not self.diurnal_cycle:
+            self.angle = self.zenith_angle
+            return
+
+        # The solar angle is described by a sinusoidal curve that
+        # oscillates around 90° (the horizon).
+        self.angle = ((self.zenith_angle + 90)
+                      + 90 * np.sin(2 * np.pi * time - np.pi / 2))
+
+        # Zenith angles above 90° refer to nighttime. Set those angles to 90°.
+        self.angle = np.min((self.angle, 90))
+
+        logger.debug(f'Solar angle is {self.angle} degree')
 
 
 class PSRAD(Radiation):
@@ -93,7 +124,9 @@ class PSRAD(Radiation):
         P_sfc = surface.pressure / 100
         T_sfc = surface.temperature
         albedo = surface.albedo
-        zenith = self.zenith_angle
+
+        # Use the **current** solar angle as zenith angle for the simulation.
+        zenith = self.angle
 
         self.psrad.setup_single(nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith,
                                 albedo, P_sfc, T_sfc,
@@ -124,14 +157,14 @@ class PSRAD(Radiation):
             # Note: The shortwave fluxes and heatingrates calculated by PSRAD
             # are **inverted**. Therefore, they are flipped to make the input
             # and output of this function consistent.
-            'sw_htngrt': (['time', 'plev'], 0.5 * sw_hr[:, ::-1]),
-            'sw_htngrt_clr': (['time', 'plev'], 0.5 * sw_hr_clr[:, ::-1]),
-            'sw_flxu': (['time', 'phlev'], 0.5 * sw_flxu[:, ::-1]),
-            'sw_flxd': (['time', 'phlev'], 0.5 * sw_flxd[:, ::-1]),
-            'sw_flxu_clr': (['time', 'phlev'], 0.5 * sw_flxu_clr[:, ::-1]),
-            'sw_flxd_clr': (['time', 'phlev'], 0.5 * sw_flxd_clr[:, ::-1]),
+            'sw_htngrt': (['time', 'plev'], self.daytime * sw_hr[:, ::-1]),
+            'sw_htngrt_clr': (['time', 'plev'], self.daytime * sw_hr_clr[:, ::-1]),
+            'sw_flxu': (['time', 'phlev'], self.daytime * sw_flxu[:, ::-1]),
+            'sw_flxd': (['time', 'phlev'], self.daytime * sw_flxd[:, ::-1]),
+            'sw_flxu_clr': (['time', 'phlev'], self.daytime * sw_flxu_clr[:, ::-1]),
+            'sw_flxd_clr': (['time', 'phlev'], self.daytime * sw_flxd_clr[:, ::-1]),
             # Net heatingrate.
-            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + 0.5 * sw_hr[:, ::-1]),
+            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + self.daytime * sw_hr[:, ::-1]),
             },
             coords={'plev': atmosphere['plev'].values}
             )

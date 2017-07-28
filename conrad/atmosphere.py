@@ -202,16 +202,20 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         """Return the pressure index of the cold point tropopause."""
         return int(np.argmin(self['T'][:, self['plev'] > pmin]))
 
-    def apply_H2O_limits(self):
-        """Adjust water vapor VMR values to follow physical limitations."""
+    def apply_H2O_limits(self, vmr_max=1.):
+        """Adjust water vapor VMR values to follow physical limitations.
+
+        Parameters:
+            vmr_max (float): Maximum limit for water vapor VMR.
+        """
         # Keep water vapor VMR values above the cold point tropopause constant.
         i = self.cold_point_index
         self['H2O'].values[0, i:] = self['H2O'][0, i]
 
-        # TODO: Set an upper VMR value at some point.
-        # # Do not allow mixing ratios above 8 percent.
-        # too_high =  self['H2O'].values > 0.05
-        # self['H2O'].values[too_high] = 0.05
+        # NOTE: This has currently no effect, as the vmr_max is set to 1.
+        # Limit the water vapor mixing ratios to a given threshold.
+        too_high =  self['H2O'].values > vmr_max
+        self['H2O'].values[too_high] = vmr_max
 
 
 class AtmosphereFixedVMR(Atmosphere):

@@ -148,6 +148,8 @@ class RCE:
         logger.info('Start RCE model run.')
 
         # TODO: Omit 'time' dim, as initial values are constant by definition.
+        # Store the initial relative humidity profile. Some atmosphere models
+        # preserve this during model run and therefore need the inital state.
         logger.debug('Store initial relative humidity profile.')
         self.atmosphere['initial_rel_humid'] = xr.DataArray(
             relative_humidity(
@@ -162,7 +164,11 @@ class RCE:
             logger.debug('Enter iteration {}.'.format(self.niter))
 
             # Caculate shortwave, longwave and net heatingrates.
+            # Afterwards, they are accesible throug ``self.heatingrates``.
             self.calculate_heatingrates()
+
+            # Adjust the solar angle according to current time.
+            self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
 
             # Apply heatingrates/fluxes to the the surface.
             self.surface.adjust(
@@ -173,8 +179,11 @@ class RCE:
                 timestep=self.timestep,
             )
 
+            # Save the old temperature profile. They are compared with
+            # adjusted values to check if the model has converged.
+            T = self.atmosphere['T'].values.copy()
+
             # Apply heatingrates to the temperature profile.
-            T = self.atmosphere['T'].values.copy()  # save old T profile.
             self.atmosphere.adjust(
                 self.heatingrates['net_htngrt'],
                 self.timestep,
@@ -184,15 +193,21 @@ class RCE:
             # Calculate temperature change for convergence check.
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T
 
+            # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
+                # If we are in the first iteration, a new is created...
                 if self.niter == 0:
                     self.create_outfile()
+                # ... otherwise we just append.
                 else:
                     self.append_to_netcdf()
 
+            # Check if the model run has converged to an equilibrium state.
             if self.is_converged():
+                # If the model is converged, skip further iterations. We did it!
                 logger.info(f'Converged after {self.niter} iterations.')
                 break
+            # Otherweise increase the iteration count and go on.
             else:
                 self.niter += 1
         else:
