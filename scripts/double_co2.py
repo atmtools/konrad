@@ -35,30 +35,37 @@ def scale_co2(factor, **kwargs):
     gf.refine_grid(p, axis=1)
 
     # Create an atmosphere model.
-    a = conrad.atmosphere.AtmosphereFixedVMR.from_atm_fields_compact(gf)
+    # a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+    # a = conrad.atmosphere.AtmosphereFixedVMR.from_atm_fields_compact(gf)
+    a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
+
     a['CO2'] *= factor
 
     # # Create synthetic relative humidity profile.
-    # rh = conrad.utils.create_relative_humidity_profile(p, 0.75)
-    # a.relative_humidity = rh
-    # a.adjust_vmr()
+    rh = conrad.utils.create_relative_humidity_profile(p, 0.75)
+    a.relative_humidity = rh
 
-    # Create a sufrace model.
-    s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
+    # Create a surface model.
+    s = conrad.surface.SurfaceHeatCapacity.from_atmosphere(a, dz=5)
 
-    # Create a sufrace model.
-    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
+    # Create a radiation model.
+    r = conrad.radiation.PSRAD(
+        atmosphere=a,
+        surface=s,
+        daytime=1,
+        zenith_angle=20,
+    )
 
     # Combine atmosphere and surface model into an RCE framework.
     rce = conrad.RCE(
         atmosphere=a,
         surface=s,
         radiation=r,
-        delta=0.000,
-        timestep=0.0625,
-        writeevery=1.,
-        max_iterations=3200,
-        outfile='results/tropical_co2_x{}-re.nc'.format(factor)
+        delta=0.000,  # Run full number of itertations.
+        timestep=1/24,  # 1 hour time step.
+        writeevery=24,  # Write netCDF output every day.
+        max_iterations=14400,  # 600 days maximum simulation time.
+        outfile='results/tropical_co2_x{}-test.nc'.format(factor)
     )
 
     rce.run()  # Start simulation.
