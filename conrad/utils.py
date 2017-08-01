@@ -13,7 +13,7 @@ __all__ = [
     'append_timestep_netcdf',
     'create_relative_humidity_profile',
     'ensure_decrease',
-    'calculate_halflevels',
+    'calculate_halflevel_pressure',
     'append_description',
 ]
 
@@ -87,22 +87,19 @@ def ensure_decrease(array):
     return array
 
 
-def calculate_halflevels(level):
+def calculate_halflevel_pressure(fulllevels):
     """Returns the linear interpolated halflevels for given array.
 
     Parameters:
-        level (ndarray): Data array.
+        fulllevels (ndarray): Pressure at fullevels.
 
     Returns:
         ndarray: Coordinates at halflevel.
 
-    Examples:
-        >>> calculate_halflevels([0, 1, 2, 4])
-        array([ 0.5,  1.5,  3. ])
     """
-    inter = (level[1:] + level[:-1]) / 2
-    bottom = level[0] - (level[1] - level[0])
-    top = level[-1] / 2
+    inter = (fulllevels[1:] + fulllevels[:-1]) / 2
+    bottom = fulllevels[0] - 0.5 * (fulllevels[1] - fulllevels[0])
+    top = 0
     return np.hstack((bottom, inter, top))
 
 

@@ -69,11 +69,11 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
 
         # Extrapolate surface pressure from last two atmosphere layers.
         p = atmosphere['plev'].values
-        p_sfc = p[0] - np.diff(p)[0]
+        p_sfc = p[0] + 0.5 * (p[0] - p[1])
 
         # Extrapolate surface pressure from last two atmosphere layers.
         z = atmosphere['z'].values[0, :]
-        z_sfc = z[0] - np.diff(z)[0]
+        z_sfc = z[0] + 0.5 * (z[0] - z[1])
 
         return cls(temperature=t_sfc,
                    pressure=p_sfc,

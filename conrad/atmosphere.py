@@ -58,7 +58,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         """
         # Create a Dataset with time and pressure dimension.
         plev = atmfield.grids[1]
-        phlev = utils.calculate_halflevels(plev)
+        phlev = utils.calculate_halflevel_pressure(plev)
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
@@ -92,7 +92,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         # Create a Dataset with time and pressure dimension.
         plev = dictionary['plev']
-        phlev = utils.calculate_halflevels(plev)
+        phlev = utils.calculate_halflevel_pressure(plev)
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
@@ -119,7 +119,7 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         # Create a Dataset with time and pressure dimension.
         plev = data['plev'][:]
-        phlev = utils.calculate_halflevels(plev)
+        phlev = utils.calculate_halflevel_pressure(plev)
         time = data['time'][[timestep]]
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
