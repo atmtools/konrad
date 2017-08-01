@@ -341,6 +341,9 @@ class AtmosphereConvective(Atmosphere):
                     break
                 termdiff = term1 - term2 + term_s
             frct = -termdiff / ((term1-term2+term_s)-termdiff)
+            
+            self['convective_top'] = DataArray([a - 1], dims=('time',))
+            
             return a-1, float(frct)
         
         # Lapse rate varies with height
@@ -352,7 +355,6 @@ class AtmosphereConvective(Atmosphere):
                 term1 = T_rad[a]*np.trapz((density*Cp)[:a+1], z[:a+1])
                 term3 = np.trapz((density*Cp*T_rad)[:a+1], z[:a+1])
                 term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.trapz(lp[0:a+1], z[0:a+1])-T_rad_s)
-                #term_s = 0
                 inintegral = np.zeros((a+1,))
                 for b in range(0, a+1):
                     inintegral[b] = np.trapz(lp[b:a+1], z[b:a+1])
@@ -361,6 +363,9 @@ class AtmosphereConvective(Atmosphere):
                     break
                 termdiff = term1 + term2 - term3 + term_s
             frct = -termdiff / ((term1+term2-term3+term_s)-termdiff)
+            
+            self['convective_top'] = DataArray([a - 1], dims=('time',))
+            
             return a-1, float(frct)
 
     def convective_adjustment(self, ct, frct, surface, timestep):
@@ -403,7 +408,7 @@ class AtmosphereConvective(Atmosphere):
             lp = lapse[0, :]
             # adjust temperature at convective top
             # TODO: What index do I need for lapse here?
-            levelup_T_at_ct = self['T'][0, ct+1] - lp[ct+1]*(z[ct]-z[ct+1])
+            levelup_T_at_ct = self['T'][0, ct+1] - 0.5*(lp[ct]+lp[ct+1])*(z[ct]-z[ct+1])
             T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
             # adjust surface temperature
             surface['temperature'][0] = T_con[ct] + np.trapz(lp[0:ct+1], z[0:ct+1])
@@ -464,7 +469,7 @@ class AtmosphereConUp(AtmosphereConvective):
         self.upwelling_adjustment(ct, timestep, w)
         
         if not isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            self.convective_adjustment(ct, frct, surface=surface)
+            self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
@@ -517,7 +522,7 @@ class AtmosphereMoistConvective(AtmosphereConUp):
             self.upwelling_adjustment(ct, timestep, w)
         
         if not isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            self.convective_adjustment(ct, frct, surface=surface)
+            self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
