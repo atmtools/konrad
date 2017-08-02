@@ -295,15 +295,17 @@ class AtmosphereConvective(Atmosphere):
         """Find the top of the convective layer, so that energy is conserved.
 
         Parameters:
-            lapse (float or array): lapse rate value to adjust to
+            lapse (array): lapse rate value to adjust to, given in K/km
             timestep (float): for the case of a surface with no heat capacity,
                 to calculate the energy emitted in that time
         """
         p = self['plev']
-        z = self['z'][0, :]
+        phlev = self['phlev']
+        dp = np.diff(phlev)
         T_rad = self['T'][0, :]
         density = typhon.physics.density(p, T_rad)
         Cp = constants.isobaric_mass_heat_capacity
+        g = constants.g
         
         #TODO
         #tau = np.zeros(z.shape)
@@ -311,7 +313,6 @@ class AtmosphereConvective(Atmosphere):
         #Cp *= np.exp(-tau/timestep) # effective heat capacity
         
         lapse = self.lapse
-        z_s = surface.height
         T_rad_s = surface.temperature
         
         if isinstance(surface, conrad.surface.SurfaceHeatCapacity):
@@ -323,50 +324,45 @@ class AtmosphereConvective(Atmosphere):
         if start_index is None:
             return None, None
 
-        # Fixed lapse rate case
-        if np.size(lapse) == 1:
-            lp = float(lapse)
-            
-            termdiff = 0
-            for a in range(start_index, len(z)):
-                term1 = (T_rad[a]+z[a]*lp)*np.trapz((density*Cp)[:a+1], z[:a+1])
-                term2 = np.trapz((density*Cp*(T_rad+z*lp))[:a+1], z[:a+1])
-                if isinstance(surface, conrad.surface.SurfaceHeatCapacity):
-                    term_s = dz_s*density_s*Cp_s*(T_rad[a]-(z_s-z[a])*lp-T_rad_s)
-                elif isinstance(surface, conrad.surface.SurfaceNoHeatCapacity):
-                    sigma = constants.stefan_boltzmann
-                    T_adj_s = T_rad[a] - (z_s-z[a])*lp
-                    term_s = sigma*(T_adj_s**4 - T_rad_s**4)*timestep
-                if (term1 - term2 + term_s) > 0:
-                    break
-                termdiff = term1 - term2 + term_s
-            frct = -termdiff / ((term1-term2+term_s)-termdiff)
-            
-            self['convective_top'] = DataArray([a - 1], dims=('time',))
-            
-            return a-1, float(frct)
+#        #In terms of pressure coordinates...
+#        termdiff = 0
+#        lp = -lapse[0, :] / (g*density)
+#        for a in range(start_index, len(p)):
+#            term1 = T_rad[a]*np.trapz((Cp/g)*np.ones(a+1), p[:a+1])
+#            term3 = np.trapz((Cp/g*T_rad)[:a+1], p[:a+1])
+#            term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.trapz(lp[0:a+1], p[0:a+1])-T_rad_s)
+#            inintegral = np.zeros((a+1,))
+#            for b in range(0, a+1):
+#                inintegral[b] = np.trapz(lp[b:a+1], p[b:a+1])
+#            term2 = np.trapz((Cp/g)*inintegral, p[:a+1])
+#            if (-term1 - term2 + term3 + term_s) > 0:
+#                break
+#            termdiff = -term1 - term2 + term3 + term_s
+#        frct = -termdiff / ((-term1-term2+term3+term_s)-termdiff)
+#        
+#        self['convective_top'] = DataArray([a - 1], dims=('time',))
+#        
+#        return a-1, float(frct)
         
-        # Lapse rate varies with height
-        # TODO: add case for surface with no heat capacity
-        else:
-            termdiff = 0
-            lp = lapse[0, :]
-            for a in range(start_index, len(z)):
-                term1 = T_rad[a]*np.trapz((density*Cp)[:a+1], z[:a+1])
-                term3 = np.trapz((density*Cp*T_rad)[:a+1], z[:a+1])
-                term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.trapz(lp[0:a+1], z[0:a+1])-T_rad_s)
-                inintegral = np.zeros((a+1,))
-                for b in range(0, a+1):
-                    inintegral[b] = np.trapz(lp[b:a+1], z[b:a+1])
-                term2 = np.trapz((density*Cp)[:a+1]*inintegral, z[:a+1])
-                if (term1 + term2 - term3 + term_s) > 0:
-                    break
-                termdiff = term1 + term2 - term3 + term_s
-            frct = -termdiff / ((term1+term2-term3+term_s)-termdiff)
-            
-            self['convective_top'] = DataArray([a - 1], dims=('time',))
-            
-            return a-1, float(frct)
+        #In terms of pressure coordinates and pressure differences...
+        termdiff = 0
+        lp = -lapse[0, :] / (g*density)
+        for a in range(start_index, len(p)):
+            term1 = T_rad[a] * np.sum((Cp/g)*dp[:a])
+            term3 = np.sum((Cp/g*T_rad)[:a]*dp[:a])
+            term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.sum(lp[0:a]*dp[0:a])-T_rad_s)
+            inintegral = np.zeros((a,))
+            for b in range(0, a):
+                inintegral[b] = np.sum(lp[b:a]*dp[b:a])
+            term2 = np.sum((Cp/g)*inintegral*dp[:a])
+            if (-term1 - term2 + term3 + term_s) > 0:
+                break
+            termdiff = -term1 - term2 + term3 + term_s
+        frct = -termdiff / ((-term1-term2+term3+term_s)-termdiff)
+        
+        self['convective_top'] = DataArray([a - 1], dims=('time',))
+        
+        return a-1, float(frct)
 
     def convective_adjustment(self, ct, frct, surface, timestep):
         """Apply the convective adjustment.
@@ -377,45 +373,42 @@ class AtmosphereConvective(Atmosphere):
             frct (float):
                 fraction: energy imbalance over energy difference between 
                 two convective profiles
-            lapse (float or array):
+            lapse (array):
                 adjust to this lapse rate value
         """
-        z = self['z'][0, :]
+        p = self['plev']
+        phlev = self['phlev']
+        dp = np.diff(phlev)
         T_rad = self['T'][0, :]
         T_con = T_rad.copy()
         lapse = self.lapse
-        z_s = surface.height
+        density = typhon.physics.density(p, T_rad)
+        g = constants.g
         
         #tau = np.zeros(z.shape)
         #tau[round(len(z)/8):] = np.arange(0, len(tau[round(len(z)/8):])/20, 0.05)
-        # Fixed lapse rate case
-        if np.size(lapse) == 1:
-            lp = float(lapse)
-            # adjust temperature at convective top
-            levelup_T_at_ct = self['T'][0, ct+1] - lp*(z[ct] - z[ct+1])
-            T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
-            # adjust surface temperature
-            surface['temperature'][0] = T_con[ct] - (z_s-z[ct])*lp
-            # adjust temperature of other atmospheric layers
-            T_con[:ct] = T_con[ct] - (z[:ct]-z[ct])*lp
+
+        lp = -lapse[0, :] / (g*density)
+#        # adjust temperature at convective top
+#        # TODO: What index do I need for lapse here?
+#        levelup_T_at_ct = self['T'][0, ct+1] - 0.5*(lp[ct]+lp[ct+1])*(p[ct]-p[ct+1])
+#        T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
+#        # adjust surface temperature
+#        surface['temperature'][0] = T_con[ct] + np.trapz(lp[0:ct+1], p[0:ct+1])
+#        # adjust temperature of other atmospheric layers
+#        for level in range(0, ct):
+#            lapse_sum = np.trapz(lp[level:ct+1], p[level:ct+1])
+#            T_con[level] = T_con[ct] + lapse_sum
             
-            #TODO
-            #expo = np.exp(-tau/timestep)
-            #T_con[:ct] = T_con[:ct]*expo[:ct] + T_rad[:ct]*(1-expo[:ct])
-        
-        # Lapse rate varies with height
-        else:
-            lp = lapse[0, :]
-            # adjust temperature at convective top
-            # TODO: What index do I need for lapse here?
-            levelup_T_at_ct = self['T'][0, ct+1] - 0.5*(lp[ct]+lp[ct+1])*(z[ct]-z[ct+1])
-            T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
-            # adjust surface temperature
-            surface['temperature'][0] = T_con[ct] + np.trapz(lp[0:ct+1], z[0:ct+1])
-            # adjust temperature of other atmospheric layers
-            for level in range(0, ct):
-                lapse_sum = np.trapz(lp[level:ct+1], z[level:ct+1])
-                T_con[level] = T_con[ct] + lapse_sum
+        # TODO: What index do I need for lapse here?
+        levelup_T_at_ct = self['T'][0, ct+1] - 0.5*(lp[ct]+lp[ct+1])*(p[ct]-p[ct+1])
+        T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
+        # adjust surface temperature
+        surface['temperature'][0] = T_con[ct] + np.sum(lp[0:ct]*dp[0:ct])
+        # adjust temperature of other atmospheric layers
+        for level in range(0, ct):
+            lapse_sum = np.sum(lp[level:ct]*dp[level:ct])
+            T_con[level] = T_con[ct] + lapse_sum
 
         self['T'].values = T_con.values[np.newaxis, :]
 
