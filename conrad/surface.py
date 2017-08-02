@@ -58,22 +58,28 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def from_atmosphere(cls, atmosphere, **kwargs):
+    def from_atmosphere(cls, atmosphere, lapse=0.0065, **kwargs):
         """Initialize a Surface object using the lowest atmosphere layer.
 
         Parameters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            lapse (float): Lapse rate to calculate the surface temperature
+                from the lowest atmosphere level.
         """
-        # Copy temperature of lowest atmosphere layer.
-        t_sfc = atmosphere['T'].values[0, 0]
-
         # Extrapolate surface pressure from last two atmosphere layers.
+        # The surface is located at the **halflevel** below the atmosphere.
         p = atmosphere['plev'].values
         p_sfc = p[0] + 0.5 * (p[0] - p[1])
 
+        # TODO: Lin. extrap. for both, pressure **and** height, is unphysical.
         # Extrapolate surface pressure from last two atmosphere layers.
         z = atmosphere['z'].values[0, :]
         z_sfc = z[0] + 0.5 * (z[0] - z[1])
+
+        # Calculate the surface temperature following a linear lapse rate.
+        # This prevents "jumps" after the first iteration, when the
+        # convective adjustment is applied.
+        t_sfc = atmosphere['T'].values[0, 0] - lapse * (z[0] - z_sfc)
 
         return cls(temperature=t_sfc,
                    pressure=p_sfc,
