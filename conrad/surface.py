@@ -67,12 +67,11 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
                 from the lowest atmosphere level.
         """
         # Extrapolate surface pressure from last two atmosphere layers.
-<<<<<<<
-	# The surface is located at the **halflevel** below the atmosphere.
+
+        # The surface is located at the **halflevel** below the atmosphere.
         #p = atmosphere['plev'].values
         phlev = atmosphere['phlev'].values
         p_sfc = phlev[0] #p[0] - np.diff(p)[0]
->>>>>>>
 
         # TODO: Lin. extrap. for both, pressure **and** height, is unphysical.
         # Extrapolate surface pressure from last two atmosphere layers.
