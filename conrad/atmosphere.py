@@ -30,7 +30,6 @@ logger = logging.getLogger()
 
 atmosphere_variables = [
     'T',
-    'z',
     'H2O',
     'N2O',
     'O3',
@@ -76,7 +75,11 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
             d[var] = DataArray(profile[np.newaxis, :], dims=('time', 'plev',))
 
-        utils.append_description(d)  # Append variable descriptions.
+        # Calculate the geopotential height.
+        d.calculate_height()
+
+        # Append variable descriptions to the Dataset.
+        utils.append_description(d)
 
         return d
 
@@ -103,7 +106,11 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         for var in atmosphere_variables:
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
 
-        utils.append_description(d)  # Append variable descriptions.
+        # Calculate the geopotential height.
+        d.calculate_height()
+
+        # Append variable descriptions to the Dataset.
+        utils.append_description(d)
 
         return d
 
@@ -131,7 +138,11 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         for var in atmosphere_variables:
             d[var] = DataArray(data[var][[timestep], :], dims=('time', 'plev',))
 
-        utils.append_description(d)  # Append variable descriptions.
+        # Calculate the geopotential height.
+        d.calculate_height()
+
+        # Append variable descriptions to the Dataset.
+        utils.append_description(d)
 
         return d
 
@@ -166,6 +177,29 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
             return self[variable].values
         else:
             return self[variable].values.ravel()
+
+    def calculate_height(self):
+        """Calculate the geopotential height."""
+        g = constants.earth_standard_gravity
+
+        plev = self['plev'].values  # Air pressure at full-levels.
+        phlev = self['phlev'].values  # Air pressure at half-levels.
+        T = self['T'].values  # Air temperature at full-levels.
+
+        # Calculate the air density from current atmospheric state.
+        rho = typhon.physics.density(plev, T)
+
+        # Use the hydrostatic equation to calculate geopotential height from
+        # given pressure, density and gravity.
+        z = np.cumsum(-np.diff(phlev) / (rho * g))
+
+        # If height is already in Dataset, update its values.
+        if 'z' in self:
+            self['z'].values[0, :] = np.cumsum(-np.diff(phlev) / (rho * g))
+        # Otherwise create the DataArray.
+        else:
+            self['z'] = DataArray(z[np.newaxis, :], dims=('time', 'plev'))
+
 
     @property
     def relative_humidity(self):
@@ -227,8 +261,8 @@ class AtmosphereFixedVMR(Atmosphere):
         heatingrates.
 
         Parameters:
-            heatingrate (float or ndarray):
-                Heatingrate (already scaled with timestep) [K].
+            heatingrates (float or ndarray): Heatingrate [K /day].
+            timestep (float): Width of a timestep [day].
         """
         self['T'] += heatingrate * timestep
 
@@ -238,6 +272,10 @@ class AtmosphereFixedRH(Atmosphere):
 
     This atmosphere model preserves the initial relative humidity profile by
     adjusting the water vapor volume mixing ratio.
+
+    Parameters:
+        heatingrates (float or ndarray): Heatingrate [K /day].
+        timestep (float): Width of a timestep [day].
     """
     def adjust(self, heatingrate, timestep, **kwargs):
         """Adjust the temperature and preserve relative humidity.
@@ -246,12 +284,17 @@ class AtmosphereFixedRH(Atmosphere):
             heatingrate (float or ndarray):
                 Heatingrate (already scaled with timestep) [K].
         """
-        self['T'] += heatingrate * timestep  # adjust temperature profile.
+        # Apply heatingrates to temperature profile.
+        self['T'] += heatingrate * timestep
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
 
-        self.apply_H2O_limits()  # adjust stratospheric VMR values.
+        # Adjust stratospheric VMR values.
+        self.apply_H2O_limits()
+
+        # Calculate the geopotential height field.
+        self.calculate_height()
 
 
 class AtmosphereConvective(Atmosphere):
@@ -416,18 +459,38 @@ class AtmosphereConvective(Atmosphere):
         
 
     def adjust(self, heatingrates, timestep, surface):
+        """Adjust the temperature and preserve relative humidity and lapse rate.
+
+        Parameters:
+            heatingrates (float or ndarray): Heatingrate [K /day].
+            timestep (float): Width of a timestep [day].
+        """
+        # Apply heatingrates to temperature profile.
         self['T'] += heatingrates * timestep
         
         if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            self.convective_adjustment_fixed_surface_temperature(surface=surface)
+            self.convective_adjustment_fixed_surface_temperature(
+                surface=surface,
+            )
         else:
+            # Search for the top of convection.
             ct, frct = self.convective_top(surface=surface, timestep=timestep)
-            self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
+
+            self.convective_adjustment(
+                ct,
+                frct,
+                surface=surface,
+                timestep=timestep,
+            )
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
 
-        self.apply_H2O_limits()  # adjust stratospheric VMR values.
+        # Adjust stratospheric VMR values.
+        self.apply_H2O_limits()
+
+        # Calculate the geopotential height field.
+        self.calculate_height()
 
         
 class AtmosphereConUp(AtmosphereConvective):
@@ -455,6 +518,7 @@ class AtmosphereConUp(AtmosphereConvective):
         self['T'] += Q * timestep
 
     def adjust(self, heatingrates, timestep, surface, w=0.0001, **kwargs):
+        #TODO: Wrtie docstring.
         self['T'] += heatingrates * timestep
 
         if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
@@ -470,7 +534,11 @@ class AtmosphereConUp(AtmosphereConvective):
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
 
-        self.apply_H2O_limits()  # adjust stratospheric VMR values.
+        # Adjust stratospheric VMR values.
+        self.apply_H2O_limits()
+
+        # Calculate the geopotential height field.
+        self.calculate_height()
 
 
 class AtmosphereMoistConvective(AtmosphereConUp):
@@ -501,6 +569,7 @@ class AtmosphereMoistConvective(AtmosphereConUp):
         self.lapse = lapse
     
     def adjust(self, heatingrates, timestep, surface, w=0, **kwargs):
+        # TODO: Write docstring.
 
         # TODO: Calculate moist lapse rates instead of hardcoding them.
         # calculate lapse rate based on previous con-rad state.
@@ -523,4 +592,8 @@ class AtmosphereMoistConvective(AtmosphereConUp):
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
 
-        self.apply_H2O_limits()  # adjust stratospheric VMR values.
+        # Adjust stratospheric VMR values.
+        self.apply_H2O_limits()
+
+        # Calculate the geopotential height field.
+        self.calculate_height()

@@ -32,7 +32,8 @@ variable_description = {
         },
     'z': {
         'units': 'm',
-        'standard_name': 'height',
+        'standard_name': 'geopotential_height',
+        'description': 'Geopotential height calculated from atmospheric state',
         'arts_name': 'z',
         },
     'lapse': {
