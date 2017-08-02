@@ -364,6 +364,7 @@ class AtmosphereConvective(Atmosphere):
         
         return a-1, float(frct)
 
+
     def convective_adjustment(self, ct, frct, surface, timestep):
         """Apply the convective adjustment.
 
@@ -400,8 +401,9 @@ class AtmosphereConvective(Atmosphere):
 #            lapse_sum = np.trapz(lp[level:ct+1], p[level:ct+1])
 #            T_con[level] = T_con[ct] + lapse_sum
             
-        # TODO: What index do I need for lapse here?
-        levelup_T_at_ct = self['T'][0, ct+1] - 0.5*(lp[ct]+lp[ct+1])*(p[ct]-p[ct+1])
+#        # TODO: What index do I need for lapse here?
+#        levelup_T_at_ct = self['T'][0, ct+1] - 0.5*(lp[ct]+lp[ct+1])*(p[ct]-p[ct+1])
+        levelup_T_at_ct = self['T'][0, ct+1] + lp[ct]*dp[ct]
         T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
         # adjust surface temperature
         surface['temperature'][0] = T_con[ct] + np.sum(lp[0:ct]*dp[0:ct])
@@ -411,6 +413,7 @@ class AtmosphereConvective(Atmosphere):
             T_con[level] = T_con[ct] + lapse_sum
 
         self['T'].values = T_con.values[np.newaxis, :]
+        
 
     def adjust(self, heatingrates, timestep, surface):
         self['T'] += heatingrates * timestep
