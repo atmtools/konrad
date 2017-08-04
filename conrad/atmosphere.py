@@ -372,7 +372,9 @@ class AtmosphereConvective(Atmosphere):
 
         start_index = self.find_first_unstable_layer()
         if start_index is None:
-            return None, None
+            # If no unstable layer ist found, do nothing.
+            # Make sure to return the right number of return values!
+            return None, None, None
 
         termdiff_neg = 0
         lp = -lapse[0, :] / (g*density)
@@ -448,13 +450,15 @@ class AtmosphereConvective(Atmosphere):
         else:
             # Search for the top of convection.
             ct, tdn, tdp = self.convective_top(surface=surface, timestep=timestep)
-            
-            self.convective_adjustment(
-                ct,
-                tdn, tdp,
-                surface=surface,
-                timestep=timestep,
-            )
+
+            # If a convective top is found, apply the convective adjustment.
+            if ct is not None:
+                self.convective_adjustment(
+                    ct,
+                    tdn, tdp,
+                    surface=surface,
+                    timestep=timestep,
+                )
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
