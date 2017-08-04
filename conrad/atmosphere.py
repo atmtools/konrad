@@ -333,18 +333,15 @@ class AtmosphereConvective(Atmosphere):
             lapse_sum = np.sum(lp[0:level]*dp[0:level])
             T_con[level] = float(surface.temperature) - lapse_sum
         
+        ct = np.min([np.where(T_con < T_rad)]) - 1
+        
         T_con[np.where(T_con < T_rad)] = T_rad[np.where(T_con < T_rad)]
         self['T'].values = T_con.values[np.newaxis, :]
         
-        #return np.min(np.where(T_con < T_rad)) - 1
+        self['convective_top'] = DataArray([ct], dims=('time',))
     
     def convective_top(self, surface, timestep):
         """Find the top of the convective layer, so that energy is conserved.
-
-        Parameters:
-            lapse (array): lapse rate value to adjust to, given in K/km
-            timestep (float): for the case of a surface with no heat capacity,
-                to calculate the energy emitted in that time
         """
         p = self['plev']
         phlev = self['phlev']
@@ -373,7 +370,6 @@ class AtmosphereConvective(Atmosphere):
         start_index = self.find_first_unstable_layer()
         if start_index is None:
             # If no unstable layer ist found, do nothing.
-            # Make sure to return the right number of return values!
             return None, None, None
 
         termdiff_neg = 0
@@ -390,11 +386,94 @@ class AtmosphereConvective(Atmosphere):
                 break
             termdiff_neg = -term1 - term2 + term3 + term_s
         termdiff_pos = -term1 - term2 + term3 + term_s
-        #frct = -termdiff / ((-term1-term2+term3+term_s)-termdiff)
         
         self['convective_top'] = DataArray([a - 1], dims=('time',))
         
         return a-1, float(termdiff_neg), float(termdiff_pos)
+    
+    def energy_difference(self, T_con, T_rad, sst_con, sst_rad, dp, eff_Cp_s):
+        """
+        Lukas, this should not need to be a function of self. Please change
+            this if you can :)
+        
+        Calculate the energy difference from zero of the convective adjustment.
+        
+        Parameters:
+            T_con: adjusted temperature profile
+            T_rad: radiative temperature profile 
+                (from which the convective adjustment is made)
+            sst_con: adjusted surface temperature
+            sst_rad: radiative surface temperature
+            dp: pressure thicknesses of levels
+            eff_Cp_s: effective heat capacity of surface
+        """
+        Cp = constants.isobaric_mass_heat_capacity
+        g = constants.g
+    
+        dT_con = T_con - T_rad
+        dT_con_s = sst_con - sst_rad
+        termdiff = - np.sum(Cp/g * dT_con * dp) + eff_Cp_s * dT_con_s
+        
+        return termdiff
+    
+    def readjust(self, ct, T_con, surface, surfacetemp, termdiff_neg, Tct_min, 
+                 termdiff_pos, Tct_max):
+        """
+        Make an adjusment to the convective top temperature (and thus the whole
+        convective profile), such that it is closer to being energy conserving.
+        
+        Parameters:
+            ct: array index,
+                the top level for the convective adjustment
+            T_con: convectively adjusted temperature profile
+            surface: surface with temperature from the radiative profile
+            surfacetemp: convectively adjusted surface temperature
+            termdiff_neg: difference from zero of the convective adjustment 
+                integration when using a convective top temperature of 
+                T[ct] = Tct_min
+            Tct_min: lower bound for the temperature of the convective top
+            termdiff_pos: difference from zero of the convective adjustment 
+                integration when using a convective top temperature of
+                T[ct] = Tct_max
+            Tct_max: upper bound for the temperature of the convective top
+        """
+        T_rad = self['T'][0, :]
+        T_con_new = T_con.copy()
+        g = constants.g
+        p = self.plev
+        phlev = self.phlev
+        dp = np.diff(phlev)
+        density = typhon.physics.density(p, T_rad)
+        lp = - self.lapse[0, :] / (g*density)
+        
+        eff_Cp_s = surface.rho * surface.cp * surface.dz
+        
+        termdiff = self.energy_difference(T_con, T_rad, surfacetemp,
+                                          surface.temperature[0], dp, eff_Cp_s)
+        
+        if termdiff > 0:
+            Tct_max = T_con[ct]
+            termdiff_pos = termdiff
+        else:
+            Tct_min = T_con[ct]
+            termdiff_neg = termdiff
+        
+        frct = -termdiff_neg / (termdiff_pos - termdiff_neg)
+        
+        # adjust convective top temperature
+        if termdiff > 0:
+            T_con_new[ct] -= (1 - frct) * (T_con[ct] - Tct_min)
+        else:
+            T_con_new[ct] += (Tct_max - T_con[ct])*frct
+            
+        # adjust surface temperature
+        surfacetemp_new = T_con_new[ct] + np.sum(lp[0:ct]*dp[0:ct])
+        # adjust temperature of other atmospheric layers
+        for level in range(0, ct):
+            lapse_sum = np.sum(lp[level:ct]*dp[level:ct])
+            T_con_new[level] = T_con_new[ct] + lapse_sum
+        
+        return T_con_new, surfacetemp_new, termdiff_neg, Tct_min, termdiff_pos, Tct_max
 
     def convective_adjustment(self, ct, tdn, tdp, surface, timestep):
         """Apply the convective adjustment.
@@ -402,8 +481,10 @@ class AtmosphereConvective(Atmosphere):
         Parameters:
             ct (float): array index,
                 the top level for the convective adjustment
-            lapse (array):
-                adjust to this lapse rate value
+            tdn, tdp: differences from zero of the convective adjustment 
+                integration when using a convective top at ct and ct+1 
+                respectively and with the convective top temperature equal to
+                the radiative temperature at that level
         """
         p = self['plev']
         phlev = self['phlev']
@@ -413,7 +494,9 @@ class AtmosphereConvective(Atmosphere):
         lapse = self.lapse
         density = typhon.physics.density(p, T_rad)
         g = constants.g
+        eff_Cp_s = surface.rho * surface.cp * surface.dz
         
+        #TODO
         #tau = np.zeros(z.shape)
         #tau[round(len(z)/8):] = np.arange(0, len(tau[round(len(z)/8):])/20, 0.05)
 
@@ -428,7 +511,25 @@ class AtmosphereConvective(Atmosphere):
         for level in range(0, ct):
             lapse_sum = np.sum(lp[level:ct]*dp[level:ct])
             T_con[level] = T_con[ct] + lapse_sum
-                
+        
+        Tct_max = levelup_T_at_ct
+        Tct_min = T_rad[ct]
+        sst_rad = surface['temperature'][0]
+        energydiff = self.energy_difference(T_con, T_rad, surfacetemp, sst_rad,
+                                            dp, eff_Cp_s)
+        
+        # adjust the convective profile: perform a maximum of 3 iterations or 
+        # until the energy difference is sufficiently small
+        counter = 0
+        while counter < 3 and np.absolute(float(energydiff)) > 0.0001:
+            newvals = self.readjust(ct, T_con, surface, surfacetemp, tdn, 
+                                    Tct_min, tdp, Tct_max)
+            T_con, surfacetemp, tdn, Tct_min, tdp, Tct_max = newvals
+            energydiff = self.energy_difference(T_con, T_rad, surfacetemp,
+                                                sst_rad, dp, eff_Cp_s)
+            counter += 1
+        
+        # save new temperature profile
         surface['temperature'][0] = surfacetemp
         self['T'].values = T_con.values[np.newaxis, :]
         
