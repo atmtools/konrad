@@ -4,6 +4,7 @@
 import logging
 
 import numpy as np
+import typhon
 from netCDF4 import Dataset
 
 from conrad import constants
@@ -15,6 +16,7 @@ __all__ = [
     'ensure_decrease',
     'calculate_halflevel_pressure',
     'append_description',
+    'refined_pgrid',
 ]
 
 logger = logging.getLogger(__name__)
@@ -120,3 +122,29 @@ def append_description(dataset, description=None):
     for key in dataset.keys():
         if key in description:
             dataset[key].attrs = constants.variable_description[key]
+
+
+def refined_pgrid(start, stop, num=200, threshold=100e2):
+    """Create a pressure grid with two spacing regimes.
+
+    This functions creates a pressure grid with two different spacings. The
+    bottom part (troposphere) uses a linear spacing. Above a given threshold,
+    a logarithmic spacing is used. This allows for higher sampling close to the
+    surface while still covering hihger altitudes.
+
+    Parameters:
+        start (float): Pressure at lowest atmosphere layer.
+        stop (float): Pressure at highest atmosphere layer.
+        num (int): Number of pressure layers.
+        threshold (float): Pressure layer at which to swich spacing.
+
+    Returns:
+        ndarray: Pressure grid.
+    """
+    # Create a linear spaced pressure grid for the lower atmosphere.
+    p_tropo = np.linspace(start, threshold, np.ceil(num / 2), endpoint=False)
+
+    # Above a given threshold, use a logarithmic spacing to create the grid.
+    p_strato = typhon.math.nlogspace(threshold, stop, np.floor(num / 2))
+
+    return np.hstack([p_tropo, p_strato])

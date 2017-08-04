@@ -365,8 +365,11 @@ class AtmosphereConvective(Atmosphere):
         if isinstance(surface, conrad.surface.SurfaceHeatCapacity):
             density_s = surface.rho
             Cp_s = surface.cp
-            dz_s = surface.dz    
-        
+            dz_s = surface.dz
+        else:
+            raise Exception('The convective adjustment is only available for '
+                            'surfaces with heat capacity.')
+
         start_index = self.find_first_unstable_layer()
         if start_index is None:
             return None, None
