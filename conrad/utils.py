@@ -127,10 +127,10 @@ def append_description(dataset, description=None):
 def refined_pgrid(start, stop, num=200, threshold=100e2):
     """Create a pressure grid with two spacing regimes.
 
-    This functions creates a pressure grid with two different spacings. The
-    bottom part (troposphere) uses a linear spacing. Above a given threshold,
-    a logarithmic spacing is used. This allows for higher sampling close to the
-    surface while still covering hihger altitudes.
+    This functions creates a pressure grid with two different spacing regimes:
+    The atmosphere is split into two parts at a given threshold. For both
+    parts, a logarithmic pressure grid with the same amount of points is
+    created. This allows to force more gridpoints into one of the parts.
 
     Parameters:
         start (float): Pressure at lowest atmosphere layer.
@@ -141,10 +141,14 @@ def refined_pgrid(start, stop, num=200, threshold=100e2):
     Returns:
         ndarray: Pressure grid.
     """
-    # Create a linear spaced pressure grid for the lower atmosphere.
-    p_tropo = np.linspace(start, threshold, np.ceil(num / 2), endpoint=False)
+    # Divide the number of gridpoints evenly across lower and upper atmosphere.
+    nbottom, ntop = np.ceil(num / 2), np.floor(num / 2)
 
-    # Above a given threshold, use a logarithmic spacing to create the grid.
-    p_strato = typhon.math.nlogspace(threshold, stop, np.floor(num / 2))
+    # Create a logarithmic spaced pressure grid for the lower atmosphere.
+    # The endpoint (`threshold`) is excluded to avoid double entries.
+    p_tropo = typhon.math.nlogspace(start, threshold, nbottom + 1)[:-1]
+
+    # Create a logarithmic spacing pressure grid for the upper atmosphere.
+    p_strato = typhon.math.nlogspace(threshold, stop, ntop)
 
     return np.hstack([p_tropo, p_strato])
