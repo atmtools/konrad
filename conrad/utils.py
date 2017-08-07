@@ -17,6 +17,7 @@ __all__ = [
     'calculate_halflevel_pressure',
     'append_description',
     'refined_pgrid',
+    'revcumsum',
 ]
 
 logger = logging.getLogger(__name__)
@@ -152,3 +153,19 @@ def refined_pgrid(start, stop, num=200, threshold=100e2):
     p_strato = typhon.math.nlogspace(threshold, stop, ntop)
 
     return np.hstack([p_tropo, p_strato])
+
+
+def revcumsum(x):
+    """Returns the reversed cumulative sum of an array.
+
+    Paramters:
+        x (ndarray): Array.
+
+    Returns:
+        ndarray: Reversed cumulative sum.
+
+    Example:
+        >>> revcumsum(np.array([0, 1, 2, 3, 4]))
+        array([10, 10, 9, 7, 4])
+    """
+    return x[::-1].cumsum()[::-1]

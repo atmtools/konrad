@@ -374,14 +374,20 @@ class AtmosphereConvective(Atmosphere):
 
         termdiff_neg = 0
         lp = -lapse[0, :] / (g*density)
+
+        # Precalculate some cumulative sums in order to reduce computations
+        # performed in the following loop.
+        term1_arr = np.cumsum(Cp / g * dp)
+        term3_arr = np.cumsum(Cp / g * T_rad.values * dp)
+
+        # Loop over all atmospheric layers above the first unstable layers.
         for a in range(start_index, len(p)):
-            term1 = T_rad[a] * np.sum((Cp/g)*dp[:a])
-            term3 = np.sum((Cp/g*T_rad)[:a]*dp[:a])
+            term1 = T_rad[a] * term1_arr[a]
+            term3 = term3_arr[a]
+            # TODO: Here is quite possibly more potential for precalculation...
             term_s = dz_s*density_s*Cp_s*(T_rad[a]+np.sum(lp[0:a]*dp[0:a])-T_rad_s)
-            inintegral = np.zeros((a,))
-            for b in range(0, a):
-                inintegral[b] = np.sum(lp[b:a]*dp[b:a])
-            term2 = np.sum((Cp/g)*inintegral*dp[:a])
+            inintegral = utils.revcumsum(lp.values[:a] * dp[:a])
+            term2 = np.sum((Cp/g)*inintegral * dp[:a])
             if (-term1 - term2 + term3 + term_s) > 0:
                 break
             termdiff_neg = -term1 - term2 + term3 + term_s
@@ -469,10 +475,10 @@ class AtmosphereConvective(Atmosphere):
         # adjust surface temperature
         surfacetemp_new = T_con_new[ct] + np.sum(lp[0:ct]*dp[0:ct])
         # adjust temperature of other atmospheric layers
-        for level in range(0, ct):
-            lapse_sum = np.sum(lp[level:ct]*dp[level:ct])
-            T_con_new[level] = T_con_new[ct] + lapse_sum
-        
+        T_con_new.values[0:ct] = (
+            T_con_new.values[ct] + utils.revcumsum(lp.values[0:ct] * dp[0:ct])
+        )
+
         return T_con_new, surfacetemp_new, termdiff_neg, Tct_min, termdiff_pos, Tct_max
 
     def convective_adjustment(self, ct, tdn, tdp, surface, timestep):
@@ -508,9 +514,9 @@ class AtmosphereConvective(Atmosphere):
         # adjust surface temperature
         surfacetemp = T_con[ct] + np.sum(lp[0:ct]*dp[0:ct])
         # adjust temperature of other atmospheric layers
-        for level in range(0, ct):
-            lapse_sum = np.sum(lp[level:ct]*dp[level:ct])
-            T_con[level] = T_con[ct] + lapse_sum
+        T_con.values[0:ct] = (
+            T_con.values[ct] + utils.revcumsum(lp.values[0:ct] * dp[0:ct])
+        )
         
         Tct_max = levelup_T_at_ct
         Tct_min = T_rad[ct]
