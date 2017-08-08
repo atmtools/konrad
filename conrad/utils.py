@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Common utility functions.
 """
+import collections
 import logging
+import os
 
 import numpy as np
 import typhon
@@ -18,6 +20,7 @@ __all__ = [
     'append_description',
     'refined_pgrid',
     'revcumsum',
+    'extract_metadata',
 ]
 
 logger = logging.getLogger(__name__)
@@ -169,3 +172,46 @@ def revcumsum(x):
         array([10, 10, 9, 7, 4])
     """
     return x[::-1].cumsum()[::-1]
+
+
+def extract_metadata(filepath, delimiter='_'):
+    """Extract meta information for simulation from filename.
+
+    Naming convention for the function to work properly:
+        /path/to/output/{season}_{experiment}_{scale}.nc
+
+    Additional information may be appended:
+        /path/to/output/{season}_{experiment}_{scale}_{extra_info}.nc
+
+    Parameters:
+        filepath (str): Path to output file.
+        delimiter (str): Delimiter used to separate meat information.
+
+    Returns:
+        collections.namedtuple: Extracted information on `season`,
+            `experiment`, `scale` and additional `extra` information.
+
+    Examples:
+        >>> extract_metadata('results/tropical_nlayers_100.nc')
+        Fileinformation(season='tropical', experiment='nlayers',
+                        scale='100', extra='')
+
+        >>> extract_metadata('results/tropical_nlayers_100_fast.nc')
+        Fileinformation(season='tropical', experiment='nlayers',
+                        scale='100', extra='fast')
+    """
+    # Trim parentdir and extension from given path. This simplifies the
+    # extraction of the wanted information in the next steps.
+    filename = os.path.splitext(os.path.basename(filepath))[0]
+
+    # Extract information on season, experiment and scale from filename.
+    # Optional remaining fields are collected as "extra" information.
+    season, experiment, scale, *extra = filename.split(delimiter)
+
+    # Define namedtuple to access results more conveniently.
+    nt = collections.namedtuple(
+        typename='Fileinformation',
+        field_names=['season', 'experiment', 'scale', 'extra'],
+    )
+
+    return nt._make((season, experiment, scale, delimiter.join(extra)))
