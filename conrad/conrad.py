@@ -130,6 +130,8 @@ class RCE:
                        unlimited_dims=['time'],
                        )
 
+        logger.info(f'Created "{self.outfile}".')
+
     def append_to_netcdf(self):
         """Append the current atmospheric state to the netCDF4 file specified
         in ``self.outfile``.
@@ -161,7 +163,12 @@ class RCE:
             )
 
         while self.niter < self.max_iterations:
-            logger.debug('Enter iteration {}.'.format(self.niter))
+            if self.niter % 100 == 0:
+                # Write every 100th time step in loglevel INFO.
+                logger.info(f'Enter iteration {self.niter}.')
+            else:
+                # All other iterations are only logged in DEBUG level.
+                logger.debug(f'Enter iteration {self.niter}.')
 
             # Caculate shortwave, longwave and net heatingrates.
             # Afterwards, they are accesible throug ``self.heatingrates``.
