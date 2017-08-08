@@ -20,30 +20,33 @@
 import multiprocessing
 import time
 
+import numpy as np
 import typhon
 
 import conrad
 
 
-def scale_co2(factor, **kwargs):
+def scale_co2(factor, season='tropical', experiment='testRH-co2', **kwargs):
     # Load the FASCOD atmosphere.
-    gf = typhon.arts.xml.load('data/tropical.xml')
+    gf = typhon.arts.xml.load(f'data/{season}.xml')
     gf = gf.extract_slice(slice(1, None), axis=1)  # omit bottom level.
 
     # Refine original pressure grid.
-    p = typhon.math.nlogspace(1013e2, 0.1e2, 200)
+    p = conrad.utils.refined_pgrid(1013e2, 0.01e2, 200)
     gf.refine_grid(p, axis=1)
 
     # Create an atmosphere model.
-    # a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-    # a = conrad.atmosphere.AtmosphereFixedVMR.from_atm_fields_compact(gf)
-    a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
+    a = conrad.atmosphere.AtmosphereConvective.from_netcdf(
+            'results/tropical_scale-co2_1.nc', -1
+    )
 
+    # Scale the CO2 concentration.
     a['CO2'] *= factor
 
     # # Create synthetic relative humidity profile.
     rh = conrad.utils.create_relative_humidity_profile(p, 0.75)
     a.relative_humidity = rh
+    a.apply_H2O_limits()
 
     # Create a surface model.
     s = conrad.surface.SurfaceHeatCapacity.from_atmosphere(a, dz=5)
@@ -52,23 +55,22 @@ def scale_co2(factor, **kwargs):
     r = conrad.radiation.PSRAD(
         atmosphere=a,
         surface=s,
-        daytime=1,
+        daytime=1/np.pi,
         zenith_angle=20,
     )
 
     # Combine atmosphere and surface model into an RCE framework.
     rce = conrad.RCE(
-        atmosphere=a,
-        surface=s,
-        radiation=r,
+        atmosphere=a, surface=s, radiation=r,
         delta=0.000,  # Run full number of itertations.
-        timestep=1/24,  # 1 hour time step.
-        writeevery=24,  # Write netCDF output every day.
-        max_iterations=14400,  # 600 days maximum simulation time.
-        outfile='results/tropical_co2_x{}-test.nc'.format(factor)
+        timestep=0.2,  # 4.8 hour time step.
+        writeevery=1.,  # Write netCDF output every day.
+        max_iterations=5000,  # 1000 days maximum simulation time.
+        outfile=f'results/{season}_{experiment}_{factor}.nc'
     )
 
-    rce.run()  # Start simulation.
+    # Start actual simulation.
+    rce.run()
 
 
 if __name__ == '__main__':
