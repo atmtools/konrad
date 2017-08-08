@@ -309,7 +309,8 @@ class AtmosphereConvective(Atmosphere):
     def __init__(self, *args, lapse=0.0065, **kwargs):
         super().__init__(*args, **kwargs)
         if isinstance(lapse, float):
-            self['lapse'] = lapse
+            lapse_array = lapse * np.ones((1, self['plev'].size))
+            self['lapse'] = DataArray(lapse_array, dims=('time', 'plev'))
         elif isinstance(lapse, np.ndarray):
             self['lapse'] = DataArray(lapse, dims=('time', 'plev'))
         
