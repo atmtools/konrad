@@ -21,7 +21,7 @@ __all__ = [
 
 class Radiation(metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, atmosphere, surface, zenith_angle=45., daytime=0.4,
+    def __init__(self, atmosphere, surface, zenith_angle=20., daytime=1/np.pi,
                  diurnal_cycle=False):
         """Return a radiation model.
 
