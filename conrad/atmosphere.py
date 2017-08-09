@@ -524,7 +524,7 @@ class AtmosphereConvective(Atmosphere):
         sst_rad = surface['temperature'][0]
         energydiff = self.energy_difference(T_con, T_rad, surfacetemp, sst_rad,
                                             dp, eff_Cp_s)
-        
+       
         # adjust the convective profile: perform a maximum of 3 iterations or 
         # until the energy difference is sufficiently small
         counter = 0
@@ -548,6 +548,7 @@ class AtmosphereConvective(Atmosphere):
             heatingrates (float or ndarray): Heatingrate [K /day].
             timestep (float): Width of a timestep [day].
         """
+        
         # Apply heatingrates to temperature profile.
         self['T'] += heatingrates * timestep
         
@@ -565,7 +566,7 @@ class AtmosphereConvective(Atmosphere):
                     ct,
                     tdn, tdp,
                     surface=surface,
-                    timestep=timestep,
+                    timestep=timestep
                 )
 
         # Preserve the initial relative humidity profile.
@@ -577,7 +578,71 @@ class AtmosphereConvective(Atmosphere):
         # Calculate the geopotential height field.
         self.calculate_height()
 
+
+class AtmosphereMoistConvective(AtmosphereConvective):
+    """Atmosphere model with preserved RH and a temperature and humidity
+    -dependent lapse rate.
+
+    This atmosphere model preserves the initial relative humidity profile by
+    adjusting the water vapor volume mixing ratio. In addition, a convection
+    parameterization is used, which sets the lapse rate to the moist adiabat,
+    calculated from the previous temperature and humidity profiles.
+    """     
+    
+    def moistlapse(self):
+        """ 
+        Calculates the moist lapse rate from the atmospheric temperature and 
+            humidity profiles 
+        Parameters:
+            a: atmosphere
+        """
+        g = constants.g
+        Lv = 2501000
+        R = 287
+        eps = 0.62197
+        Cp = conrad.constants.isobaric_mass_heat_capacity
+        VMR = self['H2O'][0, :]
+        T = self['T'][0, :]
+        lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
+        self['lapse'][0] = lapse
+    
+    def adjust(self, heatingrates, timestep, surface, **kwargs):
+        """Calculate the moist adiabatic lapse rate based on the previous con-
+        rad state. Adjust the temperature. Preserve relative humidity.
+        """
+
+        # TODO: Calculate moist lapse rates instead of hardcoding them.
+        # calculate lapse rate based on previous con-rad state.
+
+        self.moistlapse() # set lapse rate
         
+        self['T'] += heatingrates * timestep
+        
+        if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
+            self.convective_adjustment_fixed_surface_temperature(surface=surface)
+        else:
+            # Search for the top of convection.
+            ct, tdn, tdp = self.convective_top(surface=surface, timestep=timestep)
+            
+            # If a convective top is found, apply the convective adjustment.
+            if ct is not None:
+                self.convective_adjustment(
+                    ct,
+                    tdn, tdp,
+                    surface=surface,
+                    timestep=timestep
+                )
+
+        # Preserve the initial relative humidity profile.
+        self.relative_humidity = self['initial_rel_humid'].values
+
+        # Adjust stratospheric VMR values.
+        self.apply_H2O_limits()
+
+        # Calculate the geopotential height field.
+        self.calculate_height()
+
+
 class AtmosphereConUp(AtmosphereConvective):
     """Atmosphere model with preserved RH and fixed temperature lapse rate,
     that includes a cooling term due to upwelling in the statosphere.
@@ -607,72 +672,19 @@ class AtmosphereConUp(AtmosphereConvective):
         self['T'] += heatingrates * timestep
 
         if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
+            #TODO: Output convective top for fixed_surface_temperature case
             ct = self.convective_adjustment_fixed_surface_temperature(surface=surface)
         else:
-            ct, frct = self.convective_top(surface=surface, timestep=timestep)
+            ct, tdn, tdp = self.convective_top(surface=surface, timestep=timestep)
 
         self.upwelling_adjustment(ct, timestep, w)
         
         if not isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
-
-        # Preserve the initial relative humidity profile.
-        self.relative_humidity = self['initial_rel_humid'].values
-
-        # Adjust stratospheric VMR values.
-        self.apply_H2O_limits()
-
-        # Calculate the geopotential height field.
-        self.calculate_height()
-
-
-class AtmosphereMoistConvective(AtmosphereConUp):
-    """Atmosphere model with preserved RH and a temperature and humidity
-    -dependent lapse rate.
-
-    This atmosphere model preserves the initial relative humidity profile by
-    adjusting the water vapor volume mixing ratio. In addition, a convection
-    parameterization is used, which sets the lapse rate to the moist adiabat,
-    calculated from the previous temperature and humidity profiles.
-    """     
-    
-    def moistlapse(self):
-        """ 
-        Calculates the moist lapse rate from the atmospheric temperature and 
-            humidity profiles 
-        Parameters:
-            a: atmosphere
-        """
-        g = constants.g
-        Lv = 2501000
-        R = 287
-        eps = 0.62197
-        Cp = conrad.constants.isobaric_mass_heat_capacity
-        VMR = self['H2O'][0, :]
-        T = self['T'][0, :]
-        lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
-        self.lapse = lapse
-    
-    def adjust(self, heatingrates, timestep, surface, w=0, **kwargs):
-        # TODO: Write docstring.
-
-        # TODO: Calculate moist lapse rates instead of hardcoding them.
-        # calculate lapse rate based on previous con-rad state.
-
-        self.moistlapse # set lapse rate
-        
-        self['T'] += heatingrates * timestep
-        
-        if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            ct = self.convective_adjustment_fixed_surface_temperature(surface=surface)
-        else:
-            ct, frct = self.convective_top(surface=surface, timestep=timestep)
-
-        if w != 0:
-            self.upwelling_adjustment(ct, timestep, w)
-        
-        if not isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            self.convective_adjustment(ct, frct, surface=surface, timestep=timestep)
+            self.convective_adjustment(
+                    ct, tdn, tdp,
+                    surface=surface,
+                    timestep=timestep
+                )
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
