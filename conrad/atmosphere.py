@@ -146,6 +146,37 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         return d
 
+    def to_atm_fields_compact(self):
+        """Convert an atmosphere into an ARTS atm_fields_compact."""
+        # Store all atmosphere variables including geopotential height.
+        variables = atmosphere_variables + ['z']
+
+        # Get ARTS variable name from variable description.
+        species = [constants.variable_description[var].get('arts_name')
+                   for var in variables]
+
+        # Create a GriddedField4.
+        atmfield = typhon.arts.types.GriddedField4()
+
+        # Set grids and their names.
+        atmfield.gridnames = ['Species', 'Pressure', 'Longitude', 'Latitude']
+        atmfield.grids = [
+            species, self['plev'].values, np.array([]), np.array([])
+        ]
+
+        # The profiles have to be passed in "stacked" form, as an ndarray of
+        # dimensions [species, pressure, lat, lon].
+        atmfield.data = np.vstack(
+            [self[var].values.reshape(1, self['plev'].size, 1, 1)
+             for var in variables]
+        )
+        atmfield.dataname = 'Data'
+
+        # Perform a consistency check of the passed grids and data tensor.
+        atmfield.check_dimension()
+
+        return atmfield
+
     # TODO: This function could handle the nasty time dimension in the future.
     # Allowing to set two-dimensional variables using a 1d-array, if one
     # coordinate has the dimension one.
