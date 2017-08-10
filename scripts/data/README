@@ -1,3 +1,14 @@
 Store input data.
 
-svn ignores all files in this directory!
+This directory includes several initial atmospheric states:
+    * tropical-standard.xml: Standard atmosphere.
+    * tropical-convective.xml: Radiative-convective equilibrium.
+    * tropical-fixedRH.xml: Radiative equilibrium with fixed rel. humidity.
+    * tropical-fixedVMR.xml: Radiative equilibirium with fixed abs. humidity.
+    * tropical-moistconvective.xml: Radiative-convective equilibrium
+        (moist lapse rate)
+
+The atmospheres in equilibrium are results of simulations over a 3000 day
+period using a solar zenith angle of 20 deg and a daytime fraction of 0.4.
+
+svn ignores all additional files in this directory!
