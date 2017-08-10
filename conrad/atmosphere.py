@@ -84,6 +84,25 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         return d
 
     @classmethod
+    def from_xml(cls, xmlfile, **kwargs):
+        """Read atmosphere from XML file containing an ARTS atm_fields_compact.
+
+        Parameters:
+            xmlfile (str): Path to XML file.
+        """
+        # Read the content of given XML file.
+        griddedfield = typhon.arts.xml.load(xmlfile)
+
+        # Check if the XML file contains an atm_fields_compact (GriddedField4).
+        arts_type = typhon.arts.utils.get_arts_typename(griddedfield)
+        if arts_type != 'GriddedField4':
+            raise TypeError(
+                f'XML file does not contain "GriddedField4" but "{arts_type}".'
+            )
+
+        return cls.from_atm_fields_compact(griddedfield, **kwargs)
+
+    @classmethod
     def from_dict(cls, dictionary, **kwargs):
         """Create an atmosphere model from dictionary values.
 
