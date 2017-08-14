@@ -314,7 +314,11 @@ class AtmosphereFixedVMR(Atmosphere):
             heatingrates (float or ndarray): Heatingrate [K /day].
             timestep (float): Width of a timestep [day].
         """
+        # Apply heatingrates to temperature profile.
         self['T'] += heatingrate * timestep
+
+        # Calculate the geopotential height field.
+        self.calculate_height()
 
 
 class AtmosphereFixedRH(Atmosphere):
