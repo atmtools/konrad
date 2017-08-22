@@ -130,6 +130,11 @@ variable_description = {
         'standard_name':
             'tendency_of_air_temperature_due_to_radiative_heating',
         },
+    'toa': {
+        'units': 'W / m**2',
+        'standard_name':
+            'radiation_budget_at_top_of_the_atmosphere',
+    },
     'deltaT': {
         'units': 'K / day',
         'standard_name': 'tendency_of_air_temperature',

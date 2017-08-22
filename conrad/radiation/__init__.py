@@ -158,13 +158,21 @@ class PSRAD(Radiation):
             # are **inverted**. Therefore, they are flipped to make the input
             # and output of this function consistent.
             'sw_htngrt': (['time', 'plev'], self.daytime * sw_hr[:, ::-1]),
-            'sw_htngrt_clr': (['time', 'plev'], self.daytime * sw_hr_clr[:, ::-1]),
+            'sw_htngrt_clr': (['time', 'plev'],
+                              self.daytime * sw_hr_clr[:, ::-1]),
             'sw_flxu': (['time', 'phlev'], self.daytime * sw_flxu[:, ::-1]),
             'sw_flxd': (['time', 'phlev'], self.daytime * sw_flxd[:, ::-1]),
-            'sw_flxu_clr': (['time', 'phlev'], self.daytime * sw_flxu_clr[:, ::-1]),
-            'sw_flxd_clr': (['time', 'phlev'], self.daytime * sw_flxd_clr[:, ::-1]),
+            'sw_flxu_clr': (['time', 'phlev'],
+                            self.daytime * sw_flxu_clr[:, ::-1]),
+            'sw_flxd_clr': (['time', 'phlev'],
+                            self.daytime * sw_flxd_clr[:, ::-1]),
             # Net heatingrate.
-            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + self.daytime * sw_hr[:, ::-1]),
+            'net_htngrt': (['time', 'plev'],
+                           lw_hr[:, :] + self.daytime * sw_hr[:, ::-1]),
+            # Radiation budget at top of the atmosphere (TOA).
+            'toa': (['time'],
+                    lw_flxu[:, 0], lw_flxd[:, 0],
+                    sw_flxu[:, -1], sw_flxd[:, -1]),
             },
             coords={'plev': atmosphere['plev'].values}
             )

@@ -2,6 +2,7 @@
 """Plotting related functions.
 """
 from matplotlib.ticker import FuncFormatter
+import matplotlib.pyplot as plt
 import numpy as np
 import typhon.plots
 
@@ -9,6 +10,7 @@ import typhon.plots
 __all__ = [
     'plot_overview_p_log',
     'plot_overview_z',
+    'gregory_plot',
 ]
 
 
@@ -85,3 +87,61 @@ def plot_overview_z(data, lw_htngrt, sw_htngrt, axes, **kwargs):
                            label='Net rate', color='k')
     ax3.set_xlabel('Heatingrate [°C/day]')
     ax3.legend(loc='upper center')
+
+
+def gregory_plot(temperature, forcing, ax=None, **kwargs):
+    """Gregory plot to estimate climate sensitivity.
+
+    Parameters:
+          temperature (ndarray): Surface temperatures [K].
+          forcing (ndarray): Radiation budget at top of atmosphere [W//m^2].
+          ax (AxesSubplot): Axes to plot in.
+          **kwargs: Additional keyword arguments are passed to ``plt.plot``.
+
+    Returns:
+          float, float: Estimated climate sensitivty [K / (W/m^2)],
+            effective forcing [W / m^2].
+
+    Examples:
+        >>> temperature = np.linspace(300, 304, 25)
+        >>> forcing = np.linspace(3.7, 0., temperature.size)
+        >>> gregory_plot(temperature, forcing)
+        (1.0810810810810814, 3.6999999999999993)
+
+    """
+    # If no axis is passed, use current axis (will create one, if needed).
+    if ax is None:
+        ax = plt.gca()
+
+    # Default keyword arguments to control the plot appearance later.
+    default_kwargs = {
+        'marker': 'o',
+        'linestyle': 'none',
+    }
+    default_kwargs.update(kwargs)
+
+    # Convert temperatures into change in temperature.
+    t_change = temperature - temperature[0]
+
+    # Plot radiative forcing against surface temperature change.
+    line, = ax.plot(t_change, forcing, **default_kwargs)
+    ax.set_xlabel('Surface temperature change [K]')
+    ax.set_ylabel('Radiation budget TOA [W/m$^2$]')
+    ax.grid(True)
+
+    # Find the maximum radiative forcing. This way, possible adjustment
+    # processes during the first timesteps are not taken into account.
+    max_forcing = np.argmax(forcing)
+    sensitivity, eff_forcing = np.polyfit(t_change[max_forcing:],
+                                          forcing[max_forcing:], 1)
+
+    # Create x-values for "Gregory" fit. Values are plotted between zero
+    # temperature change and zero forcing.
+    x = np.linspace(0, - eff_forcing / sensitivity, 10)
+
+    # Plot linear "Gregory" fit into same axis.
+    ax.plot(x, eff_forcing + sensitivity * x, color=line.get_color())
+
+    # Return the estimated climate sensivity in units of K / (W/m^2) and the
+    # effective forcing in W / m^2.
+    return -1 / sensitivity, eff_forcing
