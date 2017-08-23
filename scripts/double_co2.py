@@ -10,63 +10,52 @@
 #SBATCH --account=uni
 #SBATCH --partition=uni-u237
 #SBATCH --nodes=1-1
-#SBATCH --ntasks=5
-#SBATCH --cpus-per-task=2
+#SBATCH --ntasks=8
+#SBATCH --cpus-per-task=1
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=lukas.kluft@gmail.com
 
 """Perform simulations to evaluate the impact of varying CO2 concentrations.
 """
+import logger
 import multiprocessing
-import time
 
 import numpy as np
-import typhon
 
 import conrad
 
 
-def scale_co2(factor, season='tropical', experiment='testRH-co2', **kwargs):
-    # Load the FASCOD atmosphere.
-    gf = typhon.arts.xml.load(f'data/{season}.xml')
-    gf = gf.extract_slice(slice(1, None), axis=1)  # omit bottom level.
+logger = logging.getLogger()
 
-    # Refine original pressure grid.
-    p = conrad.utils.refined_pgrid(1013e2, 0.01e2, 200)
-    gf.refine_grid(p, axis=1)
 
-    # Create an atmosphere model.
-    a = conrad.atmosphere.AtmosphereConvective.from_netcdf(
-            'results/tropical_scale-co2_1.nc', -1
-    )
+def scale_co2(factor, atmosphere='tropical-moistconvective',
+              experiment='scale-co2-moistconvective', **kwargs):
+    # Load atmosphere and surface model from netCDF file.
+    # The models used as initial state are in equilibrium to avoid signals
+    # from pure adjustment in the results.
+    ncfile = f'data/{atmosphere}.nc'
+    a = conrad.atmosphere.AtmosphereMoistConvective.from_netcdf(ncfile)
+    s = conrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile, dz=100)
 
     # Scale the CO2 concentration.
     a['CO2'] *= factor
 
     # # Create synthetic relative humidity profile.
-    rh = conrad.utils.create_relative_humidity_profile(p, 0.75)
-    a.relative_humidity = rh
-    a.apply_H2O_limits()
-
-    # Create a surface model.
-    s = conrad.surface.SurfaceHeatCapacity.from_atmosphere(a, dz=5)
+    # rh = conrad.utils.create_relative_humidity_profile(a['plev'].values, 0.75)
+    # a.relative_humidity = rh
+    # a.apply_H2O_limits()
 
     # Create a radiation model.
-    r = conrad.radiation.PSRAD(
-        atmosphere=a,
-        surface=s,
-        daytime=1/np.pi,
-        zenith_angle=20,
-    )
+    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
 
-    # Combine atmosphere and surface model into an RCE framework.
+    # Combine all submodels into a RCE framework.
     rce = conrad.RCE(
         atmosphere=a, surface=s, radiation=r,
         delta=0.000,  # Run full number of itertations.
         timestep=0.2,  # 4.8 hour time step.
         writeevery=1.,  # Write netCDF output every day.
-        max_iterations=5000,  # 1000 days maximum simulation time.
-        outfile=f'results/{season}_{experiment}_{factor}.nc'
+        max_iterations=15000,  # 1000 days maximum simulation time.
+        outfile=conrad.utils.get_filepath(atmosphere, experiment, factor),
     )
 
     # Start actual simulation.
@@ -74,22 +63,13 @@ def scale_co2(factor, season='tropical', experiment='testRH-co2', **kwargs):
 
 
 if __name__ == '__main__':
-    scale_factors = [0.5, 1, 2, 4, 8]
+    # Factors to modify the CO2 concentration with.
+    scale_factors = [0.5, 1, 2 ,4, 8]
 
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
     with conrad.radiation.utils.PsradSymlinks():
-        time.sleep(5)  # workaround for multiprocessing on  slow file systems.
-        jobs = []
-        for factor in scale_factors:
-            p = multiprocessing.Process(
-                target=scale_co2,
-                name='CO2-x{}'.format(factor),
-                args=[factor],
-            )
-            jobs.append(p)
-            p.start()
+        p = multiprocessing.Pool(8)
+        p.map(scale_co2, scale_factors)
 
-        # Wait for all jobs to finish before exit with-block.
-        for job in jobs:
-            job.join()
+    logger.info('All jobs finished.')
