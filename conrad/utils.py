@@ -23,6 +23,8 @@ __all__ = [
     'extract_metadata',
     'radiation_budget',
     'equilibrium_sensitivity',
+    'get_filepath',
+    'create_pardirs',
 ]
 
 logger = logging.getLogger(__name__)
@@ -180,43 +182,43 @@ def extract_metadata(filepath, delimiter='_'):
     """Extract meta information for simulation from filename.
 
     Naming convention for the function to work properly:
-        /path/to/output/{season}_{experiment}_{scale}.nc
+        /path/to/output/{atmosphere}_{experiment}_{scale}.nc
 
     Additional information may be appended:
-        /path/to/output/{season}_{experiment}_{scale}_{extra_info}.nc
+        /path/to/output/{atmosphere}_{experiment}_{scale}_{extra_info}.nc
 
     Parameters:
         filepath (str): Path to output file.
         delimiter (str): Delimiter used to separate meat information.
 
     Returns:
-        collections.namedtuple: Extracted information on `season`,
+        collections.namedtuple: Extracted information on `atmosphere`,
             `experiment`, `scale` and additional `extra` information.
 
     Examples:
         >>> extract_metadata('results/tropical_nlayers_100.nc')
-        Fileinformation(season='tropical', experiment='nlayers',
+        Fileinformation(atmosphere='tropical', experiment='nlayers',
                         scale='100', extra='')
 
         >>> extract_metadata('results/tropical_nlayers_100_fast.nc')
-        Fileinformation(season='tropical', experiment='nlayers',
+        Fileinformation(atmosphere='tropical', experiment='nlayers',
                         scale='100', extra='fast')
     """
     # Trim parentdir and extension from given path. This simplifies the
     # extraction of the wanted information in the next steps.
     filename = os.path.splitext(os.path.basename(filepath))[0]
 
-    # Extract information on season, experiment and scale from filename.
+    # Extract information on atmosphere, experiment and scale from filename.
     # Optional remaining fields are collected as "extra" information.
-    season, experiment, scale, *extra = filename.split(delimiter)
+    atmosphere, experiment, scale, *extra = filename.split(delimiter)
 
     # Define namedtuple to access results more conveniently.
     nt = collections.namedtuple(
         typename='Fileinformation',
-        field_names=['season', 'experiment', 'scale', 'extra'],
+        field_names=['atmosphere', 'experiment', 'scale', 'extra'],
     )
 
-    return nt._make((season, experiment, scale, delimiter.join(extra)))
+    return nt._make((atmosphere, experiment, scale, delimiter.join(extra)))
 
 
 def radiation_budget(lw_flxu, lw_flxd, sw_flxu, sw_flxd):
@@ -258,3 +260,59 @@ def equilibrium_sensitivity(temperature, forcing):
         (1.0810810810810809, 3.7000000000000002)
     """
     return (temperature[-1] - temperature[0]) / forcing[0], forcing[0]
+
+
+def get_filepath(atmosphere='**', experiment='**', scale='**', extra='',
+                 result_dir='results', create_tree=True):
+    """Returns path to netCDF4 file for given model run.
+
+    Naming convention for the filepaths:
+        {result_dir}/{season}/{experiment}/{season}_{experiment}_{scale}.nc
+
+    Additional information may be appended:
+        {result_dir}/{season}/{experiment}/{season}_{experiment}_{scale}_{extra}.nc
+
+    Parameters:
+          atmosphere (str): Initial atmosphere identifier.
+          experiment (str): Experiment identifier.
+          scale (str): Changed factor in specific run.
+          extra (str): Additional information.
+          result_dir (str): Parent directory to store all results.
+          create_tree (bool): If ``True``, the directory tree is created.
+
+    Returns:
+          str: Full path to netCDF4 file.
+    """
+    if extra == '':
+        # Combine information on initial atmosphere, experiment and chosen
+        # scale factor to a full netCDF filename.
+        filename = f'{atmosphere}_{experiment}_{scale}.nc'
+    else:
+        # If additional information is given, place it right before the
+        # file extension.
+        filename = f'{atmosphere}_{experiment}_{scale}_{extra}.nc'
+
+    # Join the directories, subdirectories and filename to a full path.
+    fullpath = os.path.join(result_dir, atmosphere, experiment, filename)
+
+    # Ensure that all parent directories are present. This allows the user
+    # to directly use the returned filepath.
+    if create_tree:
+        create_pardirs(fullpath)
+
+    return fullpath
+
+
+def create_pardirs(path):
+    """Create all directories in a given file path.
+
+    Examples:
+          The following call will ensure, that the
+          directories `foo`, `bar` and `baz` exist:
+          >>> create_pardirs('foo/bar/baz/test.txt')
+
+    Parameters:
+          path (str): Filepath.
+    """
+    # Create the full given directory tree, regardless if it already exists.
+    os.makedirs(os.path.dirname(path), exist_ok=True)
