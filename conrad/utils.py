@@ -295,10 +295,13 @@ def get_filepath(atmosphere='**', experiment='**', scale='**', extra='',
     # Join the directories, subdirectories and filename to a full path.
     fullpath = os.path.join(result_dir, atmosphere, experiment, filename)
 
-    # Ensure that all parent directories are present. This allows the user
-    # to directly use the returned filepath.
+    # Ensure that all parent directories exist.
+    # This allows to directly use the returned filepath.
     if create_tree:
-        create_pardirs(fullpath)
+        # Do not create trees for glob patterns (include `*`)!
+        # This prevents the creation of nasty directories like `*` or `**`.
+        if '*' not in fullpath:
+            create_pardirs(fullpath)
 
     return fullpath
 
