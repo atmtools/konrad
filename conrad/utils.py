@@ -6,7 +6,6 @@ import logging
 import os
 
 import numpy as np
-import typhon
 from netCDF4 import Dataset
 
 from conrad import constants
@@ -132,34 +131,36 @@ def append_description(dataset, description=None):
             dataset[key].attrs = constants.variable_description[key]
 
 
-def refined_pgrid(start, stop, num=200, threshold=100e2):
-    """Create a pressure grid with two spacing regimes.
+def refined_pgrid(start, stop, num=200, shift=0.1):
+    """Create a pressure grid with adjustable distribution in logspace.
 
-    This functions creates a pressure grid with two different spacing regimes:
-    The atmosphere is split into two parts at a given threshold. For both
-    parts, a logarithmic pressure grid with the same amount of points is
-    created. This allows to force more gridpoints into one of the parts.
+    The distribution of gridpoints can be adjusted to be top or bottom heavy.
 
     Parameters:
         start (float): Pressure at lowest atmosphere layer.
         stop (float): Pressure at highest atmosphere layer.
         num (int): Number of pressure layers.
-        threshold (float): Pressure layer at which to swich spacing.
+        shift (float): Controls how much to shift the grid points.
+            <1: Bottom heavy grid point distributed in logspace.
+            ==1: Evenly distributed in logspace.
+            >1: Top heavy distributed in logspace.
 
     Returns:
         ndarray: Pressure grid.
     """
-    # Divide the number of gridpoints evenly across lower and upper atmosphere.
-    nbottom, ntop = np.ceil(num / 2), np.floor(num / 2)
+    # Create a pressure grid that is linear in logspace.
+    samples = np.linspace(np.log(start), np.log(stop), num)
 
-    # Create a logarithmic spaced pressure grid for the lower atmosphere.
-    # The endpoint (`threshold`) is excluded to avoid double entries.
-    p_tropo = typhon.math.nlogspace(start, threshold, nbottom + 1)[:-1]
+    # Calculate the stepsize between each gridpoint.
+    steps = np.diff(samples)
 
-    # Create a logarithmic spacing pressure grid for the upper atmosphere.
-    p_strato = typhon.math.nlogspace(threshold, stop, ntop)
+    # The stepsizes are readjusted to change the distribution of the
+    # gridpoints. Start and stop are preserved!
+    steps *= np.linspace(shift, 2 - shift, num - 1)
 
-    return np.hstack([p_tropo, p_strato])
+    # Build the final pressure grid by adding the start pressre to the
+    # cumulative sum over the readjusted steps.
+    return np.exp(samples[0] + np.append([0], steps.cumsum()))
 
 
 def revcumsum(x):

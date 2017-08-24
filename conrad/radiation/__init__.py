@@ -170,11 +170,15 @@ class PSRAD(Radiation):
             'net_htngrt': (['time', 'plev'],
                            lw_hr[:, :] + self.daytime * sw_hr[:, ::-1]),
             # Radiation budget at top of the atmosphere (TOA).
-            'toa': (['time'],
-                    lw_flxu[:, 0], lw_flxd[:, 0],
-                    sw_flxu[:, -1], sw_flxd[:, -1]),
+            'toa': (['time'], (
+                (self.daytime * sw_flxd[:, 0] + lw_flxd[:, -1])
+                - (self.daytime * sw_flxu[:, 0] + lw_flxu[:, -1]))),
             },
-            coords={'plev': atmosphere['plev'].values}
+            coords={
+                'time': [0],
+                'plev': atmosphere['plev'].values,
+                'phlev': atmosphere['phlev'].values,
+            }
             )
 
         append_description(ret)  # Append variable descriptions.
