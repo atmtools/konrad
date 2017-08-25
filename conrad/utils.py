@@ -6,6 +6,7 @@ import logging
 import os
 
 import numpy as np
+import typhon
 from netCDF4 import Dataset
 
 from conrad import constants
@@ -131,37 +132,32 @@ def append_description(dataset, description=None):
             dataset[key].attrs = constants.variable_description[key]
 
 
-def refined_pgrid(start, stop, num=200, shift=0.1):
+def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
     """Create a pressure grid with adjustable distribution in logspace.
 
-    The distribution of gridpoints can be adjusted to be top or bottom heavy.
+    Notes:
+          Wrapper for ``typhon.math.squeezable_logspace``.
 
     Parameters:
-        start (float): Pressure at lowest atmosphere layer.
-        stop (float): Pressure at highest atmosphere layer.
-        num (int): Number of pressure layers.
-        shift (float): Controls how much to shift the grid points.
-            <1: Bottom heavy grid point distributed in logspace.
-            ==1: Evenly distributed in logspace.
-            >1: Top heavy distributed in logspace.
+        start (float): The starting value of the sequence.
+        stop (float): The end value of the sequence.
+        num (int): Number of sample to generate (Default is 50).
+        squeeze (float): Factor with which the first stepwidth is
+            squeezed in logspace. Has to be between  ``(0, 2)`.
+            Values smaller than one compress the gridpoints,
+            while values greater than 1 strecht the spacing.
+            The default is ``0.5`` (bottom heavy.)
+        fixpoint (float): Relative fixpoint for squeezing the grid.
+            Has to be between ``[0, 1]``. The  default is ``0`` (bottom).
 
     Returns:
         ndarray: Pressure grid.
     """
-    # Create a pressure grid that is linear in logspace.
-    samples = np.linspace(np.log(start), np.log(stop), num)
+    grid = typhon.math.squeezable_logspace(
+        start=start, stop=stop, num=num, squeeze=shift, fixpoint=fixpoint
+    )
 
-    # Calculate the stepsize between each gridpoint.
-    steps = np.diff(samples)
-
-    # The stepsizes are readjusted to change the distribution of the
-    # gridpoints. Start and stop are preserved!
-    steps *= np.linspace(shift, 2 - shift, num - 1)
-
-    # Build the final pressure grid by adding the start pressre to the
-    # cumulative sum over the readjusted steps.
-    return np.exp(samples[0] + np.append([0], steps.cumsum()))
-
+    return grid
 
 def revcumsum(x):
     """Returns the reversed cumulative sum of an array.
