@@ -99,7 +99,7 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         """
         data = netCDF4.Dataset(ncfile)
 
-        #TODO: Should other variables (e.g. albedo) also be read?
+        # TODO: Should other variables (e.g. albedo) also be read?
         return cls(temperature=data.variables['temperature'][timestep],
                    pressure=data.variables['pressure'][timestep],
                    height=data.variables['height'][timestep],

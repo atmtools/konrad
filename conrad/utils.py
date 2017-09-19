@@ -159,6 +159,7 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
 
     return grid
 
+
 def revcumsum(x):
     """Returns the reversed cumulative sum of an array.
 

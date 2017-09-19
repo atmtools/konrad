@@ -211,7 +211,7 @@ class RCE:
 
             # Check if the model run has converged to an equilibrium state.
             if self.is_converged():
-                # If the model is converged, skip further iterations. We did it!
+                # If the model is converged, skip further iterations. Success!
                 logger.info(f'Converged after {self.niter} iterations.')
                 break
             # Otherweise increase the iteration count and go on.
