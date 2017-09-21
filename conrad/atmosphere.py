@@ -275,16 +275,17 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         lapse_rate = np.append(lapse_rate[0], lapse_rate)
         return np.append(lapse_rate, lapse_rate[-1])
 
-    def find_first_unstable_layer(self, critical_lapse_rate=-0.0065,
-                                  pmin=10e2):
-        lapse_rate = self.get_lapse_rates()
-        for n in range(len(lapse_rate) - 1, 1, -1):
-            if lapse_rate[n] < critical_lapse_rate and self['plev'][n] > pmin:
-                return n
-
     @property
     def cold_point_index(self, pmin=1e2):
-        """Return the pressure index of the cold point tropopause."""
+        """Return the pressure index of the cold point tropopause.
+
+        Parameters:
+              pmin (float): Lower pressure threshold. The cold point has to
+              be below (higher pressure, lower height) that value.
+
+        Returns:
+            int: Layer index.
+        """
         return int(np.argmin(self['T'][:, self['plev'] > pmin]))
 
     def apply_H2O_limits(self, vmr_max=1.):
@@ -376,6 +377,24 @@ class AtmosphereConvective(Atmosphere):
 
         utils.append_description(self)  # Append variable descriptions.
 
+    def find_first_unstable_layer(self):
+        """Find the first unstable layer beneath the cold point.
+
+        Returns:
+            int: Layer index.
+        """
+        # Get current lapse rate to compare it with the critical threshold.
+        lapse_rate = -self.get_lapse_rates()
+        critical_lapse_rate = self.lapse.values[0, :]
+
+        # Loop over all layers from the cold point towards the surface.
+        for n in range(self.cold_point_index, 1, -1):
+            # If the lapse rate in the layer is larger (more negative) than
+            # the critical value, the layer is unstable.
+            if lapse_rate[n] > critical_lapse_rate[n]:
+                # Return the layer index and omit further iterations.
+                return n
+
     def convective_adjustment_fixed_surface_temperature(self, surface):
         """
         Apply a convective adjustment assuming the surface temperture is fixed.
@@ -434,6 +453,7 @@ class AtmosphereConvective(Atmosphere):
         lapse = self.lapse[0, :]
         start_index = self.find_first_unstable_layer()
         if start_index is None:
+            self['convective_top'] = DataArray([0], dims=('time',))
             return None, None, None
 
         # convert lapse rate from K/km to K/Pa, assuming hydrost. equilibrium.
@@ -470,17 +490,17 @@ class AtmosphereConvective(Atmosphere):
                 term2 = np.sum((Cp[:a]/g)*inintegral * dp[:a])
             if (-term1 - term2 + term3 + term_s) > 0:
                 # if this happens on the first iteration, restart the search
-                if termdiff_neg == 1:
+                if a == start_index:
                     a = 1
                 else:
                     break
-                    
+
             # termdiff_neg and termdiff_pos are used to calculate the small
             # adjustment that we make to the top level of convection
             termdiff_neg = -term1 - term2 + term3 + term_s
             a += 1
         termdiff_pos = -term1 - term2 + term3 + term_s
-        
+
         # the index of the top level to adjust
         self['convective_top'] = DataArray([a - 1], dims=('time',))
 
@@ -712,7 +732,7 @@ class AtmosphereMoistConvective(AtmosphereConvective):
         T = self['T'][0, :]
         lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
         lapse_phlev = utils.calculate_halflevel_pressure(lapse.values)
-        self['lapse'][0] = lapse_phlev
+        self['lapse'].values[0, :] = lapse_phlev
 
     def adjust(self, heatingrates, timestep, surface, **kwargs):
         """Calculate the moist adiabatic lapse rate based on the previous con-
