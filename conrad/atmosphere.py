@@ -443,7 +443,7 @@ class AtmosphereConvective(Atmosphere):
         lp = -lapse[:].values / (g*density)
 
         # in case the first layer in the loop produces a positive termdiff
-        termdiff_neg = 0
+        termdiff_neg = 1
 
         # Precalculate some cumulative sums in order to reduce computations
         # performed in the following loop.
@@ -457,7 +457,8 @@ class AtmosphereConvective(Atmosphere):
         # We test these profiles until we find one that is approximately
         # energy conserving.
 
-        for a in range(start_index, len(p)):
+        a = start_index
+        while a < len(p):
             term1 = T_rad[a] * term1_arr[a]
             term3 = term3_arr[a]
             term_s = dz_s*density_s*Cp_s*(T_rad[a]+surface_sum[a]-T_rad_s)
@@ -468,12 +469,18 @@ class AtmosphereConvective(Atmosphere):
             else:
                 term2 = np.sum((Cp[:a]/g)*inintegral * dp[:a])
             if (-term1 - term2 + term3 + term_s) > 0:
-                break
+                # if this happens on the first iteration, restart the search
+                if termdiff_neg == 1:
+                    a = 1
+                else:
+                    break
+                    
             # termdiff_neg and termdiff_pos are used to calculate the small
             # adjustment that we make to the top level of convection
             termdiff_neg = -term1 - term2 + term3 + term_s
+            a += 1
         termdiff_pos = -term1 - term2 + term3 + term_s
-
+        
         # the index of the top level to adjust
         self['convective_top'] = DataArray([a - 1], dims=('time',))
 
@@ -838,6 +845,47 @@ class AtmosphereSlowConvective(AtmosphereConvective):
         # Adjust stratospheric VMR values.
         self.apply_H2O_limits()
 
+        # Calculate the geopotential height field.
+        self.calculate_height()
+
+
+class AtmosphereSlowMoistConvection(AtmosphereSlowConvective):
+    
+    def moistlapse(self):
+        """Updates the atmospheric lapse rate for the convective adjustment
+        according to the moist adiabat, which is calculated from the
+        atmospheric temperature and humidity profiles. The lapse rate is in
+        units of K/km.
+        Parameters:
+            a: atmosphere
+        """
+        g = constants.g
+        Lv = 2501000
+        R = 287
+        eps = 0.62197
+        Cp = constants.isobaric_mass_heat_capacity
+        VMR = self['H2O'][0, :]
+        T = self['T'][0, :]
+        lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
+        lapse_phlev = utils.calculate_halflevel_pressure(lapse.values)
+        self['lapse'][0] = lapse_phlev
+    
+    def adjust(self, heatingrates, timestep, surface):
+        
+        self.moistlapse()
+        
+        # Apply heatingrates to temperature profile.
+        self['T'] += heatingrates * timestep
+    
+        # Apply convective adjustment
+        self.convective_adjustment(surface, timestep)
+    
+        # Preserve the initial relative humidity profile.
+        self.relative_humidity = self['initial_rel_humid'].values
+    
+        # Adjust stratospheric VMR values.
+        self.apply_H2O_limits()
+    
         # Calculate the geopotential height field.
         self.calculate_height()
 
