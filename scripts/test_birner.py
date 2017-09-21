@@ -15,6 +15,8 @@ import conrad
 import typhon
 import numpy as np
 import copy
+import time
+import multiprocessing
 
 def ozoneshift(a, shift):
     """
@@ -64,39 +66,53 @@ def moistlapse(a):
     VMR = a['H2O'][0, :]
     T = a['T'][0, :]
     lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
-    return lapse
+    return lapse.values
 
-for squash in [1]: #np.arange(0.7, 1.3, 0.05): # range(0, 32, 2):
+#for levels in [200]: #[100, 200, 300, 400, 500]:
+
+#for squash in np.arange(0.85, 1.3, 0.05): # range(0, 32, 2):
+def scaleozone(squash, levels):
     squashname = str(squash).replace('.', '')
-    # Load the FASCOD atmosphere.
-    gf = typhon.arts.xml.load('/home/mpim/m300580/conrad/scripts/data/tropical.xml')
-    gf = gf.extract_slice(slice(1, None), axis=1)  # omit bottom level
     
+    # Load the FASCOD atmosphere.
+    #gf = typhon.arts.xml.load('/home/mpim/m300580/conrad/scripts/data/tropical.xml')
+    #gf = gf.extract_slice(slice(1, None), axis=1)  # omit bottom level
+    
+    gf = typhon.arts.xml.load('/home/mpim/m300580/conrad/scripts/data/tropical-convective.xml')
+    #gf = typhon.arts.xml.load('/home/mpim/m300580/conrad/scripts/data/tropical-fixedRH.xml')
     # Refine original pressure grid.
-    p_old = gf.grids[1]
-    p = typhon.math.nlogspace(p_old.max(), p_old.min(), 200)
+    p = conrad.utils.refined_pgrid(1013e2, 0.01e2, levels)
     gf.refine_grid(p, axis=1)
     
-    # Create a sufrace model.
-    s = conrad.surface.SurfaceHeatCapacity(cp=200, dz=50)
-    #s = conrad.surface.SurfaceFixedTemperature()
+#    # Refine original pressure grid.
+#    p_old = gf.grids[1]
+#    p = typhon.math.nlogspace(p_old.max(), p_old.min(), levels)
+#    gf.refine_grid(p, axis=1)
     
     # Create an atmosphere model.
+    # Lapse rate varies with height, but fixed throughout run
+    a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf, lapse=0.0065*np.ones((1, levels)))
     #a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-    a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
-    a['lapse'] = 0.0065 # Fixed lapse rate
+    #a = conrad.atmosphere.AtmosphereSlowConvective.from_atm_fields_compact(gf, tau=np.ones((1, levels))) #, lapse=0.0065*np.ones((1, levels)))
+    #a['lapse'][0] = moistlapse(a)
+    #a['convective_tau'] *= 2
+    #a['convective_tau'][0, :40] = 0
+    
+    # If the lapse rate should change at each time step depending on the
+    # updated atmospheric temperature and humidity use AtmosphereMoistConvective
+    
+    # Create a sufrace model.
+    #s = conrad.surface.SurfaceHeatCapacity.from_atmosphere(a, dz=3)
+    #s = conrad.surface.SurfaceFixedTemperature.from_netcdf('/home/mpim/m300580/Documents/lukas/eq_atmospheres_netcdf/tropical-convective.nc')#from_atmosphere(a)
+    s = conrad.surface.SurfaceHeatCapacity.from_netcdf('/home/mpim/m300580/Documents/lukas/eq_atmospheres_netcdf/tropical-convective.nc')#from_atmosphere(a)
+    #s['temperature'] = 320
+    
     #TODO a['convective_timescale'] = some array, a function of height 
                                         #default zero
     
-    # Lapse rate varies with height, but fixed throughout run
-    # in this case use AtmosphereConvective with moist lapse rate
-    # If the lapse rate should change at each time step depending on the
-    # updated atmospheric temperature and humidity use AtmosphereMoistConvective
-    #a['lapse'].values = moistlapse(a)[np.newaxis, :] # Lukas, why doesn't this work?
-    
     # Other atmospheric changes
-    #a['CO2'] *= 4
-    #a['O3'].values = ozonesquash(a, squash)[np.newaxis, :]
+    #a['CO2'] *= 0.5
+    a['O3'].values = ozonesquash(a, squash)[np.newaxis, :]
     #a['O3'] *= factor
     
     # Create synthetic relative humidity profile.
@@ -104,7 +120,7 @@ for squash in [1]: #np.arange(0.7, 1.3, 0.05): # range(0, 32, 2):
     a.relative_humidity = rh
     
     # Create a sufrace model.
-    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
+    r = conrad.radiation.PSRAD(atmosphere=a, surface=s, zenith_angle=20) #daytime=0.3, 
     
     # Combine atmosphere and surface model into an RCE framework.
     rce = conrad.RCE(
@@ -112,14 +128,32 @@ for squash in [1]: #np.arange(0.7, 1.3, 0.05): # range(0, 32, 2):
         surface=s,
         radiation=r,
         delta=0,#0.001,
-        timestep=0.02,#0.1
+        timestep=0.02, #0.02,
         writeevery=1,
-        max_iterations=10000,#2000, 
-        outfile='/home/mpim/m300580/conrad/scripts/results/testing.nc'
-        #outfile='/scratch/local1/m300580/conrad/ozonesquash4CO2/convective_test{}.nc'.format(squashname)
+        max_iterations=20000,
+        #outfile='/home/mpim/m300580/conrad/scripts/results/readjust_test.nc'
+        outfile='/scratch/local1/m300580/conrad/ozonesquash/con_{}levels/squash{}.nc'.format(levels, squashname)
         )
     
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
     with conrad.radiation.utils.PsradSymlinks():
         rce.run()  # Start simulation.
+
+if __name__ == '__main__':
+    squashfactors = np.arange(0.7, 1.35, 0.05)
+    #squashfactors = [0.7, 0.75]
+    levelset = [400, 600, 1000]
+    # The with block is not required for the model to run but prevents
+    # creating and removing of symlinks during each iteration.
+    with conrad.radiation.utils.PsradSymlinks():
+        time.sleep(5)  # workaround for multiprocessing on slow file systems.
+        jobs = []
+        for factor in squashfactors:
+            p = multiprocessing.Process(target=scaleozone, args=[factor, 600],)
+            jobs.append(p)
+            p.start()
+
+        # Wait for all jobs to finish before exit with-block.
+        for job in jobs:
+            job.join()

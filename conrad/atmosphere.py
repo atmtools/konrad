@@ -26,7 +26,6 @@ import conrad
 from conrad import constants
 from conrad import utils
 
-
 logger = logging.getLogger()
 
 atmosphere_variables = [
@@ -450,20 +449,19 @@ class AtmosphereConvective(Atmosphere):
         # performed in the following loop.
         term1_arr = np.cumsum(Cp / g * dp)
         term3_arr = np.cumsum(Cp / g * T_rad.values * dp)
+        surface_sum = np.cumsum(lp[:-1] * dp_lapse)
 
         # Loop over atmospheric layers above the first unstable layers.
         # The atmospheric layers we loop over are at the top of the convective
         # profile, (the layers below this are determined by the lapse rate).
         # We test these profiles until we find one that is approximately
         # energy conserving.
+
         for a in range(start_index, len(p)):
             term1 = T_rad[a] * term1_arr[a]
             term3 = term3_arr[a]
-            # TODO: Here is quite possibly more potential for precalculation...
-            term_s = (
-                dz_s * density_s * Cp_s *
-                (T_rad[a] + np.sum(lp[0:a+1] * dp_lapse[0:a+1]) - T_rad_s)
-            )
+            term_s = dz_s*density_s*Cp_s*(T_rad[a]+surface_sum[a]-T_rad_s)
+
             inintegral = utils.revcumsum(lp[1:a+1] * dp_lapse[1:a+1])
             if isinstance(Cp, float):
                 term2 = np.sum((Cp/g)*inintegral * dp[:a])
@@ -751,139 +749,79 @@ class AtmosphereSlowConvective(AtmosphereConvective):
     """
     Under construction. Do not use.
     """
-    def __init__(self, *args, tau=0.0, **kwargs):
+    def __init__(self, *args, tau=0, **kwargs):
         super().__init__(*args, **kwargs)
-        if isinstance(tau, float):
-            tau_array = tau * np.ones((1, self['plev'].size))
-            self['convective_tau'] = DataArray(data=tau_array,
-                                               dims=('time', 'plev'))
-        elif isinstance(tau, np.ndarray):
-            self['convective_tau'] = DataArray(tau, dims=('time', 'plev'))
+
+        self['convective_tau'] = DataArray(tau[np.newaxis, :], dims=('time', 'plev'))
 
         utils.append_description(self)
 
-    def readjust(self, ct, T_con, surface, surfacetemp, termdiff_neg, Tct_min,
-                 termdiff_pos, Tct_max, timestep):
-        """
-        Make an adjusment to the convective top temperature (and thus the whole
-        convective profile), such that it is closer to being energy conserving.
+    def test_profile(self, surface, surfaceT, timestep, lp):
 
-        Parameters:
-            ct: array index,
-                the top level for the convective adjustment
-            T_con: convectively adjusted temperature profile
-            surface: surface with temperature from the radiative profile
-            surfacetemp: convectively adjusted surface temperature
-            termdiff_neg: difference from zero of the convective adjustment
-                integration when using a convective top temperature of
-                T[ct] = Tct_min
-            Tct_min: lower bound for the temperature of the convective top
-            termdiff_pos: difference from zero of the convective adjustment
-                integration when using a convective top temperature of
-                T[ct] = Tct_max
-            Tct_max: upper bound for the temperature of the convective top
-        """
         T_rad = self['T'][0, :]
-        T_con_new = T_con.copy()
-        g = constants.g
-        p = self.plev
-        phlev = self.phlev
-        dp = np.diff(phlev)
-        density = typhon.physics.density(p, T_rad)
-        lp = - self.lapse[0, :] / (g*density)
-        tau = self['convective_tau'][0]
-        tf = np.exp(-tau/timestep)
-
-        eff_Cp_s = surface.rho * surface.cp * surface.dz
-
-        termdiff = self.energy_difference(T_con, T_rad, surfacetemp,
-                                          surface.temperature[0], dp, eff_Cp_s)
-
-        if termdiff > 0:
-            Tct_max = T_con[ct]
-            termdiff_pos = termdiff
-        else:
-            Tct_min = T_con[ct]
-            termdiff_neg = termdiff
-
-        frct = -termdiff_neg / (termdiff_pos - termdiff_neg)
-
-        # adjust convective top temperature
-        if termdiff > 0:
-            T_con_new[ct] -= (1 - frct) * (T_con[ct] - Tct_min)
-        else:
-            T_con_new[ct] += (Tct_max - T_con[ct])*frct
-
-        # adjust surface temperature
-        surfacetemp_new = T_con_new[ct] + np.sum(lp[0:ct]*dp[0:ct])
-        # adjust temperature of other atmospheric layers
-        T_con_new.values[0:ct] = (
-            T_rad[0:ct] * (1 - tf[0:ct]) + tf[0:ct]
-            * (T_con_new.values[ct]
-               + utils.revcumsum(lp.values[0:ct] * dp[0:ct]))
-        )
-
-        return (T_con_new, surfacetemp_new, termdiff_neg, Tct_min,
-                termdiff_pos, Tct_max)
-
-    def convective_adjustment(self, ct, tdn, tdp, surface, timestep):
-        """Apply the convective adjustment.
-
-        Parameters:
-            ct (float): array index,
-                the top level for the convective adjustment
-            tdn, tdp: differences from zero of the convective adjustment
-                integration when using a convective top at ct and ct+1
-                respectively and with the convective top temperature equal to
-                the radiative temperature at that level
-        """
         p = self['plev']
         phlev = self['phlev']
         dp = np.diff(phlev)
-        T_rad = self['T'][0, :]
-        T_con = T_rad.copy()
-        lapse = self.lapse
-        density = typhon.physics.density(p, T_rad)
-        g = constants.g
+        dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p))) # for lapse rate integral
+        
+        tau = self['convective_tau'][0]
+        tf = 1 - np.exp(-timestep/tau)
+        T_con = T_rad*(1 - tf) + tf*(surfaceT - np.cumsum(dp_lapse * lp[:-1]))
+
         eff_Cp_s = surface.rho * surface.cp * surface.dz
 
-        lp = -lapse[0, :] / (g*density)
+        diff = self.energy_difference(T_con, T_rad, surfaceT, surface.temperature, dp, eff_Cp_s)
+        
+        return T_con, float(diff.values)
+    
+    
+    def convective_adjustment(self, surface, timestep):
 
-        frct = - tdn / (tdp - tdn)
-        tau = self['convective_tau'][0]
-        tf = np.exp(-tau/timestep)
+        T_rad = self['T'][0, :]
+        p = self['plev']
 
-        levelup_T_at_ct = (
-            T_rad[ct]*(1-tf[ct]) + tf[ct]*(T_rad[ct+1] + lp[ct]*dp[ct])
-        )
-        T_con[ct] += (levelup_T_at_ct - self['T'][0, ct])*frct
-        # adjust surface temperature
-        surfacetemp = T_con[ct] + np.sum(lp[0:ct]*dp[0:ct])
-        # adjust temperature of other atmospheric layers
-        T_con.values[0:ct] = (
-            T_rad[0:ct] * (1 - tf[0:ct]) + tf[0:ct]
-            * (T_con.values[ct] + utils.revcumsum(lp.values[0:ct] * dp[0:ct]))
-        )
+        lapse = self.lapse[0, :]
+        density1 = typhon.physics.density(p, T_rad)
+        density = utils.calculate_halflevel_pressure(density1.values)
 
-        Tct_max = levelup_T_at_ct
-        Tct_min = T_rad[ct]
-        sst_rad = surface['temperature'][0]
-        energydiff = self.energy_difference(T_con, T_rad, surfacetemp, sst_rad,
-                                            dp, eff_Cp_s)
+        g = constants.g
+        lp = -lapse[:].values / (g*density)
+                
+        # find energy difference if no change to surface temp due to convective adjustment
+        surfaceTpos = surface.temperature.values
+        T_con, diffpos = self.test_profile(surface, surfaceTpos, timestep, lp)
+        if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
+            self['T'].values = T_con.values[np.newaxis, :]
 
-        # adjust the convective profile: perform a maximum of 3 iterations or
-        # until the energy difference is sufficiently small
-        counter = 0
-        while counter < 3 and np.absolute(float(energydiff)) > 0.0001:
-            newvals = self.readjust(ct, T_con, surface, surfacetemp, tdn,
-                                    Tct_min, tdp, Tct_max, timestep)
-            T_con, surfacetemp, tdn, Tct_min, tdp, Tct_max = newvals
-            energydiff = self.energy_difference(T_con, T_rad, surfacetemp,
-                                                sst_rad, dp, eff_Cp_s)
-            counter += 1
+        if diffpos < 0:
+            return None
+            #raise ValueError('Convective adjustment must cool surface')
+
+        
+        # reduce surface temperature until the adjustment is associated with an energy loss
+        surfaceTneg = surfaceTpos - 10
+        T_con, diffneg = self.test_profile(surface, surfaceTneg, timestep, lp)
+        while diffneg > 0:
+            diffpos = diffneg
+            surfaceTpos = surfaceTneg
+            surfaceTneg -= 10
+            T_con, diffneg = self.test_profile(surface, surfaceTneg, timestep, lp)
+
+
+        while -diffneg > 0.00001 and diffpos > 0.00001:
+            # use upper and lower bounds of surface temperature to find a closer profile
+            surfaceT = surfaceTneg + (surfaceTpos - surfaceTneg)* (-diffneg) / (-diffneg + diffpos)
+            T_con, diff = self.test_profile(surface, surfaceT, timestep, lp)
+            if diff > 0:
+                diffpos = diff
+                surfaceTpos = surfaceT
+            else:
+                diffneg = diff
+                surfaceTneg = surfaceT
+
 
         # save new temperature profile
-        surface['temperature'][0] = surfacetemp
+        surface['temperature'][0] = surfaceT
         self['T'].values = T_con.values[np.newaxis, :]
 
     def adjust(self, heatingrates, timestep, surface):
@@ -891,26 +829,8 @@ class AtmosphereSlowConvective(AtmosphereConvective):
         # Apply heatingrates to temperature profile.
         self['T'] += heatingrates * timestep
 
-        tau = self['convective_tau'][0].values
-        eff_Cp = constants.isobaric_mass_heat_capacity * np.exp(-tau/timestep)
-
-        if isinstance(surface, conrad.surface.SurfaceFixedTemperature):
-            self.convective_adjustment_fixed_surface_temperature(
-                surface=surface,
-            )
-        else:
-            # Search for the top of convection.k
-            ct, tdn, tdp = self.convective_top(surface=surface,
-                                               timestep=timestep,
-                                               Cp=eff_Cp)
-
-            # If a convective top is found, apply the convective adjustment.
-            if ct is not None:
-                self.convective_adjustment(
-                    ct, tdn, tdp,
-                    surface=surface,
-                    timestep=timestep
-                )
+        # Apply convective adjustment
+        self.convective_adjustment(surface, timestep)
 
         # Preserve the initial relative humidity profile.
         self.relative_humidity = self['initial_rel_humid'].values
