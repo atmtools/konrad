@@ -2,12 +2,14 @@
 """Common utility functions.
 """
 import collections
+import copy
 import logging
 import os
 
 import numpy as np
 import typhon
 from netCDF4 import Dataset
+from astropy.convolution import convolve, Box1DKernel
 
 from conrad import constants
 
@@ -67,6 +69,26 @@ def append_timestep_netcdf(filename, data, timestamp):
                         nc.variables[var][t] = data[var].values
                     else:
                         nc.variables[var][t] = data[var]
+
+def ozonesquash(o3, z, squash):
+    """
+    Squashes the ozone profile upwards or stretches it downwards, with no 
+        change to the shape of the profile above the ozone concentration maximum
+    Parameters:
+        o3 (ndarray): initial ozone profile
+        z (ndarray): corresponding height values
+        squash: float, with 1 being no squash, 
+            numbers < 1 squashing the profile towards the maximum,
+            numbers > 1, stretching the profile downwards
+    Returns:
+        ndarray: new ozone profile
+    """
+    i_max_o3 = np.argmax(o3)
+    
+    sqz = (z - z[i_max_o3])*squash + z[i_max_o3]
+    new_o3 = copy.copy(o3) #TODO: check if copy is needed
+    new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3)
+    return new_o3
 
 
 def create_relative_humidity_profile(p, rh_s=0.75):
@@ -317,3 +339,48 @@ def create_pardirs(path):
     """
     # Create the full given directory tree, regardless if it already exists.
     os.makedirs(os.path.dirname(path), exist_ok=True)
+
+def max_mass_divergence(ds, maxDiv=True, i=-1):
+    """ Find the level of maximum mass divergence
+    Sorry Lukas, this one is not so neat. Please change it!
+    
+    Parameters:
+        ds: Dataset from netCDF4
+        i: index for Dataset timestep
+        maxDiv == True: returns T and z at level of maximum divergence
+        maxDiv == False: returns stability (S), omega and divergence profiles  
+    """
+    drylapse = 0.0098
+    lapse_rate = np.diff(ds['T'][i, :]) / np.diff(ds['z'][i, :])
+    lapse_rate = typhon.math.interpolate_halflevels(lapse_rate)
+    gamma = lapse_rate/drylapse
+    Cp = constants.Cp # isobaric specific heat of dry air [J kg-1 K-1]
+    Rd = 287.058 # gas constant of dry air [J kg-1, K-1]
+    
+    T = ds['T'][i, 1:-1]
+    S = Rd/Cp * T/(ds['plev'][1:-1]/10**2) * (1 - gamma) # static stability [K hPa-1]
+    Q_r = ds['net_htngrt'][i, 1:-1] # radiative cooling [K day-1]
+    omega = -Q_r/S # [hPa day-1]
+    d_omega1 = np.diff(omega)
+    
+    d_omega = convolve(d_omega1, Box1DKernel(5)) # smooth
+    
+    d_P = np.diff(ds['plev'])[1:-1]/10**2
+    Div = d_omega/d_P # mass divergence
+    
+    if not maxDiv:
+        return S, omega, Div
+    
+    z = typhon.math.interpolate_halflevels(ds['z'][i, 1:-1])
+    
+    cp_z = z[np.argmin(T[np.where(z < 30000)])] # z at cold point
+    
+    # find maximum divergence between 5 km altitude and the cold point height
+    Div_5_30 = Div[np.where(z > 5000)][np.where(z < cp_z)]
+    z_5_30 = z[np.where(z > 5000)][np.where(z < cp_z)]
+    z_maxDiv = z_5_30[np.argmax(Div_5_30)]
+    
+    T_5_30 = typhon.math.interpolate_halflevels(T)[np.where(z > 5000)][np.where(z < cp_z)]
+    T_maxDiv = T_5_30[np.argmax(Div_5_30)]
+    
+    return T_maxDiv, z_maxDiv
