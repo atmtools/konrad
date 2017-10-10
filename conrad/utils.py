@@ -17,6 +17,7 @@ from conrad import constants
 __all__ = [
     'append_timestep_netcdf',
     'create_relative_humidity_profile',
+    'create_relative_humidity_profile2',
     'ensure_decrease',
     'calculate_halflevel_pressure',
     'append_description',
@@ -104,6 +105,27 @@ def create_relative_humidity_profile(p, rh_s=0.75):
     return np.round(rh, decimals=4)
 
 
+def create_relative_humidity_profile2(plev, rh_surface=0.90, rh_tropo=0.35,
+                                      p_tropo=150e2, c=1.7):
+    """Create a realistic relative humidity profile for the tropics.
+
+    Parameters:
+        plev (ndarray): Pressure [Pa].
+        rh_surface (float): Relative humidity at first pressure level.
+        rh_tropo (float): Relative humidity at upper-tropospheric peak.
+        c (float): Factor to control the width of the
+            upper-tropospheric peak.
+
+    Returns:
+        ndarray: Relative humidity.
+    """
+    rh = rh_surface / (np.exp(1) - 1) * (np.exp((plev / plev[0])**1.1) - 1)
+
+    rh += rh_tropo * np.exp(-c*(np.log(plev / p_tropo)**2))
+
+    return rh
+
+
 def ensure_decrease(array):
     """Ensure that a given array is decreasing.
 
@@ -164,7 +186,7 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
         start (float): The starting value of the sequence.
         stop (float): The end value of the sequence.
         num (int): Number of sample to generate (Default is 50).
-        squeeze (float): Factor with which the first stepwidth is
+        shift (float): Factor with which the first stepwidth is
             squeezed in logspace. Has to be between  ``(0, 2)`.
             Values smaller than one compress the gridpoints,
             while values greater than 1 strecht the spacing.
