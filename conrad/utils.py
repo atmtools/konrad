@@ -17,6 +17,8 @@ from conrad import constants
 
 __all__ = [
     'append_timestep_netcdf',
+    'ozone_profile',
+    'ozonesquash',
     'create_relative_humidity_profile',
     'create_relative_humidity_profile2',
     'ensure_decrease',
@@ -72,6 +74,7 @@ def append_timestep_netcdf(filename, data, timestamp):
                     else:
                         nc.variables[var][t] = data[var]
 
+
 def ozonesquash(o3, z, squash):
     """
     Squashes the ozone profile upwards or stretches it downwards, with no 
@@ -92,7 +95,8 @@ def ozonesquash(o3, z, squash):
     new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3)
     return new_o3
 
-def ozone_profile(p, o3_dataset):
+
+def ozone_profile(p=None, o3_dataset=None):
     """
     Open a datafile of ozone values and interpolate them onto the pressure
         grid.
@@ -102,12 +106,26 @@ def ozone_profile(p, o3_dataset):
     Returns:
         ndarray: Ozone concentration corresponding to p.
     """
-    o3_data = np.array(o3_dataset['O3'])
-    p_data = np.array(o3_dataset['plev'])
-    f = interp1d(p_data, o3_data, kind='cubic', fill_value='extrapolate')
-    o3_new = f(p)
-    
-    return o3_new
+    # If the ozone dataset is not passed, use the shipped one.
+    if o3_dataset is None:
+        # Use the current module path to construct the location of the
+        # data directory.
+        pkg_path = os.path.dirname(__file__)
+        ncfile = os.path.join(pkg_path, 'data', 'ozone_profile.nc')
+        o3_dataset = Dataset(ncfile)
+
+    # **Read** the ozone profile into a ndarray.
+    o3_data = o3_dataset['O3'][:]
+
+    # If no pressure grid is passed...
+    if p is None:
+        # return the original data.
+        return o3_data
+    else:
+        # Otherwise interpolate the values to the passed pressure grid.
+        p_data = np.array(o3_dataset['plev'])
+        f = interp1d(p_data, o3_data, kind='cubic', fill_value='extrapolate')
+        return f(p)
 
 def create_relative_humidity_profile(p, rh_s=0.75):
     """Create an exponential relative humidity profile.
