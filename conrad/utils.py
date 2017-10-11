@@ -10,6 +10,7 @@ import numpy as np
 import typhon
 from netCDF4 import Dataset
 from astropy.convolution import convolve, Box1DKernel
+from scipy.interpolate import interp1d
 
 from conrad import constants
 
@@ -91,6 +92,22 @@ def ozonesquash(o3, z, squash):
     new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3)
     return new_o3
 
+def ozone_profile(p, o3_dataset):
+    """
+    Open a datafile of ozone values and interpolate them onto the pressure
+        grid.
+    Parameters:
+        p (ndarray): Pressure.
+        o3_dataset (Dataset): ozone data at 200 pressure levels.
+    Returns:
+        ndarray: Ozone concentration corresponding to p.
+    """
+    o3_data = np.array(o3_dataset['O3'])
+    p_data = np.array(o3_dataset['plev'])
+    f = interp1d(p_data, o3_data, kind='cubic', fill_value='extrapolate')
+    o3_new = f(p)
+    
+    return o3_new
 
 def create_relative_humidity_profile(p, rh_s=0.75):
     """Create an exponential relative humidity profile.
