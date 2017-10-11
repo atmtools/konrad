@@ -26,6 +26,7 @@ setup(
     ],
     include_package_data=True,
     install_requires=[
+        'astropy',
         'matplotlib>=2.0.0',
         'netcdf4>=1.2.7',
         'numba>=0.33.0',
