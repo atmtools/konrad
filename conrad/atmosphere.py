@@ -275,6 +275,100 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         lapse_rate = np.append(lapse_rate[0], lapse_rate)
         return np.append(lapse_rate, lapse_rate[-1])
 
+    def get_potential_temperature(self, p0=1000e2):
+        """Calculate the potential temperature.
+
+        .. math::
+            \theta = T \cdot \left(\frac{p_0}{P}\right)^\frac{2}{7}
+
+        Parameters:
+              p0 (float): Pressure at reference level [Pa].
+
+        Returns:
+              ndarray: Potential temperature [K].
+        """
+        # Get view on temperature and pressure arrays.
+        T = self['T'].values[0, :]
+        p = self['plev'].values
+
+        # Calculate the potential temperature.
+        return T * (p0 / p) ** (2 / 7)
+
+    def get_static_stability(self):
+        """Calculate the static stability.
+
+        .. math::
+            \sigma = - \frac{T}{\Theta} \frac{\partial\Theta}{\partial p}
+
+        Returns:
+              ndarray: Static stability [K/Pa].
+        """
+        # Get view on temperature and pressure arrays.
+        t = self['T'].values[0, :]
+        p = self['plev'].values
+
+        # Calculate potential temperature and its vertical derivative.
+        theta =  self.get_potential_temperature()
+        dtheta = np.diff(theta) / np.diff(p)
+
+        return -(t / theta)[:-1] * dtheta
+
+    def get_diabatic_subsidence(self, radiative_cooling):
+        """Calculate the diabatic subsidence.
+
+        Parameters:
+              radiative_cooling (ndarray): Radiative cooling rates.
+                Positive values for heating, negative values for cooling!
+
+        Returns:
+            ndarray: Diabatic subsidence [Pa/day].
+        """
+        sigma = self.get_static_stability()
+
+        return -radiative_cooling[:-1] / sigma
+
+    def get_subsidence_convergence_max_index(self, radiative_cooling,
+                                             pmin=10e2):
+        """Return index of maximum subsidence convergence.
+
+        Parameters:
+            radiative_cooling (ndarray): Radiative cooling rates.
+                Positive values for heating, negative values for cooling!
+            pmin (float): Lower pressure threshold. The cold point has to
+                be below (higher pressure, lower height) that value.
+
+        Returns:
+              int: Layer index.
+        """
+        plev = self['plev'].values
+        omega = self.get_diabatic_subsidence(radiative_cooling)
+        domega = np.diff(omega) / np.diff(plev[:-1])
+
+        return np.argmax(domega[plev[:-2]>pmin])
+
+    def adjust_relative_humidity(self, heatingrates, rh_surface=0.8,
+                                 rh_tropo=0.3):
+        """Adjust the relative humidity according to the vertical structure."""
+        # TODO: Humidity values should be attributes of Atmosphere objects.
+
+        # Find the level (index) of maximum diabatic subsidence convergence.
+        # This level is associated with a second peak in the relative humidity.
+        scm = self.get_subsidence_convergence_max_index(heatingrates[0, :])
+        self['convergence_max'] = DataArray([scm], dims=('time',))
+
+        # Determine relative humidity profile with second maximum at the
+        # level of maximum subsidence convergence.
+        plev = self['plev'].values
+        rh = utils.create_relative_humidity_profile(
+            plev=plev,
+            rh_surface=rh_surface,
+            rh_tropo=rh_tropo,
+            p_tropo=plev[scm],
+        )
+
+        # Overwrite the current humidity profile with the new values.
+        self.relative_humidity = rh
+
     @property
     def cold_point_index(self, pmin=1e2):
         """Return the pressure index of the cold point tropopause.
@@ -462,8 +556,9 @@ class AtmosphereConvective(Atmosphere):
         g = constants.g
         lp = -lapse[:].values / (g*density)
 
-        # in case the first layer in the loop produces a positive termdiff
-        termdiff_neg = 1
+        # By pre-assigning this variable to None, we can check if we are in
+        # the first iteration in the following loop.
+        termdiff_neg = None
 
         # Precalculate some cumulative sums in order to reduce computations
         # performed in the following loop.
@@ -489,8 +584,10 @@ class AtmosphereConvective(Atmosphere):
             else:
                 term2 = np.sum((Cp[:a]/g)*inintegral * dp[:a])
             if (-term1 - term2 + term3 + term_s) > 0:
-                # if this happens on the first iteration, restart the search
-                if a == start_index:
+                # If the iteration at the start index results in a positive
+                # difference, restart search at the bottom to ensure that we
+                #  did not start above the convective top.
+                if a == start_index and termdiff_neg is None:
                     a = 1
                 else:
                     break
@@ -762,8 +859,8 @@ class AtmosphereMoistConvective(AtmosphereConvective):
                     timestep=timestep
                 )
 
-        # Preserve the initial relative humidity profile.
-        self.relative_humidity = self['initial_rel_humid'].values
+        # Adjust relative humidity profile according to vertical structure.
+        self.adjust_relative_humidity(heatingrates)
 
         # Adjust stratospheric VMR values.
         self.apply_H2O_limits()
