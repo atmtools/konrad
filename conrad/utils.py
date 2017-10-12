@@ -20,7 +20,6 @@ __all__ = [
     'ozone_profile',
     'ozonesquash',
     'create_relative_humidity_profile',
-    'create_relative_humidity_profile2',
     'ensure_decrease',
     'calculate_halflevel_pressure',
     'append_description',
@@ -127,35 +126,28 @@ def ozone_profile(p=None, o3_dataset=None):
         f = interp1d(p_data, o3_data, kind='cubic', fill_value='extrapolate')
         return f(p)
 
-def create_relative_humidity_profile(p, rh_s=0.75):
-    """Create an exponential relative humidity profile.
 
-    Parameters:
-        p (ndarray): Pressure.
-        rh_s (float): Relative humidity at first pressure level.
-
-    Returns:
-        ndarray: Relative humidtiy."""
-    rh = rh_s / (np.exp(1) - 1) * (np.exp(p / p[0]) - 1)
-    return np.round(rh, decimals=4)
-
-
-def create_relative_humidity_profile2(plev, rh_surface=0.90, rh_tropo=0.35,
-                                      p_tropo=150e2, c=1.7):
+def create_relative_humidity_profile(plev, rh_surface=0.80, rh_tropo=0.30,
+                                     p_tropo=150e2, c=1.7):
     """Create a realistic relative humidity profile for the tropics.
 
     Parameters:
         plev (ndarray): Pressure [Pa].
-        rh_surface (float): Relative humidity at first pressure level.
-        rh_tropo (float): Relative humidity at upper-tropospheric peak.
+        rh_surface (float): Relative humidity at first
+            pressure level (surface).
+        rh_tropo (float): Relative humidity at second maximum
+            in the upper-troposphere.
+        p_tropo (float): Pressure at which the second maximum is located [Pa].
         c (float): Factor to control the width of the
             upper-tropospheric peak.
 
     Returns:
         ndarray: Relative humidity.
     """
+    # Exponential decay from the surface value throughout the atmosphere.
     rh = rh_surface / (np.exp(1) - 1) * (np.exp((plev / plev[0])**1.1) - 1)
 
+    # Add  Gaussian centered at a given pressure in the upper troposhere.
     rh += rh_tropo * np.exp(-c*(np.log(plev / p_tropo)**2))
 
     return rh
