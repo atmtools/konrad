@@ -20,6 +20,7 @@ import logging
 import typhon
 import netCDF4
 import numpy as np
+from scipy.interpolate import interp1d
 from xarray import Dataset, DataArray
 
 import conrad
@@ -197,6 +198,50 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         atmfield.check_dimension()
 
         return atmfield
+
+    def refine_plev(self, pgrid, axis=1, **kwargs):
+        """Refine the pressure grid of an atmosphere object.
+
+        Note:
+              This method returns a **new** object,
+              the original object is maintained!
+
+        Parameters:
+              pgrid (ndarray): New pressure grid [Pa].
+              axis (int): Index of pressure axis (should be 1).
+                This keyword is only there for possible changes in future.
+            **kwargs: Additional keyword arguments are collected
+                and passed to :func:`scipy.interpolate.interp1d`
+
+        Returns:
+              Atmosphere: A **new** atmosphere object.
+        """
+        # Initialize an empty directory to fill it with interpolated data.
+        # The dictionary is later used to create a new object using the
+        # Atmosphere.from_dict() classmethod. This allows to circumvent the
+        # fixed dimension size in xarray.DataArrays.
+        datadict = dict()
+
+        datadict['plev'] = pgrid  # Store new pressure grid.
+        # Loop over all atmospheric variables...
+        for variable in atmosphere_variables:
+            # and create an interpolation function using the original data.
+            f = interp1d(self['plev'].values, self[variable],
+                         axis=axis, **kwargs)
+
+            # Store the interpolated new data in the data directory.
+            datadict[variable] = DataArray(f(pgrid), dims=('time', 'plev'))
+
+        # Create a new atmosphere object from the filled data directory.
+        new_atmosphere = type(self).from_dict(datadict)
+
+        # Calculate the geopotential height.
+        new_atmosphere.calculate_height()
+
+        # Append variable descriptions to the Dataset.
+        utils.append_description(new_atmosphere)
+
+        return new_atmosphere
 
     # TODO: This function could handle the nasty time dimension in the future.
     # Allowing to set two-dimensional variables using a 1d-array, if one
