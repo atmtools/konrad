@@ -381,24 +381,40 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
 
         return np.argmax(domega[plev[:-2] > pmin]) + 1
 
-    def adjust_relative_humidity(self, heatingrates, rh_surface=0.8,
+    def adjust_relative_humidity(self, heatingrates, timestep, rh_surface=0.8,
                                  rh_tropo=0.3):
         """Adjust the relative humidity according to the vertical structure."""
         # TODO: Humidity values should be attributes of Atmosphere objects.
 
+        plev = self['plev'].values  # Get view on pressure values.
+
         # Find the level (index) of maximum diabatic subsidence convergence.
         # This level is associated with a second peak in the relative humidity.
         scm = self.get_subsidence_convergence_max_index(heatingrates[0, :])
-        self['convergence_max'] = DataArray([scm], dims=('time',))
+        p_tropo_new = plev[scm]
+
+        # If present, compare the old pressure level of the second humidity
+        # maximum with the new one.
+        if 'p_tropo' in self:
+            p_tropo_old = self['p_tropo'].values[0]
+
+            omega_max = np.max(self.get_diabatic_subsidence(
+                heatingrates[0, :]).values)
+
+            if (p_tropo_new - p_tropo_old) < -omega_max * timestep:
+                p_tropo_new = p_tropo_old - omega_max * timestep
+            elif (p_tropo_new - p_tropo_old) > omega_max * timestep:
+                p_tropo_new = p_tropo_old + omega_max * timestep
+
+        self['p_tropo'] = DataArray([p_tropo_new], dims=('time',))
 
         # Determine relative humidity profile with second maximum at the
         # level of maximum subsidence convergence.
-        plev = self['plev'].values
         rh = utils.create_relative_humidity_profile(
             plev=plev,
             rh_surface=rh_surface,
             rh_tropo=rh_tropo,
-            p_tropo=plev[scm],
+            p_tropo=p_tropo_new,
         )
 
         # Overwrite the current humidity profile with the new values.

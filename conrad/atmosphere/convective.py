@@ -331,7 +331,7 @@ class AtmosphereMoistConvective(AtmosphereConvective):
 
         # Preserve the initial relative humidity profile.
         # self.relative_humidity = self['initial_rel_humid'].values
-        self.adjust_relative_humidity(heatingrates)
+        self.adjust_relative_humidity(heatingrates, timestep)
 
         # Adjust stratospheric VMR values.
         self.apply_H2O_limits()
