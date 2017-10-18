@@ -17,10 +17,10 @@
 
 """Perform simulations to evaluate the impact of varying CO2 concentrations.
 """
-import logger
+import logging
 import multiprocessing
 
-import numpy as np
+from typhon.math import nlogspace
 
 import conrad
 
@@ -28,20 +28,21 @@ import conrad
 logger = logging.getLogger()
 
 
-def scale_co2(factor, atmosphere='tropical-moistconvective',
-              experiment='scale-co2-moistconvective', **kwargs):
+def scale_co2(factor, atmosphere='secondmax',
+              experiment='fixed-rh', **kwargs):
     # Load atmosphere and surface model from netCDF file.
     # The models used as initial state are in equilibrium to avoid signals
     # from pure adjustment in the results.
     ncfile = f'data/{atmosphere}.nc'
     a = conrad.atmosphere.AtmosphereMoistConvective.from_netcdf(ncfile)
-    s = conrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile, dz=100)
+    a = a.refine_plev(conrad.utils.refined_pgrid(1013e2, 0.01e2, 250))
+    s = conrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile, dz=50)
 
     # Scale the CO2 concentration.
     a['CO2'] *= factor
 
     # # Create synthetic relative humidity profile.
-    # rh = conrad.utils.create_relative_humidity_profile(a['plev'].values, 0.75)
+    # rh = conrad.utils.create_relative_humidity_profile(a['plev'].values)
     # a.relative_humidity = rh
     # a.apply_H2O_limits()
 
@@ -52,9 +53,9 @@ def scale_co2(factor, atmosphere='tropical-moistconvective',
     rce = conrad.RCE(
         atmosphere=a, surface=s, radiation=r,
         delta=0.000,  # Run full number of itertations.
-        timestep=0.2,  # 4.8 hour time step.
+        timestep=0.15,  # 4.8 hour time step.
         writeevery=1.,  # Write netCDF output every day.
-        max_iterations=15000,  # 1000 days maximum simulation time.
+        max_iterations=10000,  # 1000 days maximum simulation time.
         outfile=conrad.utils.get_filepath(atmosphere, experiment, factor),
     )
 
@@ -64,12 +65,12 @@ def scale_co2(factor, atmosphere='tropical-moistconvective',
 
 if __name__ == '__main__':
     # Factors to modify the CO2 concentration with.
-    scale_factors = [0.5, 1, 2 ,4, 8]
+    scale_factors = [0.5, 1, 2, 4]
 
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
     with conrad.radiation.utils.PsradSymlinks():
-        p = multiprocessing.Pool(8)
+        p = multiprocessing.Pool(4)
         p.map(scale_co2, scale_factors)
 
     logger.info('All jobs finished.')
