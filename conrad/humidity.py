@@ -87,7 +87,7 @@ class Humidity(metaclass=abc.ABCMeta):
         return self.vmr
 
     @abc.abstractmethod
-    def determine(self, plev, T, **kwargs):
+    def get(self, plev, T, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
@@ -101,7 +101,7 @@ class Humidity(metaclass=abc.ABCMeta):
 
 class FixedVMR(Humidity):
     """Keep the water vapor volume mixing ratio constant."""
-    def determine(self, plev, T, **kwargs):
+    def get(self, plev, T, **kwargs):
         if self.vmr is None:
             self.vmr = self.vmr_profile(plev, T)
 
@@ -114,7 +114,7 @@ class FixedRH(Humidity):
     The relative humidity is kept constant under temperature changes,
     allowing for a moistening in a warming climate.
     """
-    def determine(self, plev, T, **kwargs):
+    def get(self, plev, T, **kwargs):
         self.vmr = self.vmr_profile(plev, T)
 
         return self.vmr
@@ -131,7 +131,7 @@ class CoupledRH(Humidity):
     References:
         Zelinka and Hartmann, 2010, Why is longwave cloud feedback positive?
     """
-    def determine(self, plev, T, p_tropo=150e2, **kwargs):
+    def get(self, plev, T, p_tropo=150e2, **kwargs):
         self.p_tropo = p_tropo
 
         self.vmr = self.vmr_profile(plev, T)

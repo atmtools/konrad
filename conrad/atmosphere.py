@@ -54,8 +54,10 @@ class Atmosphere(Dataset):
 
 
         # Check input types.
-        surface = utils.return_if_type(surface, 'surface',
-                                       Surface, SurfaceHeatCapacity())
+        surface = utils.return_if_type(
+            surface, 'surface', Surface,
+            SurfaceHeatCapacity.from_atmosphere(self)
+        )
 
         humidity = utils.return_if_type(humidity, 'humidity',
                                         Humidity, FixedRH())
@@ -91,7 +93,7 @@ class Atmosphere(Dataset):
         self.convection.stabilize(atmosphere=self, timestep=timestep)
 
         # Preserve the initial relative humidity profile.
-        self['H2O'][0, :] = self.humidity.determine(
+        self['H2O'][0, :] = self.humidity.get(
             plev=self.get_values('plev'),
             T=self.get_values('T', keepdims=False),
             p_tropo=self.get_subsidence_convergence_max(heatingrate[0, :]),
