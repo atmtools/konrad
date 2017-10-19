@@ -54,10 +54,8 @@ class Atmosphere(Dataset):
 
 
         # Check input types.
-        surface = utils.return_if_type(
-            surface, 'surface', Surface,
-            SurfaceHeatCapacity.from_atmosphere(self)
-        )
+        surface = utils.return_if_type(surface, 'surface',
+                                        Surface, SurfaceHeatCapacity())
 
         humidity = utils.return_if_type(humidity, 'humidity',
                                         Humidity, FixedRH())
