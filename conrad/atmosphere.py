@@ -52,42 +52,19 @@ class Atmosphere(Dataset):
         # Initialize ``xarray.Dataset`` with given positional args and kwargs.
         super().__init__(**kwargs)
 
-        # If no surface is passed...
-        if surface is None:
-            # use a surface with heat capacity as default.
-            surface = SurfaceHeatCapacity()
-        elif not isinstance(surface, Surface):
-            raise TypeError(
-                'Argument `surface` has to be of type {}.'.format(Surface)
-            )
 
-        # If no humidity handler is passed...
-        if humidity is None:
-            # use a humidity scheme with preserved relative humidity and
-            # coupled vertical structure.
-            humidity = CoupledRH()
-        elif not isinstance(humidity, Humidity):
-            raise TypeError(
-                'Argument `humidity` has to be of type {}.'.format(Humidity)
-            )
+        # Check input types.
+        surface = utils.return_if_type(surface, 'surface',
+                                       Surface, SurfaceHeatCapacity())
 
-        # If no convection scheme is passed...
-        if convection is None:
-            # use hard ajustment.
-            convection = HardAdjustment()
-        elif not isinstance(convection, Convection):
-            raise TypeError(
-                'Argument `convection` has to be of type {}.'.format(Convection)
-            )
+        humidity = utils.return_if_type(humidity, 'humidity',
+                                        Humidity, CoupledRH())
 
-        # If no lapse rate handler is passed...
-        if lapse is None:
-            # use hard ajustment.
-            lapse = MoistLapseRate()
-        elif not isinstance(lapse, LapseRate):
-            raise TypeError(
-                'Argument `lapse` has to be of type {}.'.format(LapseRate)
-            )
+        convection = utils.return_if_type(convection, 'convection',
+                                          Convection, HardAdjustment())
+
+        lapse = utils.return_if_type(lapse, 'lapse',
+                                     LapseRate, MoistLapseRate())
 
         # Set additional attributes for the Atmosphere object. They can be
         # accessed through point notation but do not need to be of type

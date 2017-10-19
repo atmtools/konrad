@@ -29,6 +29,8 @@ __all__ = [
     'equilibrium_sensitivity',
     'get_filepath',
     'create_pardirs',
+    'max_mass_divergence',
+    'return_if_type',
 ]
 
 logger = logging.getLogger(__name__)
@@ -406,3 +408,27 @@ def max_mass_divergence(ds, maxDiv=True, i=-1):
     T_maxDiv = T_5_30[np.argmax(Div_5_30)]
     
     return T_maxDiv, z_maxDiv
+
+
+def return_if_type(variable, variablename, expect, default):
+    """Return a variable if it matches an expected type.
+
+    Parameters:
+          variable: Variable to check.
+          variablename (str): Variable name for error message.
+          expect (type): Expected variable type.
+          default: Default value, if varibale is ``None``.
+
+    Raises:
+          TypeError: If variable does not match expected type.
+    """
+    if variable is None:
+        # use a surface with heat capacity as default.
+        variable = default
+    elif not isinstance(variable, expect):
+        raise TypeError(
+            'Argument `{name}` has to be of type `{type}`.'.format(
+                name=variablename, type=expect.__name__)
+        )
+
+    return variable
