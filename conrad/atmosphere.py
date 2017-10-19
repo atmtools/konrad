@@ -11,8 +11,9 @@ from xarray import Dataset, DataArray
 from conrad import constants
 from conrad import utils
 from conrad.convection import (Convection, HardAdjustment)
-from conrad.surface import (Surface, SurfaceHeatCapacity)
 from conrad.humidity import (Humidity, CoupledRH)
+from conrad.lapserate import (LapseRate, MoistLapseRate)
+from conrad.surface import (Surface, SurfaceHeatCapacity)
 
 
 __all__ = [
@@ -34,7 +35,8 @@ atmosphere_variables = [
 
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
-    def __init__(self, convection=None, humidity=None, surface=None, **kwargs):
+    def __init__(self, convection=None, humidity=None, surface=None,
+                 lapse=None, **kwargs):
         """Create an atmosphere model.
 
        Parameters:
@@ -44,6 +46,8 @@ class Atmosphere(Dataset):
                 Defaults to ``conrad.humidity.CoupledRH``.
              surface (conrad.surface.Surface): Surface model.
                 Defaults to ``conrad.surface.SurfaceHeatCapacity``.
+             lapse (conrad.lapse.LapseRate): Lapse rate handler.
+                Defaults to ``conrad.lapserate.MoistLapseRate``.
         """
         # Initialize ``xarray.Dataset`` with given positional args and kwargs.
         super().__init__(**kwargs)
@@ -76,12 +80,22 @@ class Atmosphere(Dataset):
                 'Argument `convection` has to be of type {}.'.format(Convection)
             )
 
+        # If no lapse rate handler is passed...
+        if lapse is None:
+            # use hard ajustment.
+            lapse = MoistLapseRate()
+        elif not isinstance(lapse, LapseRate):
+            raise TypeError(
+                'Argument `lapse` has to be of type {}.'.format(LapseRate)
+            )
+
         # Set additional attributes for the Atmosphere object. They can be
         # accessed through point notation but do not need to be of type
         # ``xarrayy.DataArray``.
         self.attrs.update({
             'convection': convection,
             'humidity': humidity,
+            'lapse': lapse,
             'surface': surface,
         })
 
@@ -372,23 +386,6 @@ class Atmosphere(Dataset):
         lapse_rate = typhon.math.interpolate_halflevels(lapse_rate)
         lapse_rate = np.append(lapse_rate[0], lapse_rate)
         return np.append(lapse_rate, lapse_rate[-1])
-
-    def get_moist_lapse_rate(self):
-        """Updates the atmospheric lapse rate for the convective adjustment
-        according to the moist adiabat, which is calculated from the
-        atmospheric temperature and humidity profiles. The lapse rate is in
-        units of K/km.
-        """
-        g = constants.g
-        Lv = 2501000
-        R = 287
-        eps = 0.62197
-        Cp = constants.isobaric_mass_heat_capacity
-        VMR = self['H2O'][0, :]
-        T = self['T'][0, :]
-        lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
-        lapse_phlev = utils.calculate_halflevel_pressure(lapse.values)
-        return lapse_phlev
 
     def get_potential_temperature(self, p0=1000e2):
         """Calculate the potential temperature.

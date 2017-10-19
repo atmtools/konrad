@@ -61,15 +61,22 @@ class NonConvective(Convection):
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
     def stabilize(self, atmosphere, timestep):
+        # Caculate critical lapse rate.
+        lapse = atmosphere.lapse.get(
+            T=atmosphere['T'].values[0, :],
+            VMR=atmosphere['H2O'].values[0, :],
+        )
+
+        # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
             p=atmosphere['plev'].values,
             phlev=atmosphere['phlev'].values,
             T_rad=atmosphere['T'].values[0, :],
-            lapse=atmosphere.get_moist_lapse_rate(),
+            lapse=lapse,
             surface=atmosphere.surface,
             timestep=timestep,
         )
-
+        # Update atmospheric temperatures as well as surface temperature.
         atmosphere['T'].values[0, :] = T_new
         atmosphere.surface.temperature[0] = T_s_new
 
