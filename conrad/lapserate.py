@@ -38,10 +38,7 @@ class MoistLapseRate(LapseRate):
             / (Cp + Lv**2 * VMR * epsilon / R / T**2)
         )
 
-        # TODO (Sally): Replace with correct interpolation.
-        lapse_phlev = utils.calculate_halflevel_pressure(lapse)
-
-        return lapse_phlev
+        return lapse
 
 
 class FixedLapseRate(LapseRate):
@@ -56,6 +53,6 @@ class FixedLapseRate(LapseRate):
 
     def get(self, T, VMR):
         if isinstance(self.lapserate, numbers.Number):
-            return self.lapserate * np.ones(T.size + 1)
+            return self.lapserate * np.ones(T.size)
         elif isinstance(self.lapserate, np.ndarray):
             return self.lapserate

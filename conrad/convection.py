@@ -4,6 +4,7 @@ import abc
 
 import numpy as np
 import typhon
+from scipy.interpolate import interp1d
 
 from conrad import (constants, utils)
 from conrad.surface import SurfaceFixedTemperature
@@ -92,12 +93,13 @@ class HardAdjustment(Convection):
         """
         near_zero = 0.00001
         density1 = typhon.physics.density(p, T_rad)
-        # TODO (Sally): I dont think that the following line is on purpose.
-        density = utils.calculate_halflevel_pressure(density1)
 
-        g = constants.g
-        # TODO: Find a clean way to handle different lapse rate versions.
-        lp = -lapse[:] / (g*density)
+        # Interpolate density and lapse rate on pressure half-levels.
+        density = interp1d(p, density1, fill_value='extrapolate')(phlev)
+        lapse = interp1d(p, lapse, fill_value='extrapolate')(phlev)
+
+        g = constants.earth_standard_gravity
+        lp = -lapse / (g * density)
 
         # find energy difference if there is no change to surface temp due to
         # convective adjustment. in this case the new profile should be
