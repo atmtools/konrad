@@ -11,7 +11,7 @@ from xarray import Dataset, DataArray
 from conrad import constants
 from conrad import utils
 from conrad.convection import (Convection, HardAdjustment)
-from conrad.humidity import (Humidity, CoupledRH)
+from conrad.humidity import (Humidity, FixedRH)
 from conrad.lapserate import (LapseRate, MoistLapseRate)
 from conrad.surface import (Surface, SurfaceHeatCapacity)
 
@@ -43,7 +43,7 @@ class Atmosphere(Dataset):
              convection (conrad.humidity.Convection): Convection scheme.
                 Defaults to ``conrad.convection.HardAdjustment``.
              humidity (conrad.humidity.Humidity): Humidity handler.
-                Defaults to ``conrad.humidity.CoupledRH``.
+                Defaults to ``conrad.humidity.FixedRH``.
              surface (conrad.surface.Surface): Surface model.
                 Defaults to ``conrad.surface.SurfaceHeatCapacity``.
              lapse (conrad.lapse.LapseRate): Lapse rate handler.
@@ -58,7 +58,7 @@ class Atmosphere(Dataset):
                                        Surface, SurfaceHeatCapacity())
 
         humidity = utils.return_if_type(humidity, 'humidity',
-                                        Humidity, CoupledRH())
+                                        Humidity, FixedRH())
 
         convection = utils.return_if_type(convection, 'convection',
                                           Convection, HardAdjustment())
