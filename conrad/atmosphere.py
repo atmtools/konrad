@@ -10,6 +10,7 @@ from xarray import Dataset, DataArray
 
 from conrad import constants
 from conrad import utils
+from conrad.convection import (Convection, HardAdjustment)
 from conrad.surface import (Surface, SurfaceHeatCapacity)
 from conrad.humidity import (Humidity, CoupledRH)
 
@@ -33,10 +34,12 @@ atmosphere_variables = [
 
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
-    def __init__(self, humidity=None, surface=None, **kwargs):
+    def __init__(self, convection=None, humidity=None, surface=None, **kwargs):
         """Create an atmosphere model.
 
        Parameters:
+             convection (conrad.humidity.Convection): Convection scheme.
+                Defaults to ``conrad.convection.HardAdjustment``.
              humidity (conrad.humidity.Humidity): Humidity handler.
                 Defaults to ``conrad.humidity.CoupledRH``.
              surface (conrad.surface.Surface): Surface model.
@@ -64,12 +67,22 @@ class Atmosphere(Dataset):
                 'Argument `humidity` has to be of type {}.'.format(Humidity)
             )
 
+        # If no convection scheme is passed...
+        if convection is None:
+            # use hard ajustment.
+            convection = HardAdjustment()
+        elif not isinstance(convection, Convection):
+            raise TypeError(
+                'Argument `convection` has to be of type {}.'.format(Convection)
+            )
+
         # Set additional attributes for the Atmosphere object. They can be
         # accessed through point notation but do not need to be of type
         # ``xarrayy.DataArray``.
         self.attrs.update({
-            'surface': surface,
+            'convection': convection,
             'humidity': humidity,
+            'surface': surface,
         })
 
 
@@ -83,10 +96,23 @@ class Atmosphere(Dataset):
         # Apply heatingrates to temperature profile.
         self['T'] += heatingrate * timestep
 
+        # Convective adjustment
+        T_con, T_s_con = self.convection.stabilize(
+            p=self['plev'].values,
+            phlev=self['phlev'].values,
+            T_rad=self['T'].values[0, :],
+            lapse=self.get_moist_lapse_rate(),
+            surface=self.surface,
+            timestep=timestep,
+        )
+        self['T'].values[0, :] = T_con
+        self.surface.temperature[0] = T_s_con
+
         # Preserve the initial relative humidity profile.
         self['H2O'][0, :] = self.humidity.determine(
             plev=self.get_values('plev'),
             T=self.get_values('T', keepdims=False),
+            p_tropo=self.get_subsidence_convergence_max(heatingrate[0, :]),
         )
 
         # Calculate the geopotential height field.
@@ -282,6 +308,11 @@ class Atmosphere(Dataset):
         # Create a new atmosphere object from the filled data directory.
         new_atmosphere = type(self).from_dict(datadict)
 
+        # Keep attributes of original atmosphere object.
+        # This is **extremely** important because references to e.g. the
+        # convection scheme or the humidity handling are stored as attributes!
+        new_atmosphere.attrs = {**self.attrs}
+
         # Calculate the geopotential height.
         new_atmosphere.calculate_height()
 
@@ -351,6 +382,23 @@ class Atmosphere(Dataset):
         lapse_rate = np.append(lapse_rate[0], lapse_rate)
         return np.append(lapse_rate, lapse_rate[-1])
 
+    def get_moist_lapse_rate(self):
+        """Updates the atmospheric lapse rate for the convective adjustment
+        according to the moist adiabat, which is calculated from the
+        atmospheric temperature and humidity profiles. The lapse rate is in
+        units of K/km.
+        """
+        g = constants.g
+        Lv = 2501000
+        R = 287
+        eps = 0.62197
+        Cp = constants.isobaric_mass_heat_capacity
+        VMR = self['H2O'][0, :]
+        T = self['T'][0, :]
+        lapse = g*(1 + Lv*VMR/R/T)/(Cp + Lv**2*VMR*eps/R/T**2)
+        lapse_phlev = utils.calculate_halflevel_pressure(lapse.values)
+        return lapse_phlev
+
     def get_potential_temperature(self, p0=1000e2):
         """Calculate the potential temperature.
 
@@ -403,7 +451,7 @@ class Atmosphere(Dataset):
 
         return -radiative_cooling[:-1] / sigma
 
-    def get_subsidence_convergence_max_index(self, radiative_cooling,
+    def get_subsidence_convergence_max(self, radiative_cooling,
                                              pmin=10e2):
         """Return index of maximum subsidence convergence.
 
@@ -420,4 +468,4 @@ class Atmosphere(Dataset):
         omega = self.get_diabatic_subsidence(radiative_cooling)
         domega = np.diff(omega) / np.diff(plev[:-1])
 
-        return np.argmax(domega[plev[:-2] > pmin]) + 1
+        return np.max(domega[plev[:-2] > pmin]) + 1
