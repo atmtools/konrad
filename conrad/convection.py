@@ -42,33 +42,39 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 
 class Convection(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
-    def __init__(self):
-        """Create a convection scheme.
-
-        Parameters:
-        """
-        pass
-
     @abc.abstractmethod
-    def stabilize(self, **kwargs):
+    def stabilize(self, atmosphere, timestep):
         """Stabilize the temperature profile by redistributing energy.
 
         Parameters:
-
-        Returns:
-            ndarray: Stabilized temperature profile [K].
+              atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+              timestep (float): Timestep width [day].
         """
 
 
 class NonConvective(Convection):
     """Do not apply convection."""
-    def stabilize(self, p, phlev, T_rad, lapse, surface, timestep=0.1):
-        return T_rad, surface.temperature[0]
+    def stabilize(self, atmosphere, timestep):
+        pass
 
 
 class HardAdjustment(Convection):
-    """Instantanuous adjustment of temperature profiles"""
-    def stabilize(self, p, phlev, T_rad, lapse, surface, timestep=0.1):
+    """Instantaneous adjustment of temperature profiles"""
+    def stabilize(self, atmosphere, timestep):
+        T_new, T_s_new = self.convective_adjustment(
+            p=atmosphere['plev'].values,
+            phlev=atmosphere['phlev'].values,
+            T_rad=atmosphere['T'].values[0, :],
+            lapse=atmosphere.get_moist_lapse_rate(),
+            surface=atmosphere.surface,
+            timestep=timestep,
+        )
+
+        atmosphere['T'].values[0, :] = T_new
+        atmosphere.surface.temperature[0] = T_s_new
+
+    def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
+                              timestep=0.1):
         """
         Find the energy-conserving temperature profile using a iterative
         procedure with test profiles. Update the atmospheric temperature
@@ -200,9 +206,13 @@ class RelaxedAdjustment(HardAdjustment):
     This convection scheme allows for a transition regime between a
     convectively driven troposphere and the radiatively balanced stratosphere.
     """
-    def __init__(self, *args, tau=0, **kwargs):
-        super().__init__(*args, **kwargs)
+    # TODO (Sally): Could you fill the docstring?
+    def __init__(self, tau=0):
+        """
 
+        Parameters:
+            tau (ndarray):
+        """
         self.convective_tau = tau
 
     def test_profile(self, T_rad, p, phlev, surface, surfaceT, lp,

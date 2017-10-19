@@ -97,16 +97,7 @@ class Atmosphere(Dataset):
         self['T'] += heatingrate * timestep
 
         # Convective adjustment
-        T_con, T_s_con = self.convection.stabilize(
-            p=self['plev'].values,
-            phlev=self['phlev'].values,
-            T_rad=self['T'].values[0, :],
-            lapse=self.get_moist_lapse_rate(),
-            surface=self.surface,
-            timestep=timestep,
-        )
-        self['T'].values[0, :] = T_con
-        self.surface.temperature[0] = T_s_con
+        self.convection.stabilize(atmosphere=self, timestep=timestep)
 
         # Preserve the initial relative humidity profile.
         self['H2O'][0, :] = self.humidity.determine(
