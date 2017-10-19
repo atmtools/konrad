@@ -12,6 +12,8 @@ requirements are enforced by the use of abstract base classes.
 import logging
 
 from . import atmosphere
+from . import convection
+from . import humidity
 from . import constants
 from . import plots
 from . import radiation
@@ -24,6 +26,8 @@ __all__ = [
     'RCE',
     'atmosphere',
     'constants',
+    'convection',
+    'humidity',
     'plots',
     'radiation',
     'surface',
