@@ -21,20 +21,16 @@ __all__ = [
 
 class Radiation(metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, atmosphere, surface, zenith_angle=20., daytime=1/np.pi,
+    def __init__(self, zenith_angle=20., daytime=1/np.pi,
                  diurnal_cycle=False):
         """Return a radiation model.
 
         Parameters:
-            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
-            surface (conrad.surface.Surface): Surface model.
             zenith_angle (float): Zenith angle of the sun.
             daytime (float): Fraction of daytime [day/day].
                 If ``diurnal_cycle`` is True, this keyword has no effect.
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
         """
-        self.atmosphere = atmosphere
-        self.surface = surface
         self.zenith_angle = zenith_angle
         self.angle = 0
         self.diurnal_cycle = diurnal_cycle
@@ -97,14 +93,12 @@ class PSRAD(Radiation):
         return tuple(ret)
 
     @utils.PsradSymlinks()
-    def get_heatingrates(self, atmosphere, surface):
+    def get_heatingrates(self, atmosphere):
         """Returns the shortwave, longwave and net heatingrates.
 
         Parameters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model
                 inherited from abstract class `conrad.atmosphere.Atmosphere`.
-            surface (conrad.surface.Surface): Surface model inherited from
-                abstract class `conrad.surface.Surface`.
         Returns:
             xarray.Dataset: Dataset containing for the simulated heating rates.
                 The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
@@ -121,9 +115,9 @@ class PSRAD(Radiation):
         nlev = atmosphere['plev'].size
 
         # Extract surface properties.
-        P_sfc = surface.pressure / 100
-        T_sfc = surface.temperature
-        albedo = surface.albedo
+        P_sfc = atmosphere.surface.pressure / 100
+        T_sfc = atmosphere.surface.temperature
+        albedo = atmosphere.surface.albedo
 
         # Use the **current** solar angle as zenith angle for the simulation.
         zenith = self.angle

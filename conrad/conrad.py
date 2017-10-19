@@ -7,7 +7,8 @@ import numpy as np
 import xarray as xr
 from typhon.atmosphere import relative_humidity
 
-from . import utils
+from conrad import utils
+from conrad.radiation import PSRAD
 
 
 logger = logging.getLogger()
@@ -18,21 +19,19 @@ __all__ = [
 
 
 class RCE:
-    """Implementation of a radiative-convective equilibrium model.
+    """Interface to control the radiative-convective equilibrium simulation.
 
     Examples:
         Create an object to setup and run a simulation:
-        >>> c = RCE(atmosphere=a, surface=s, radiation=r)
-        >>> c.run()
+        >>> rce = conrad.RCE(atmosphere)
+        >>> rcec.run()
     """
-    def __init__(self, atmosphere, surface, radiation, outfile=None,
+    def __init__(self, atmosphere, radiation=None, outfile=None,
                  timestep=1, delta=0.01, writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
             atmosphere (Atmosphere): `conrad.atmosphere.Atmosphere`.
-            surface (Surface): An surface object inherited from
-                `conrad.surface.Surface`.
             outfile (str): netCDF4 file to store output.
             writeevery(int or float): Set frequency in which to write output.
                 int: Every nth timestep is written.
@@ -44,8 +43,10 @@ class RCE:
         """
         # Sub-models.
         self.atmosphere = atmosphere
-        self.surface = surface
-        self.radiation = radiation
+        if radiation is None:
+            self.radiation = PSRAD()
+        else:
+            self.radiation = radiation
 
         # Control parameters.
         self.delta = delta
@@ -86,7 +87,6 @@ class RCE:
         """Use the radiation sub-model to calculate heatingrates."""
         self.heatingrates = self.radiation.get_heatingrates(
             atmosphere=self.atmosphere,
-            surface=self.surface,
             )
 
     def is_converged(self):
@@ -124,11 +124,16 @@ class RCE:
     def create_outfile(self):
         """Create netCDF4 file to store simulation results."""
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.surface, inplace=True)
+        data.merge(self.atmosphere.surface, inplace=True)
+        # TODO: **Dirty** hack to restore netCDF functionality.
+        # xarray.to_netcdf can only store basic types.
+        attrs = data.attrs
+        data.attrs = {}
         data.to_netcdf(self.outfile,
                        mode='w',
                        unlimited_dims=['time'],
                        )
+        data.attrs = attrs
 
         logger.info(f'Created "{self.outfile}".')
 
@@ -137,7 +142,7 @@ class RCE:
         in ``self.outfile``.
         """
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.surface, inplace=True)
+        data.merge(self.atmosphere.surface, inplace=True)
 
         utils.append_timestep_netcdf(
             filename=self.outfile,
@@ -178,7 +183,7 @@ class RCE:
             self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
 
             # Apply heatingrates/fluxes to the the surface.
-            self.surface.adjust(
+            self.atmosphere.surface.adjust(
                 sw_down=self.heatingrates['sw_flxd'].values[0, 0],
                 sw_up=self.heatingrates['sw_flxu'].values[0, 0],
                 lw_down=self.heatingrates['lw_flxd'].values[0, 0],
@@ -194,7 +199,7 @@ class RCE:
             self.atmosphere.adjust(
                 self.heatingrates['net_htngrt'],
                 self.timestep,
-                surface=self.surface,
+                surface=self.atmosphere.surface,
                 )
 
             # Calculate temperature change for convergence check.

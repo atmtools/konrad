@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import abc
 import collections
 import logging
 
@@ -11,6 +10,8 @@ from xarray import Dataset, DataArray
 
 from conrad import constants
 from conrad import utils
+from conrad.surface import (Surface, SurfaceHeatCapacity)
+from conrad.humidity import (Humidity, CoupledRH)
 
 
 __all__ = [
@@ -30,11 +31,66 @@ atmosphere_variables = [
 ]
 
 
-class Atmosphere(Dataset, metaclass=abc.ABCMeta):
+class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
-    @abc.abstractmethod
+    def __init__(self, humidity=None, surface=None, **kwargs):
+        """Create an atmosphere model.
+
+       Parameters:
+             humidity (conrad.humidity.Humidity): Humidity handler.
+                Defaults to ``conrad.humidity.CoupledRH``.
+             surface (conrad.surface.Surface): Surface model.
+                Defaults to ``conrad.surface.SurfaceHeatCapacity``.
+        """
+        # Initialize ``xarray.Dataset`` with given positional args and kwargs.
+        super().__init__(**kwargs)
+
+        # If no surface is passed...
+        if surface is None:
+            # use a surface with heat capacity as default.
+            surface = SurfaceHeatCapacity()
+        elif not isinstance(surface, Surface):
+            raise TypeError(
+                'Argument `surface` has to be of type {}.'.format(Surface)
+            )
+
+        # If no humidity handler is passed...
+        if humidity is None:
+            # use a humidity scheme with preserved relative humidity and
+            # coupled vertical structure.
+            humidity = CoupledRH()
+        elif not isinstance(humidity, Humidity):
+            raise TypeError(
+                'Argument `humidity` has to be of type {}.'.format(Humidity)
+            )
+
+        # Set additional attributes for the Atmosphere object. They can be
+        # accessed through point notation but do not need to be of type
+        # ``xarrayy.DataArray``.
+        self.attrs.update({
+            'surface': surface,
+            'humidity': humidity,
+        })
+
+
     def adjust(self, heatingrate, timestep, **kwargs):
-        """Adjust atmosphere according to given heatingrate."""
+        """Adjust temperature according to given heating rates.
+
+        Parameters:
+            heatingrate (ndarray): Radiative heatingrate [K/day].
+            timestep (float): Timestep width [day].
+        """
+        # Apply heatingrates to temperature profile.
+        self['T'] += heatingrate * timestep
+
+        # Preserve the initial relative humidity profile.
+        self['H2O'][0, :] = self.humidity.determine(
+            plev=self.get_values('plev'),
+            T=self.get_values('T', keepdims=False),
+        )
+
+        # Calculate the geopotential height field.
+        self.calculate_height()
 
     @classmethod
     def from_atm_fields_compact(cls, atmfield, **kwargs):
@@ -88,7 +144,8 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         arts_type = typhon.arts.utils.get_arts_typename(griddedfield)
         if arts_type != 'GriddedField4':
             raise TypeError(
-                f'XML file does not contain "GriddedField4" but "{arts_type}".'
+                'XML file contains "{}". Expected "GriddedField4".'.format(
+                    arts_type)
             )
 
         return cls.from_atm_fields_compact(griddedfield, **kwargs)
@@ -287,22 +344,6 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         else:
             self['z'] = DataArray(z[np.newaxis, :], dims=('time', 'plev'))
 
-    @property
-    def relative_humidity(self):
-        """Return the relative humidity of the current atmospheric state."""
-        vmr, p, T = self['H2O'], self['plev'], self['T']
-        return typhon.atmosphere.relative_humidity(vmr, p, T)
-
-    @relative_humidity.setter
-    def relative_humidity(self, RH):
-        """Set the water vapor mixing ratio to match given relative humidity.
-
-        Parameters:
-            RH (ndarray or float): Relative humidity.
-        """
-        logger.debug('Adjust VMR to preserve relative humidity.')
-        self['H2O'].values = typhon.atmosphere.vmr(RH, self['plev'], self['T'])
-
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
         lapse_rate = np.diff(self['T'][0, :]) / np.diff(self['z'][0, :])
@@ -380,70 +421,3 @@ class Atmosphere(Dataset, metaclass=abc.ABCMeta):
         domega = np.diff(omega) / np.diff(plev[:-1])
 
         return np.argmax(domega[plev[:-2] > pmin]) + 1
-
-    def adjust_relative_humidity(self, heatingrates, timestep, rh_surface=0.8,
-                                 rh_tropo=0.3):
-        """Adjust the relative humidity according to the vertical structure."""
-        # TODO: Humidity values should be attributes of Atmosphere objects.
-
-        plev = self['plev'].values  # Get view on pressure values.
-
-        # Find the level (index) of maximum diabatic subsidence convergence.
-        # This level is associated with a second peak in the relative humidity.
-        scm = self.get_subsidence_convergence_max_index(heatingrates[0, :])
-        p_tropo_new = plev[scm]
-
-        # If present, compare the old pressure level of the second humidity
-        # maximum with the new one.
-        if 'p_tropo' in self:
-            p_tropo_old = self['p_tropo'].values[0]
-
-            omega_max = np.max(self.get_diabatic_subsidence(
-                heatingrates[0, :]).values)
-
-            if (p_tropo_new - p_tropo_old) < -omega_max * timestep:
-                p_tropo_new = p_tropo_old - omega_max * timestep
-            elif (p_tropo_new - p_tropo_old) > omega_max * timestep:
-                p_tropo_new = p_tropo_old + omega_max * timestep
-
-        self['p_tropo'] = DataArray([p_tropo_new], dims=('time',))
-
-        # Determine relative humidity profile with second maximum at the
-        # level of maximum subsidence convergence.
-        rh = utils.create_relative_humidity_profile(
-            plev=plev,
-            rh_surface=rh_surface,
-            rh_tropo=rh_tropo,
-            p_tropo=p_tropo_new,
-        )
-
-        # Overwrite the current humidity profile with the new values.
-        self.relative_humidity = rh
-
-    @property
-    def cold_point_index(self, pmin=1e2):
-        """Return the pressure index of the cold point tropopause.
-
-        Parameters:
-              pmin (float): Lower pressure threshold. The cold point has to
-              be below (higher pressure, lower height) that value.
-
-        Returns:
-            int: Layer index.
-        """
-        return int(np.argmin(self['T'][:, self['plev'] > pmin]))
-
-    def apply_H2O_limits(self, vmr_max=1.):
-        """Adjust water vapor VMR values to follow physical limitations.
-
-        Parameters:
-            vmr_max (float): Maximum limit for water vapor VMR.
-        """
-        # Keep water vapor VMR values above the cold point tropopause constant.
-        i = self.cold_point_index
-        self['H2O'].values[0, i:] = self['H2O'][0, i]
-
-        # NOTE: This has currently no effect, as the vmr_max is set to 1.
-        # Limit the water vapor mixing ratios to a given threshold.
-        too_high = self['H2O'].values > vmr_max
-        self['H2O'].values[too_high] = vmr_max
