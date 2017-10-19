@@ -5,7 +5,7 @@ import numbers
 
 import numpy as np
 
-from conrad import (constants, utils)
+from conrad import constants
 
 
 class LapseRate(metaclass=abc.ABCMeta):

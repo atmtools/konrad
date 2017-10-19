@@ -23,8 +23,9 @@ class RCE:
 
     Examples:
         Create an object to setup and run a simulation:
-        >>> rce = conrad.RCE(atmosphere)
-        >>> rcec.run()
+        >>> import conrad
+        >>> rce = conrad.RCE(...)
+        >>> rce.run()
     """
     def __init__(self, atmosphere, radiation=None, outfile=None,
                  timestep=1, delta=0.01, writeevery=1, max_iterations=5000):
