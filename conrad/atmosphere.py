@@ -462,10 +462,12 @@ class Atmosphere(Dataset):
                 be below (higher pressure, lower height) that value.
 
         Returns:
-              int: Layer index.
+              float: Pressure of maxixum subsidence divergence [Pa].
         """
         plev = self['plev'].values
         omega = self.get_diabatic_subsidence(radiative_cooling)
         domega = np.diff(omega) / np.diff(plev[:-1])
 
-        return np.max(domega[plev[:-2] > pmin]) + 1
+        # The found maximum is off by 1 due to numerical differentiation in
+        # the subsidence calculation. Therefore, return the pressure above.
+        return plev[np.argmax(domega[plev[:-2] > pmin]) + 1]
