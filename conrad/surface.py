@@ -81,6 +81,7 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         # Calculate the surface temperature following a linear lapse rate.
         # This prevents "jumps" after the first iteration, when the
         # convective adjustment is applied.
+        # TODO: Use atmosphere.lapse object for consistent lapse rate.
         t_sfc = atmosphere['T'].values[0, 0] + lapse * (z[0] - z_sfc)
 
         return cls(temperature=t_sfc,
