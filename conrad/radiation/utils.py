@@ -54,7 +54,11 @@ class PsradSymlinks(contextlib.ContextDecorator):
 
     def __exit__(self, *args):
         for f in self._created_files:
+            # Remove PSrad files and their corresponding entries in the file
+            #  list. This allows to reuse the object several times while
+            # keeping the file list up-to-date.
             os.remove(f)
+            self._created_files.remove(f)
             logger.debug("Remove symlink %s", f)
 
 
