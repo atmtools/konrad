@@ -176,12 +176,12 @@ class RCE:
                 # All other iterations are only logged in DEBUG level.
                 logger.debug(f'Enter iteration {self.niter}.')
 
+            # Adjust the solar angle according to current time.
+            self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
+
             # Caculate shortwave, longwave and net heatingrates.
             # Afterwards, they are accesible throug ``self.heatingrates``.
             self.calculate_heatingrates()
-
-            # Adjust the solar angle according to current time.
-            self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
 
             # Apply heatingrates/fluxes to the the surface.
             self.atmosphere.surface.adjust(
