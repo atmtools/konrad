@@ -17,8 +17,9 @@ from conrad import constants
 
 __all__ = [
     'append_timestep_netcdf',
-    'ozone_profile',
     'ozonesquash',
+    'ozone_profile',
+    'ozone_profile_rcemip',
     'ensure_decrease',
     'calculate_halflevel_pressure',
     'append_description',
@@ -126,6 +127,29 @@ def ozone_profile(p=None, o3_dataset=None):
         p_data = np.array(o3_dataset['plev'])
         f = interp1d(p_data, o3_data, kind='cubic', fill_value='extrapolate')
         return f(p)
+
+
+def ozone_profile_rcemip(plev, g1=3.6478, g2=0.83209, g3=11.3515):
+    """Compute the ozone volumetric mixing ratio from pressure.
+
+    .. math::
+        O_3 = g_1 \cdot p^{g_2} e^\frac{-p}{g_3}
+
+    Parameters:
+        plev (ndarray): Atmospheric pressure [Pa].
+        g1, g2, g3 (float): Fitting parameters for gamma distribution
+            according to Wing et al. (2017).
+
+    Returns:
+          ndarray: Ozone profile [VMR].
+
+    Reference:
+        Wing et al., 2017, Radiative-Convective Equilibrium Model
+        Intercomparison Project
+
+    """
+    p = plev / 100
+    return g1 * p**g2 * np.exp(-p / g3) * 1e-6
 
 
 def ensure_decrease(array):
