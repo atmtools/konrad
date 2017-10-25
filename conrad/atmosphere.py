@@ -197,23 +197,22 @@ class Atmosphere(Dataset):
             ncfile (str): Path to netCDF file.
             timestep (int): Timestep to read (default is last timestep).
         """
-        data = netCDF4.Dataset(ncfile).variables
+        with netCDF4.Dataset(ncfile) as dataset:
+            # Create a Dataset with time and pressure dimension.
+            plev = dataset.variables['plev'][:]
+            phlev = utils.calculate_halflevel_pressure(plev)
+            d = cls(coords={'plev': plev,  # pressure level
+                            'time': [0],  # time dimension
+                            'phlev': phlev,  # pressure at halflevels
+                            },
+                    **kwargs,
+                    )
 
-        # Create a Dataset with time and pressure dimension.
-        plev = data['plev'][:]
-        phlev = utils.calculate_halflevel_pressure(plev)
-        d = cls(coords={'plev': plev,  # pressure level
-                        'time': [0],  # time dimension
-                        'phlev': phlev,  # pressure at halflevels
-                        },
-                **kwargs,
+            for var in atmosphere_variables:
+                d[var] = DataArray(
+                    data=dataset.variables[var][[timestep], :],
+                    dims=('time', 'plev',)
                 )
-
-        for var in atmosphere_variables:
-            d[var] = DataArray(
-                data=data[var][[timestep], :],
-                dims=('time', 'plev',)
-            )
 
         # Calculate the geopotential height.
         d.calculate_height()
