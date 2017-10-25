@@ -108,6 +108,7 @@ class HardAdjustment(Convection):
         T_con, diffpos = self.test_profile(T_rad, p, phlev, surface,
                                            surfaceTpos, lp,
                                            timestep=timestep)
+        
         # this is the temperature profile required if we have a set-up with a
         # fixed surface temperature, then the energy does not matter.
         if isinstance(surface, SurfaceFixedTemperature):
@@ -122,30 +123,15 @@ class HardAdjustment(Convection):
         # produces an increase in energy (as convection warms the atmosphere).
         # this surface temperature is an upper bound to the energy-conserving
         # surface temperature.
-        # now we reduce surface temperature until we find an adjusted profile
-        # that is associated with an energy loss.
-        surfaceTneg = surfaceTpos - 1
+        # taking the surface temperature as the coldest temperature in the
+        # radiative profile gives us a lower bound.
+        surfaceTneg = np.min(T_rad)
         T_con, diffneg = self.test_profile(T_rad, p, phlev, surface,
                                            surfaceTneg, lp,
                                            timestep=timestep)
-        # good guess for energy-conserving profile
+        # good guess for energy-conserving profile (unlikely!)
         if np.abs(diffneg) < near_zero:
             return T_con, surfaceTneg
-        # if surfaceTneg = surfaceTpos - 1 is not negative enough to produce an
-        # energy loss, keep reducing surfaceTneg to find a lower bound for the
-        # uncertainty range of the energy-conserving surface temperature
-        while diffneg > 0:
-            diffpos = diffneg
-            # update surfaceTpos to narrow the uncertainty range
-            surfaceTpos = surfaceTneg
-            surfaceTneg -= 1
-            T_con, diffneg = self.test_profile(T_rad, p, phlev, surface,
-                                               surfaceTneg, lp,
-                                               timestep=timestep)
-            # again for the case that this surface temperature happens to
-            # be a good guess (sufficiently close to energy conserving)
-            if np.abs(diffneg) < near_zero:
-                return T_con, surfaceTneg
 
         # Now we have a upper and lower bound for the surface temperature of
         # the energy conserving profile. Iterate to get closer to the energy-
@@ -244,13 +230,11 @@ class RelaxedAdjustment(HardAdjustment):
 
         tf = 1 - np.exp(-timestep / self.convective_tau)
         T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp[:-1]))
-        T_con = T_con
 
         eff_Cp_s = surface.rho * surface.cp * surface.dz
 
         diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
                                  dp, eff_Cp_s)
-
-        return T_con, float(diff.values)
+        return T_con, float(diff)
 
 
