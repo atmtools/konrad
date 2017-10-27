@@ -65,7 +65,7 @@ class HardAdjustment(Convection):
         # Caculate critical lapse rate.
         lapse = atmosphere.lapse.get(
             T=atmosphere['T'].values[0, :],
-            VMR=atmosphere['H2O'].values[0, :],
+            p=atmosphere['plev'].values[:],
         )
 
         # Find convectively adjusted temperature profile.

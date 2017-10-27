@@ -277,6 +277,7 @@ class Atmosphere(Dataset):
         datadict = dict()
 
         datadict['plev'] = pgrid  # Store new pressure grid.
+
         # Loop over all atmospheric variables...
         for variable in atmosphere_variables:
             # and create an interpolation function using the original data.
@@ -287,6 +288,7 @@ class Atmosphere(Dataset):
             datadict[variable] = DataArray(f(pgrid), dims=('time', 'plev'))
 
         # Create a new atmosphere object from the filled data directory.
+        # This method also calculates the new phlev coordinates.
         new_atmosphere = type(self).from_dict(datadict)
 
         # Keep attributes of original atmosphere object.
