@@ -155,19 +155,12 @@ class RCE:
         """Run the radiative-convective equilibrium model."""
         logger.info('Start RCE model run.')
 
-        # TODO: Omit 'time' dim, as initial values are constant by definition.
-        # Store the initial relative humidity profile. Some atmosphere models
-        # preserve this during model run and therefore need the inital state.
-        logger.debug('Store initial relative humidity profile.')
-        self.atmosphere['initial_rel_humid'] = xr.DataArray(
-            relative_humidity(
-                self.atmosphere['H2O'].values,
-                self.atmosphere['plev'].values,
-                self.atmosphere['T'].values,
-                ),
-            dims=('time', 'plev'),
-            )
+        # Initialize surface pressure to be equal to lowest half-level
+        # pressure. This is consistent with handling in PSrad.
+        self.atmosphere.surface['pressure'] = self.atmosphere['phlev'][0]
 
+        # Main loop to control all model iterations until maximum number is
+        # reached or a given stop criterion is fulfilled.
         while self.niter < self.max_iterations:
             if self.niter % 100 == 0:
                 # Write every 100th time step in loglevel INFO.

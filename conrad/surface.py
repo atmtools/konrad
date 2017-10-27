@@ -24,25 +24,27 @@ logger = logging.getLogger()
 
 class Surface(Dataset, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for surface models."""
-    def __init__(self, albedo=0.2, temperature=288., pressure=101325.,
-                 height=0.):
+    def __init__(self, albedo=0.2, temperature=288., height=0.):
         """Initialize a surface model.
 
         Parameters:
             albedo (float): Surface albedo. The default value of 0.2 is a
                 decent choice for clear-sky simulation in the tropics.
             temperature (float): Surface temperature [K].
-            pressure (float): Surface pressure [Pa].
             height (float): Surface height [m].
         """
         super().__init__()
         self['albedo'] = albedo
-        self['pressure'] = pressure
         self['time'] = [0]
         self['height'] = height
         self['temperature'] = DataArray(np.array([temperature]),
                                         dims=('time',),
                                         )
+
+        # The surface pressure is initialized before the first iteration
+        # within the RCE framework to ensure a pressure that is consistent
+        # with the atmosphere used.
+        self['pressure'] = None
 
         utils.append_description(self)
 
@@ -60,33 +62,24 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def from_atmosphere(cls, atmosphere, lapse=0.0065, **kwargs):
+    def from_atmosphere(cls, atmosphere, **kwargs):
         """Initialize a Surface object using the lowest atmosphere layer.
 
         Parameters:
             atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
-            lapse (float): Lapse rate to calculate the surface temperature
-                from the lowest atmosphere level.
         """
-        # Extrapolate surface pressure from last two atmosphere layers.
-
-        # The surface is located at the **halflevel** below the atmosphere.
-        phlev = atmosphere['phlev'].values
-        p_sfc = phlev[0]
-
-        # Extrapolate surface pressure from geopotential height of lowest two
-        #  atmospheric layers.
+        # Extrapolate surface height from geopotential height of lowest two
+        # atmospheric layers.
         z = atmosphere['z'].values[0, :]
         z_sfc = z[0] + 0.5 * (z[0] - z[1])
 
         # Calculate the surface temperature following a linear lapse rate.
         # This prevents "jumps" after the first iteration, when the
         # convective adjustment is applied.
-        # TODO: Use atmosphere.lapse object for consistent lapse rate.
+        lapse = atmosphere.lapse.get()[0]
         t_sfc = atmosphere['T'].values[0, 0] + lapse * (z[0] - z_sfc)
 
         return cls(temperature=t_sfc,
-                   pressure=p_sfc,
                    height=z_sfc,
                    **kwargs,
                    )
@@ -103,7 +96,6 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
 
         # TODO: Should other variables (e.g. albedo) also be read?
         return cls(temperature=data.variables['temperature'][timestep],
-                   pressure=data.variables['pressure'][timestep],
                    height=data.variables['height'][timestep],
                    **kwargs,
                    )
