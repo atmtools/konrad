@@ -75,6 +75,16 @@ variable_description = {
         'standard_name': 'methane_mixing_ratio',
         'arts_name': 'abs_species-CH4',
         },
+    'diabatic_convergence_max_plev': {
+        'units': 'Pa',
+        'standard_name': 'diabatic_convergence_max_plev',
+        'description': 'Pressure level of maximum diabatic convergence',
+    },
+    'diabatic_convergence_max_index': {
+        'units': '1',
+        'standard_name': 'diabatic_convergence_max_index',
+        'description': 'Level index of maximum diabatic convergence',
+    },
     # Radiative quantities
     'lw_htngrt': {
         'units': 'K / day',

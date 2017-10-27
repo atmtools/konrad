@@ -436,4 +436,13 @@ class Atmosphere(Dataset):
 
         # The found maximum is off by 1 due to numerical differentiation in
         # the subsidence calculation. Therefore, return the pressure above.
-        return plev[np.argmax(domega[plev[:-2] > pmin]) + 1]
+        max_index = np.argmax(domega[plev[:-2] > pmin]) + 1
+        max_plev = plev[max_index]
+
+        # Store found index and pressure level to atmosphere.
+        self['diabatic_convergence_max_index'] = DataArray([max_index],
+                                                           dims=('time',))
+        self['diabatic_convergence_max_plev'] = DataArray([max_plev],
+                                                          dims=('time',))
+
+        return max_plev
