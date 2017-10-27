@@ -21,11 +21,14 @@ __all__ = [
 
 class Radiation(metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, zenith_angle=20., diurnal_cycle=False):
+    def __init__(self, zenith_angle=47.88, diurnal_cycle=False):
         """Return a radiation model.
 
         Parameters:
             zenith_angle (float): Zenith angle of the sun.
+                The default angle of 47.88 degree results in 342 W/m^2
+                solar insolation at the top of the atmosphere when used
+                together with a solar constant of 510 W/m^2.
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
         """
         self.zenith_angle = zenith_angle

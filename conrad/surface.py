@@ -24,12 +24,13 @@ logger = logging.getLogger()
 
 class Surface(Dataset, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for surface models."""
-    def __init__(self, albedo=0.3, temperature=288., pressure=101325.,
+    def __init__(self, albedo=0.2, temperature=288., pressure=101325.,
                  height=0.):
         """Initialize a surface model.
 
         Parameters:
-            albedo (float): Surface albedo.
+            albedo (float): Surface albedo. The default value of 0.2 is a
+                decent choice for clear-sky simulation in the tropics.
             temperature (float): Surface temperature [K].
             pressure (float): Surface pressure [Pa].
             height (float): Surface height [m].
