@@ -84,11 +84,14 @@ class Atmosphere(Dataset):
             heatingrate (ndarray): Radiative heatingrate [K/day].
             timestep (float): Timestep width [day].
         """
+        # Caculate critical lapse rate.
+        lapse = self.lapse.get(self)
+        
         # Apply heatingrates to temperature profile.
         self['T'] += heatingrate * timestep
 
         # Convective adjustment
-        self.convection.stabilize(atmosphere=self, timestep=timestep)
+        self.convection.stabilize(atmosphere=self, lapse=lapse, timestep=timestep)
 
         # Preserve the initial relative humidity profile.
         self['H2O'][0, :] = self.humidity.get(
@@ -342,18 +345,20 @@ class Atmosphere(Dataset):
 
         plev = self['plev'].values  # Air pressure at full-levels.
         phlev = self['phlev'].values  # Air pressure at half-levels.
-        T = self['T'].values  # Air temperature at full-levels.
-
+        T = np.hstack((self.surface.temperature, self['T'][0, :]))
+        p = np.hstack((phlev[0], plev))
         # Calculate the air density from current atmospheric state.
-        rho = typhon.physics.density(plev, T)
-
+        rho = typhon.physics.density(p, T)
+        
+        dp = np.hstack((np.array([plev[0] - phlev[0]]), np.diff(plev)))
+        rho_phlev = interp1d(p, rho)(phlev[:-1])
         # Use the hydrostatic equation to calculate geopotential height from
         # given pressure, density and gravity.
-        z = np.cumsum(-np.diff(phlev) / (rho * g))
+        z = np.cumsum(-dp / (rho_phlev * g))
 
         # If height is already in Dataset, update its values.
         if 'z' in self:
-            self['z'].values[0, :] = np.cumsum(-np.diff(phlev) / (rho * g))
+            self['z'].values[0, :] = z
         # Otherwise create the DataArray.
         else:
             self['z'] = DataArray(z[np.newaxis, :], dims=('time', 'plev'))

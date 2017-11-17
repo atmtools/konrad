@@ -6,7 +6,7 @@ import numpy as np
 import typhon
 from scipy.interpolate import interp1d
 
-from conrad import (constants, utils)
+from conrad import constants
 from conrad.surface import SurfaceFixedTemperature
 
 
@@ -61,12 +61,7 @@ class NonConvective(Convection):
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
-    def stabilize(self, atmosphere, timestep):
-        # Caculate critical lapse rate.
-        lapse = atmosphere.lapse.get(
-            T=atmosphere['T'].values[0, :],
-            p=atmosphere['plev'].values[:],
-        )
+    def stabilize(self, atmosphere, lapse, timestep):
 
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
@@ -95,8 +90,7 @@ class HardAdjustment(Convection):
         density1 = typhon.physics.density(p, T_rad)
 
         # Interpolate density and lapse rate on pressure half-levels.
-        density = interp1d(p, density1, fill_value='extrapolate')(phlev)
-        lapse = interp1d(p, lapse, fill_value='extrapolate')(phlev)
+        density = interp1d(p, density1, fill_value='extrapolate')(phlev[:-1])
 
         g = constants.earth_standard_gravity
         lp = -lapse / (g * density)
@@ -104,7 +98,7 @@ class HardAdjustment(Convection):
         # find energy difference if there is no change to surface temp due to
         # convective adjustment. in this case the new profile should be
         # associated with an increase in energy in the atmosphere.
-        surfaceTpos = surface.temperature.values
+        surfaceTpos = surface.temperature.data
         T_con, diffpos = self.test_profile(T_rad, p, phlev, surface,
                                            surfaceTpos, lp,
                                            timestep=timestep)
@@ -125,10 +119,9 @@ class HardAdjustment(Convection):
         # surface temperature.
         # taking the surface temperature as the coldest temperature in the
         # radiative profile gives us a lower bound.
-        surfaceTneg = np.min(T_rad)
-        T_con, diffneg = self.test_profile(T_rad, p, phlev, surface,
-                                           surfaceTneg, lp,
-                                           timestep=timestep)
+        surfaceTneg = np.array([np.min(T_rad)])
+        eff_Cp_s = surface.rho * surface.cp * surface.dz
+        diffneg = eff_Cp_s.data * (surfaceTneg - surface.temperature.data)
         # good guess for energy-conserving profile (unlikely!)
         if np.abs(diffneg) < near_zero:
             return T_con, surfaceTneg
@@ -178,8 +171,7 @@ class HardAdjustment(Convection):
         dp = np.diff(phlev)
         # for lapse rate integral
         dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p)))
-
-        T_con = surfaceT - np.cumsum(dp_lapse * lp[:-1])
+        T_con = surfaceT - np.cumsum(dp_lapse * lp.data)
         if np.any(T_con > T_rad):
             contop = np.max(np.where(T_con > T_rad))
             T_con[contop+1:] = T_rad[contop+1:]
@@ -229,7 +221,7 @@ class RelaxedAdjustment(HardAdjustment):
         dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p)))
 
         tf = 1 - np.exp(-timestep / self.convective_tau)
-        T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp[:-1]))
+        T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp.data))
 
         eff_Cp_s = surface.rho * surface.cp * surface.dz
 
