@@ -14,6 +14,7 @@ from conrad.convection import (Convection, HardAdjustment)
 from conrad.humidity import (Humidity, FixedRH)
 from conrad.lapserate import (LapseRate, MoistLapseRate)
 from conrad.surface import (Surface, SurfaceHeatCapacity)
+from conrad.upwelling import (Upwelling, NoUpwelling)
 
 
 __all__ = [
@@ -36,7 +37,7 @@ atmosphere_variables = [
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
     def __init__(self, convection=None, humidity=None, surface=None,
-                 lapse=None, **kwargs):
+                 lapse=None, upwelling=None, **kwargs):
         """Create an atmosphere model.
 
        Parameters:
@@ -65,6 +66,9 @@ class Atmosphere(Dataset):
 
         lapse = utils.return_if_type(lapse, 'lapse',
                                      LapseRate, MoistLapseRate())
+        
+        upwelling = utils.return_if_type(upwelling, 'upwelling',
+                                         Upwelling, NoUpwelling())
 
         # Set additional attributes for the Atmosphere object. They can be
         # accessed through point notation but do not need to be of type
@@ -74,6 +78,7 @@ class Atmosphere(Dataset):
             'humidity': humidity,
             'lapse': lapse,
             'surface': surface,
+            'upwelling': upwelling,
         })
 
 
@@ -92,6 +97,9 @@ class Atmosphere(Dataset):
 
         # Convective adjustment
         self.convection.stabilize(atmosphere=self, lapse=lapse, timestep=timestep)
+        
+        # Upwelling induced cooling
+        self.upwelling.cool(atmosphere=self, radheat=heatingrate, timestep=timestep)
 
         # Preserve the initial relative humidity profile.
         self['H2O'][0, :] = self.humidity.get(
