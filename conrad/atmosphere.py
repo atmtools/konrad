@@ -66,7 +66,7 @@ class Atmosphere(Dataset):
 
         lapse = utils.return_if_type(lapse, 'lapse',
                                      LapseRate, MoistLapseRate())
-        
+
         upwelling = utils.return_if_type(upwelling, 'upwelling',
                                          Upwelling, NoUpwelling())
 
@@ -91,13 +91,13 @@ class Atmosphere(Dataset):
         """
         # Caculate critical lapse rate.
         lapse = self.lapse.get(self)
-        
+
         # Apply heatingrates to temperature profile.
         self['T'] += heatingrate * timestep
 
         # Convective adjustment
         self.convection.stabilize(atmosphere=self, lapse=lapse, timestep=timestep)
-        
+
         # Upwelling induced cooling
         self.upwelling.cool(atmosphere=self, radheat=heatingrate, timestep=timestep)
 
@@ -357,7 +357,7 @@ class Atmosphere(Dataset):
         p = np.hstack((phlev[0], plev))
         # Calculate the air density from current atmospheric state.
         rho = typhon.physics.density(p, T)
-        
+
         dp = np.hstack((np.array([plev[0] - phlev[0]]), np.diff(plev)))
         rho_phlev = interp1d(p, rho)(phlev[:-1])
         # Use the hydrostatic equation to calculate geopotential height from
@@ -459,3 +459,16 @@ class Atmosphere(Dataset):
                                                           dims=('time',))
 
         return max_plev
+
+    def tracegases_rcemip(self):
+        """ Set trace gas concentrations to be constant throughout the
+        atmosphere, following the values for the RCE-MIP (Wing et al. 2017).
+        These values are hardcoded in the dictionary named concentrations.
+        """
+        concentrations = {'CO2':348*10**-6, 'CH4':1650*10**-9,
+                          'N2O':306*10**-9, 'CO':0}
+        plev = self['plev'].values
+        for gas in concentrations.keys():
+            self[gas][0, :] = concentrations[gas]*np.ones(plev.shape)
+
+        return
