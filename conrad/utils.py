@@ -58,11 +58,10 @@ def append_timestep_netcdf(filename, data, timestamp):
         t = nc.dimensions['time'].size  # get index to store data.
         nc.variables['time'][t] = timestamp  # append timestamp.
 
-        # Append data for each variable in ``data``.
-        for var in data:
-            # Append variable if it has a `time` dimension and is no
-            # dimension itself.
-            if 'time' in nc[var].dimensions and var not in nc.dimensions:
+        # Append values for each data variable in ``data``.
+        for var in data.data_vars:
+            # Append variable if it has a `time` dimension.
+            if 'time' in nc[var].dimensions:
                 # TODO: Find a cleaner way to handle different data dimensions.
                 if 'plev' in nc[var].dimensions:
                     if hasattr(data[var], 'values'):
