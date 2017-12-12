@@ -114,7 +114,7 @@ class PSRAD(Radiation):
 
         # Extract surface properties.
         P_sfc = atmosphere.surface.pressure.values / 100
-        T_sfc = atmosphere.surface.temperature.values
+        T_sfc = atmosphere.surface.temperature.values[0]
         albedo = atmosphere.surface.albedo.values
 
         # Use the **current** solar angle as zenith angle for the simulation.
