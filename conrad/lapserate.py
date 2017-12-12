@@ -4,7 +4,7 @@ import abc
 import numbers
 
 import numpy as np
-from typhon.physics import e_eq_water_mk
+from typhon.physics import (e_eq_water_mk, vmr2specific_humidity)
 from scipy.interpolate import interp1d
 
 from conrad import constants
@@ -40,11 +40,10 @@ class MoistLapseRate2(LapseRate):
         z = np.hstack((z_surface, atmosphere['z'][0, :]))
         g = constants.earth_standard_gravity
         Cp = constants.isobaric_mass_heat_capacity
-        epsilon = constants.gas_constant_ratio
         L = 2500800 - 2360*(T_a-273) + 1.6*(T_a-273)**2 - 0.06*(T_a-273)**3
         #L = constants.heat_of_vaporization
         gamma_d = g / Cp
-        q_saturated = epsilon * e_eq_water_mk(T) / p
+        q_saturated = vmr2specific_humidity(e_eq_water_mk(T) / p)
         dqdz = np.diff(q_saturated) / np.diff(z)
         gamma_m = gamma_d + L/Cp*dqdz
         gamma_m[np.min(np.where(gamma_m > gamma_d)):] = gamma_d
@@ -56,17 +55,16 @@ class MoistLapseRate(LapseRate):
         T = atmosphere['T'][0, :]
         p = atmosphere['plev'][:]
         phlev = atmosphere['phlev'][:]
+
         # Use short formula symbols for physical constants.
         g = constants.earth_standard_gravity
         L = constants.heat_of_vaporization
-        #L = 2500800 - 2360*(T-273) + 1.6*(T-273)**2 - 0.06*(T-273)**3
         Rd = constants.specific_gas_constant_dry_air
         Rv = constants.specific_gas_constant_water_vapor
-        epsilon = constants.gas_constant_ratio
         Cp = constants.isobaric_mass_heat_capacity
 
         gamma_d = g / Cp  # dry lapse rate
-        q_saturated = epsilon * e_eq_water_mk(T) / p
+        q_saturated = vmr2specific_humidity(e_eq_water_mk(T) / p)
 
         gamma_m = (gamma_d * ((1 + (L * q_saturated) / (Rd * T)) /
                               (1 + (L**2 * q_saturated) / (Cp * Rv * T**2))
