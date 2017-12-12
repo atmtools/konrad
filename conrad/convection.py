@@ -126,6 +126,12 @@ class HardAdjustment(Convection):
         if np.abs(diffneg) < near_zero:
             return T_con, surfaceTneg
 
+        # NOTE (lkluft): Dirty workaround to always initialize `surfaceT`.
+        # I encountered situations where the while-loop did not run a single
+        # iteration and therefore the return-statement failed.
+        surfaceT = (surfaceTneg + (surfaceTpos - surfaceTneg)
+                    * (-diffneg) / (-diffneg + diffpos))
+
         # Now we have a upper and lower bound for the surface temperature of
         # the energy conserving profile. Iterate to get closer to the energy-
         # conserving temperature profile.
@@ -178,6 +184,12 @@ class HardAdjustment(Convection):
         else:
             T_con = T_rad
             contop = 0
+
+        # If run with a fixed surface temperature, always return the
+        # convective profile starting from the current surface temperature.
+        # TODO: Check if this is the best place to account for that case.
+        if isinstance(surface, SurfaceFixedTemperature):
+            return T_con, 0.
 
         eff_Cp_s = surface.rho * surface.cp * surface.dz
 
