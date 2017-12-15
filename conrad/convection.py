@@ -234,7 +234,13 @@ class RelaxedAdjustment(HardAdjustment):
 
         tf = 1 - np.exp(-timestep / self.convective_tau)
         T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp.data))
-
+        
+        # If run with a fixed surface temperature, always return the
+        # convective profile starting from the current surface temperature.
+        # TODO: Check if this is the best place to account for that case.
+        if isinstance(surface, SurfaceFixedTemperature):
+            return T_con, 0.
+        
         eff_Cp_s = surface.rho * surface.cp * surface.dz
 
         diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
