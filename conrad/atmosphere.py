@@ -100,16 +100,18 @@ class Atmosphere(Dataset):
 
         # Upwelling induced cooling
         self.upwelling.cool(atmosphere=self, radheat=heatingrate, timestep=timestep)
-
+        
+        # Calculate the geopotential height field.
+        self.calculate_height()
+        
         # Preserve the initial relative humidity profile.
         self['H2O'][0, :] = self.humidity.get(
             plev=self.get_values('plev'),
             T=self.get_values('T', keepdims=False),
+            z=self.get_values('z', keepdims=False),
             p_tropo=self.get_subsidence_convergence_max(heatingrate[0, :]),
         )
 
-        # Calculate the geopotential height field.
-        self.calculate_height()
 
     @classmethod
     def from_atm_fields_compact(cls, atmfield, **kwargs):

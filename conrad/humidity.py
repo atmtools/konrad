@@ -8,7 +8,8 @@ from typhon.atmosphere import vmr
 
 class Humidity(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all humidity handlers."""
-    def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=150e2, c=1.7):
+    def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=150e2, c=1.7,
+                 vmr_strato=None, d=None):
         """Create a humidity handler.
 
         Parameters:
@@ -25,6 +26,8 @@ class Humidity(metaclass=abc.ABCMeta):
         self.p_tropo = p_tropo
         self.c = c
         self.vmr = None
+        self.vmr_strato = vmr_strato
+        self.d = d
 
     def relative_humidity_profile(self, p):
         """Create a realistic relative humidity profile for the tropics.
@@ -45,7 +48,7 @@ class Humidity(metaclass=abc.ABCMeta):
 
         return rh
 
-    def adjust_stratosphere(self, vmr, p, T, cold_point_min=1e2):
+    def adjust_stratosphere(self, vmr, p, T, z, cold_point_min=1e2):
         """Adjust water vapor VMR values in the stratosphere.
 
         The stratosphere is determined using the cold point (pressure level
@@ -56,6 +59,7 @@ class Humidity(metaclass=abc.ABCMeta):
             p (ndarray): Pressure levels [Pa].
             T (ndarray): Temperature [K].
             cold_point_min (float): Lower threshold for cold point pressure.
+            d (float): transition depth in km
 
         Returns:
               ndarray: Adjusted water vapor profile [VMR].
@@ -67,22 +71,43 @@ class Humidity(metaclass=abc.ABCMeta):
         cp_index = int(np.argmin(T[p > cold_point_min]))
 
         # Keep water vapor VMR values above the cold point tropopause constant.
-        vmr[cp_index:] = vmr[cp_index]
+        # If stratospheric background = None, use cold point VMR, otherwise 
+        # transition to the stratospheric background value
+        if self.vmr_strato == None:
+            vmr[cp_index:] = vmr[cp_index]
+        else:
+            d = self.d
+            if d == None:
+                raise ValueError('Specify a transition depth for the ' +
+                                 'stratospheric water vapour mixing ratio.')
+            vmr_strato = self.vmr_strato
+            vmr_cp = vmr[cp_index]
+            cpz = z[cp_index] # height of the base of the transition
+            
+            # index of the top of the transition, this breaks if d is too large
+            # and z is nowhere bigger than cpz+1000*d
+            d_i = np.min(np.where(z > cpz+1000*d)) 
+            
+            vmr[cp_index:d_i] = (-np.cos(np.pi*(z[cp_index:d_i]-cpz)/(1000*d)) 
+                                 * (vmr_strato - vmr_cp)/2
+                                 + (vmr_strato + vmr_cp)/2 )
+            vmr[d_i:] = vmr_strato
 
         return vmr
 
-    def vmr_profile(self, p, T):
+    def vmr_profile(self, p, T, z):
         """Return a water vapor volume mixing ratio profile.
 
         Parameters:
             p (ndarray): Pressure levels [Pa].
             T (ndarray): Temperature [K].
+            z (ndarray): Altitude [m].
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
         self.vmr = vmr(self.relative_humidity_profile(p), p, T)
-        self.vmr = self.adjust_stratosphere(self.vmr, p, T)
+        self.vmr = self.adjust_stratosphere(self.vmr, p, T, z)
 
         return self.vmr
 
@@ -101,9 +126,9 @@ class Humidity(metaclass=abc.ABCMeta):
 
 class FixedVMR(Humidity):
     """Keep the water vapor volume mixing ratio constant."""
-    def get(self, plev, T, **kwargs):
+    def get(self, plev, T, z, **kwargs):
         if self.vmr is None:
-            self.vmr = self.vmr_profile(plev, T)
+            self.vmr = self.vmr_profile(plev, T, z)
 
         return self.vmr
 
@@ -114,8 +139,8 @@ class FixedRH(Humidity):
     The relative humidity is kept constant under temperature changes,
     allowing for a moistening in a warming climate.
     """
-    def get(self, plev, T, **kwargs):
-        self.vmr = self.vmr_profile(plev, T)
+    def get(self, plev, T, z, **kwargs):
+        self.vmr = self.vmr_profile(plev, T, z)
 
         return self.vmr
 
@@ -131,9 +156,9 @@ class CoupledRH(Humidity):
     References:
         Zelinka and Hartmann, 2010, Why is longwave cloud feedback positive?
     """
-    def get(self, plev, T, p_tropo=150e2, **kwargs):
+    def get(self, plev, T, z, p_tropo=150e2, **kwargs):
         self.p_tropo = p_tropo
 
-        self.vmr = self.vmr_profile(plev, T)
+        self.vmr = self.vmr_profile(plev, T, z)
 
         return self.vmr
