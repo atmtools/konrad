@@ -3,13 +3,14 @@
 import abc
 
 import numpy as np
+from scipy.stats import skewnorm
 from typhon.atmosphere import vmr
 
 
 class Humidity(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all humidity handlers."""
-    def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=150e2, c=1.7,
-                 vmr_strato=None, d=None):
+    def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=100e2,
+                 vmr_strato=None):
         """Create a humidity handler.
 
         Parameters:
@@ -18,16 +19,14 @@ class Humidity(metaclass=abc.ABCMeta):
             rh_tropo (float): Relative humidity at second maximum
                 in the upper-troposphere.
             p_tropo (float): Pressure level of second humidity maximum [Pa].
-            c (float): Factor to control the width of the
-                upper-tropospheric peak.
+            vmr_strato (float): Stratospheric water vapor VMR.
         """
         self.rh_surface = rh_surface
         self.rh_tropo = rh_tropo
         self.p_tropo = p_tropo
-        self.c = c
-        self.vmr = None
         self.vmr_strato = vmr_strato
-        self.d = d
+
+        self.vmr = None  # Attribute may be used for chaching later one.
 
     def relative_humidity_profile(self, p):
         """Create a realistic relative humidity profile for the tropics.
@@ -39,12 +38,18 @@ class Humidity(metaclass=abc.ABCMeta):
             ndarray: Relative humidity.
         """
         # Exponential decay from the surface value throughout the atmosphere.
-        rh = (self.rh_surface / (np.exp(1) - 1)
-              * (np.exp((p / p[0]) ** 1.1) - 1)
-        )
+        rh = self.rh_surface * (p / p[0]) ** 1.15
 
-        # Add  Gaussian centered at a given pressure in the upper troposhere.
-        rh += self.rh_tropo * np.exp(-self.c * (np.log(p / self.p_tropo) ** 2))
+        # Add skew-normal distribution.
+        rh += self.rh_tropo * skewnorm.pdf(
+            x=np.log(p),
+            # NOTE: Subtract 20e2 hPa to match the passed value of `p_tropo`
+            # with the actual peak of the skewnorm distribution.
+            loc=np.log(self.p_tropo - 20e2),
+            # Shape parameters are fitted to an ERA5 climatology.
+            a=4,
+            scale=0.75,
+        )
 
         return rh
 
@@ -112,12 +117,13 @@ class Humidity(metaclass=abc.ABCMeta):
         return self.vmr
 
     @abc.abstractmethod
-    def get(self, plev, T, **kwargs):
+    def get(self, plev, T, z, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
-            p (ndarray): Pressure levels [Pa].
+            plev (ndarray): Pressure levels [Pa].
             T (ndarray): Temperature [K].
+            z (ndarray): Height [m].
 
         Returns:
             ndarray: Water vapor profile [VMR].
