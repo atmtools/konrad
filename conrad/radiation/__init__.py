@@ -30,6 +30,8 @@ class Radiation(metaclass=abc.ABCMeta):
                 together with a solar constant of 510 W/m^2.
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
         """
+        super().__init__()
+        
         self.zenith_angle = zenith_angle
         self.diurnal_cycle = diurnal_cycle
 
@@ -174,9 +176,24 @@ class PSRAD(Radiation):
 
 
 class RRTMG(Radiation):
-
+    """RRTMG radiation scheme using the CliMT python wrapper."""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.state_lw = None
+        self.state_sw = None
+    
     def update_radiative_state(self, atmosphere, state0, sw=True):
+        """ Update CliMT formatted atmospheric state using parameters from our 
+        model.
         
+        Parameters:
+            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            state0 (dictionary): atmospheric state in the format for climt
+        
+        Returns:
+            dictionary: updated state
+        """
         from sympl import DataArray 
 
         plev = atmosphere['plev'].values
@@ -278,25 +295,42 @@ class RRTMG(Radiation):
         return state0
         
     def radiative_fluxes(self, atmosphere):
+        """Returns shortwave and longwave fluxes and heating rates.
         
-        # TODO: Do all of this only once (first iteration),
-        # and then just update the radiative state.
-        import climt
-        rad_lw = climt.RRTMGLongwave()
-        rad_sw = climt.RRTMGShortwave()
-        state0_lw = climt.get_default_state([rad_lw])
-        state0_sw = climt.get_default_state([rad_sw])
+        Parameters:
+            atmosphere (conrad.atmosphere.Atmosphere): atmosphere model
         
-        self.update_radiative_state(atmosphere, state0_lw, sw=False)
-        self.update_radiative_state(atmosphere, state0_sw, sw=True)
+        Returns:
+            tuple: containing two dictionaries, one of air temperature
+            values and the other of fluxes and heating rates 
+        """
+        if self.state_lw is None or self.state_sw is None:
+            import climt
+            self.rad_lw = climt.RRTMGLongwave()
+            self.rad_sw = climt.RRTMGShortwave()
+            self.state_lw = climt.get_default_state([self.rad_lw])
+            self.state_sw = climt.get_default_state([self.rad_sw])
         
-        lw_fluxes = rad_lw(state0_lw)
-        sw_fluxes = rad_sw(state0_sw)
+        self.update_radiative_state(atmosphere, self.state_lw, sw=False)
+        self.update_radiative_state(atmosphere, self.state_sw, sw=True)
+        
+        lw_fluxes = self.rad_lw(self.state_lw)
+        sw_fluxes = self.rad_sw(self.state_sw)
         
         return lw_fluxes, sw_fluxes
     
     def get_heatingrates(self, atmosphere):
-        
+        """Returns the shortwave, longwave and net heatingrates.
+        Converts output from radiative_fluxes to be in the format required for
+        our model.
+
+        Parameters:
+            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+
+        Returns:
+            xarray.Dataset: Dataset containing for the simulated heating rates.
+                The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
+        """
         lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere)
         lw_fluxes = lw_dT_fluxes[1]
         sw_fluxes = sw_dT_fluxes[1]
