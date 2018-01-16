@@ -387,6 +387,34 @@ def create_pardirs(path):
     # Create the full given directory tree, regardless if it already exists.
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
+
+def contop_t(ds, lim=-0.2):
+    """Find the temperature at the level where the radiative heating has a
+    certain value, lim.
+    In the HardAdjustment case, for a contop temperature that is not dependent
+    on the number of distribution of pressure levels, it is better to take a
+    value of lim not equal or very close to zero.
+    
+    Parameters:
+        ds (netCDF4 Dataset)
+        lim (float): radiative heating rate
+    
+    Returns:
+        array containing a pressure value
+        array containing a temperature value
+    """
+    T = ds['T'][-1]
+    p = ds['plev']
+    heatingrate = ds['net_htngrt'][-1]
+    contop_i = np.min(np.where(heatingrate > lim))
+    heat_array = np.array([heatingrate[contop_i-1], heatingrate[contop_i]])
+    T_array = np.array([T[contop_i-1], T[contop_i]])
+    p_array = np.array([p[contop_i-1], p[contop_i]])
+    f_T = interp1d(heat_array, T_array)
+    f_p = interp1d(heat_array, p_array)
+    return f_p(lim), f_T(lim)
+
+
 def max_mass_divergence(ds, maxDiv=True, i=-1):
     """ Find the level of maximum mass divergence
     Sorry Lukas, this one is not so neat. Please change it!
