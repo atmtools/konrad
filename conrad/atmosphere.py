@@ -53,10 +53,9 @@ class Atmosphere(Dataset):
         # Initialize ``xarray.Dataset`` with given positional args and kwargs.
         super().__init__(**kwargs)
 
-
         # Check input types.
         surface = utils.return_if_type(surface, 'surface',
-                                        Surface, SurfaceHeatCapacity())
+                                       Surface, SurfaceHeatCapacity())
 
         humidity = utils.return_if_type(humidity, 'humidity',
                                         Humidity, FixedRH())
@@ -95,10 +94,12 @@ class Atmosphere(Dataset):
         self['T'] += heatingrate * timestep
 
         # Convective adjustment
-        self.convection.stabilize(atmosphere=self, lapse=lapse, timestep=timestep)
+        self.convection.stabilize(atmosphere=self, lapse=lapse,
+                                  timestep=timestep)
 
         # Upwelling induced cooling
-        self.upwelling.cool(atmosphere=self, radheat=heatingrate, timestep=timestep)
+        self.upwelling.cool(atmosphere=self, radheat=heatingrate,
+                            timestep=timestep)
         
         # Calculate the geopotential height field.
         self.calculate_height()
@@ -110,7 +111,6 @@ class Atmosphere(Dataset):
             z=self.get_values('z', keepdims=False),
             p_tropo=self.get_convective_top(heatingrate[0, :]),
         )
-
 
     @classmethod
     def from_atm_fields_compact(cls, atmfield, **kwargs):
@@ -431,8 +431,7 @@ class Atmosphere(Dataset):
 
         return -radiative_cooling[:-1] / sigma
 
-    def get_subsidence_convergence_max(self, radiative_cooling,
-                                             pmin=10e2):
+    def get_subsidence_convergence_max(self, radiative_cooling, pmin=10e2):
         """Return index of maximum subsidence convergence.
 
         Parameters:
@@ -504,14 +503,22 @@ class Atmosphere(Dataset):
         return contop_plev
 
     def tracegases_rcemip(self):
-        """ Set trace gas concentrations to be constant throughout the
-        atmosphere, following the values for the RCE-MIP (Wing et al. 2017).
-        These values are hardcoded in the dictionary named concentrations.
-        """
-        concentrations = {'CO2':348*10**-6, 'CH4':1650*10**-9,
-                          'N2O':306*10**-9, 'CO':0}
-        plev = self['plev'].values
-        for gas in concentrations.keys():
-            self[gas][0, :] = concentrations[gas]*np.ones(plev.shape)
+        """Set trace gas concentrations according to the RCE-MIP configuration.
 
-        return
+        The volume mixing ratios are following the values for the
+        RCE-MIP (Wing et al. 2017) and constant throughout the atmosphere.
+        """
+        concentrations = {
+            'CO2': 348e-6,
+            'CH4': 1650e-9,
+            'N2O': 306e-9,
+            'CO': 0,
+        }
+        plev = self['plev'].values
+
+        # Assign constant VMR values to all atmosphere levels.
+        for gas, vmr in concentrations.items():
+            self[gas][0, :] = vmr * np.ones(plev.shape)
+
+        # Determine the ozone profile according to RCEMIP.
+        self['O3'][0, :] = utils.ozone_profile_rcemip(plev)
