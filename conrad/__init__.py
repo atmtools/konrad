@@ -13,11 +13,13 @@ import logging
 
 from . import atmosphere
 from . import convection
-from . import humidity
 from . import constants
+from . import humidity
+from . import lapserate
 from . import plots
 from . import radiation
 from . import surface
+from . import upwelling
 from . import utils
 from .conrad import RCE
 
@@ -28,18 +30,22 @@ __all__ = [
     'constants',
     'convection',
     'humidity',
+    'lapserate',
     'plots',
     'radiation',
     'surface',
+    'upwelling',
     'utils',
 ]
 
 __version__ = '0.3dev'
 
+# Basic configuration for all loggers used within conrad.
+# NOTE: The process name is included for more verbose logs in multiprocessing.
 logging.basicConfig(
     # filename='log.txt',
     level=logging.INFO,
     datefmt='%Y-%m-%d %H:%M:%S',
-    style='{',
+    style='{',  # Allows to use format string syntax in the next line.
     format='{asctime} {processName}:{levelname}:{name}:{message}',
     )
