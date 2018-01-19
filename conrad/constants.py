@@ -85,6 +85,16 @@ variable_description = {
         'standard_name': 'diabatic_convergence_max_index',
         'description': 'Level index of maximum diabatic convergence',
     },
+    'convective_top_plev': {
+        'units': 'Pa',
+        'standard_name': 'convective_top_plev',
+        'description': 'Pressure level of the top of convection',
+    },
+    'convective_top_temperature': {
+        'units': 'K',
+        'standard_name': 'convective_top_temperature',
+        'description': 'Temperature at the top of convection',
+    },
     # Radiative quantities
     'lw_htngrt': {
         'units': 'K / day',

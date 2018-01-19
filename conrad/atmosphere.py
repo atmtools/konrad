@@ -81,7 +81,6 @@ class Atmosphere(Dataset):
             'upwelling': upwelling,
         })
 
-
     def adjust(self, heatingrate, timestep, **kwargs):
         """Adjust temperature according to given heating rates.
 
@@ -103,13 +102,13 @@ class Atmosphere(Dataset):
         
         # Calculate the geopotential height field.
         self.calculate_height()
-        
+
         # Preserve the initial relative humidity profile.
         self['H2O'][0, :] = self.humidity.get(
             plev=self.get_values('plev'),
             T=self.get_values('T', keepdims=False),
             z=self.get_values('z', keepdims=False),
-            p_tropo=self.get_subsidence_convergence_max(heatingrate[0, :]),
+            p_tropo=self.get_convective_top(heatingrate[0, :]),
         )
 
 
@@ -461,6 +460,48 @@ class Atmosphere(Dataset):
                                                           dims=('time',))
 
         return max_plev
+
+    def get_convective_top(self, heatingrate, lim=-0.1):
+        """Find the pressure where the radiative heating has a certain value.
+
+        Note:
+            In the HardAdjustment case, for a contop temperature that is not
+            dependent on the number of distribution of pressure levels, it is
+            better to take a value of lim not equal or very close to zero.
+
+        Parameters:
+            heatingrate (ndarray): Radiative heating rate [K/day].
+            lim (float): Threshold value [K/day].
+
+        Returns:
+            float: Pressure at height of convective top [Pa].
+        """
+        p = self['plev'].values[:]
+        T = self['T'].values[-1, :]
+
+        # NOTE: `np.argmax` returns the first occurence of the maximum value.
+        # In this example, the index of the first `True` value,
+        # corresponding to the convective top, is returned.
+        contop_i = np.argmax(heatingrate > lim)
+
+        # Create auxiliary arrays storing the Qr, T and p values above and
+        # below the threshold value. These arrays are used as input for the
+        # interpolation in the next step.
+        heat_array = np.array([heatingrate[contop_i-1], heatingrate[contop_i]])
+        p_array = np.array([p[contop_i-1], p[contop_i]])
+        T_array = np.array([T[contop_i-1], T[contop_i]])
+
+        # Interpolate the pressure value where the heatingrate # equals `lim`.
+        contop_plev = interp1d(heat_array, p_array)(lim)
+        contop_T = interp1d(heat_array, T_array)(lim)
+
+        # Store interpolated pressure level and temperature values.
+        self['convective_top_plev'] = DataArray(
+            [contop_plev], dims=('time',))
+        self['convective_top_temperature'] = DataArray(
+            [contop_T], dims=('time',))
+
+        return contop_plev
 
     def tracegases_rcemip(self):
         """ Set trace gas concentrations to be constant throughout the
