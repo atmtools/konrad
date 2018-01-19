@@ -10,7 +10,7 @@ from typhon.atmosphere import vmr
 class Humidity(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all humidity handlers."""
     def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=100e2,
-                 vmr_strato=None):
+                 vmr_strato=None, transition_depth=None):
         """Create a humidity handler.
 
         Parameters:
@@ -20,11 +20,14 @@ class Humidity(metaclass=abc.ABCMeta):
                 in the upper-troposphere.
             p_tropo (float): Pressure level of second humidity maximum [Pa].
             vmr_strato (float): Stratospheric water vapor VMR.
+            transition_depth (float): Transition depth from humidity at the
+                cold point to the straotpsheric background [m].
         """
         self.rh_surface = rh_surface
         self.rh_tropo = rh_tropo
         self.p_tropo = p_tropo
         self.vmr_strato = vmr_strato
+        self.transition_depth = transition_depth
 
         self.vmr = None  # Attribute may be used for chaching later one.
 
@@ -64,7 +67,6 @@ class Humidity(metaclass=abc.ABCMeta):
             p (ndarray): Pressure levels [Pa].
             T (ndarray): Temperature [K].
             cold_point_min (float): Lower threshold for cold point pressure.
-            d (float): transition depth in km
 
         Returns:
               ndarray: Adjusted water vapor profile [VMR].
@@ -81,7 +83,7 @@ class Humidity(metaclass=abc.ABCMeta):
         if self.vmr_strato == None:
             vmr[cp_index:] = vmr[cp_index]
         else:
-            d = self.d
+            d = self.transition_depth
             if d == None:
                 raise ValueError('Specify a transition depth for the ' +
                                  'stratospheric water vapour mixing ratio.')
@@ -90,12 +92,14 @@ class Humidity(metaclass=abc.ABCMeta):
             cpz = z[cp_index] # height of the base of the transition
             
             # index of the top of the transition, this breaks if d is too large
-            # and z is nowhere bigger than cpz+1000*d
-            d_i = np.min(np.where(z > cpz+1000*d)) 
+            # and z is nowhere bigger than `cpz + transition_depth`.
+            d_i = np.min(np.where(z > cpz+self.transition_depth))
             
-            vmr[cp_index:d_i] = (-np.cos(np.pi*(z[cp_index:d_i]-cpz)/(1000*d)) 
-                                 * (vmr_strato - vmr_cp)/2
-                                 + (vmr_strato + vmr_cp)/2 )
+            vmr[cp_index:d_i] = (
+                -np.cos(np.pi*(z[cp_index:d_i]-cpz)/(self.transition_depth))
+                * (vmr_strato - vmr_cp)/2
+                + (vmr_strato + vmr_cp)/2
+            )
             vmr[d_i:] = vmr_strato
 
         return vmr
