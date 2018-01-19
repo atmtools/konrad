@@ -304,8 +304,11 @@ class RRTMG(Radiation):
             tuple: containing two dictionaries, one of air temperature
             values and the other of fluxes and heating rates 
         """
+        
         if self.state_lw is None or self.state_sw is None:
             import climt
+            #climt.set_constant('solar_constant', value=510, units='W m^-2')
+            climt.set_constant('stellar_irradiance', value=510, units='W m^-2')
             self.rad_lw = climt.RRTMGLongwave()
             self.rad_sw = climt.RRTMGShortwave()
             self.state_lw = climt.get_default_state([self.rad_lw])
