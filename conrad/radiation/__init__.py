@@ -15,6 +15,7 @@ logger = logging.getLogger()
 __all__ = [
     'Radiation',
     'PSRAD',
+    'RRTMG',
 ]
 
 
@@ -202,8 +203,8 @@ class RRTMG(Radiation):
         temperature = atmosphere.surface.temperature.data[0]
         albedo = float(atmosphere.surface.albedo.data)
         o2fraction = 0.21
-        zenith = self.zenith_angle
-        
+        zenith = np.deg2rad(self.zenith_angle)
+
         state0['mid_levels'] = DataArray(np.arange(0, numlevels),
               dims=('mid_levels'), attrs={'label': 'mid_levels'})
         state0['interface_levels'] = DataArray(np.arange(0, numlevels+1),
