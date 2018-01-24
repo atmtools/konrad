@@ -460,7 +460,7 @@ class Atmosphere(Dataset):
 
         return max_plev
 
-    def get_convective_top(self, heatingrate, lim=-0.1):
+    def get_convective_top(self, heatingrate, lim=-0.2):
         """Find the pressure where the radiative heating has a certain value.
 
         Note:
@@ -481,7 +481,7 @@ class Atmosphere(Dataset):
         # NOTE: `np.argmax` returns the first occurence of the maximum value.
         # In this example, the index of the first `True` value,
         # corresponding to the convective top, is returned.
-        contop_i = np.argmax(heatingrate > lim)
+        contop_i = int(np.argmax(heatingrate > lim))
 
         # Create auxiliary arrays storing the Qr, T and p values above and
         # below the threshold value. These arrays are used as input for the
