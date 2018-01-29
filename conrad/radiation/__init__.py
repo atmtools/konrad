@@ -4,8 +4,9 @@
 import abc
 import logging
 
-from xarray import Dataset
 import numpy as np
+from typhon.physics import vmr2specific_humidity
+from xarray import Dataset
 
 from . import utils
 from conrad.utils import append_description
@@ -179,10 +180,12 @@ class PSRAD(Radiation):
 class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, solar_constant=492.7, **kwargs):
         super().__init__(*args, **kwargs)
         self.state_lw = None
         self.state_sw = None
+
+        self.solar_constant = solar_constant
     
     def update_radiative_state(self, atmosphere, state0, sw=True):
         """ Update CliMT formatted atmospheric state using parameters from our 
@@ -216,7 +219,7 @@ class RRTMG(Radiation):
         state0['air_temperature'] = DataArray(atmosphere['T'][0, :].data,
               dims=('mid_levels'), attrs={'units': 'degK'})
         vmr_h2o = atmosphere['H2O'][0, :].data
-        specific_humidity = vmr_h2o / (1 + vmr_h2o)
+        specific_humidity = vmr2specific_humidity(vmr_h2o)
         state0['specific_humidity'] = DataArray(specific_humidity,
               dims=('mid_levels'), attrs={'units': 'g/g'})
         state0['mole_fraction_of_oxygen_in_air'] = DataArray(
@@ -309,7 +312,9 @@ class RRTMG(Radiation):
         if self.state_lw is None or self.state_sw is None:
             import climt
             #climt.set_constant('solar_constant', value=510, units='W m^-2')
-            climt.set_constant('stellar_irradiance', value=510, units='W m^-2')
+            climt.set_constant('stellar_irradiance',
+                               value=self.solar_constant,
+                               units='W m^-2')
             self.rad_lw = climt.RRTMGLongwave()
             self.rad_sw = climt.RRTMGShortwave()
             self.state_lw = climt.get_default_state([self.rad_lw])
