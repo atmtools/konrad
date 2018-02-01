@@ -180,13 +180,13 @@ class PSRAD(Radiation):
 class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
     
-    def __init__(self, *args, solar_constant=492.7, **kwargs):
+    def __init__(self, *args, solar_constant=510, **kwargs):
         super().__init__(*args, **kwargs)
         self.state_lw = None
         self.state_sw = None
 
         self.solar_constant = solar_constant
-    
+
     def update_radiative_state(self, atmosphere, state0, sw=True):
         """ Update CliMT formatted atmospheric state using parameters from our 
         model.
@@ -311,12 +311,11 @@ class RRTMG(Radiation):
         
         if self.state_lw is None or self.state_sw is None:
             import climt
-            #climt.set_constant('solar_constant', value=510, units='W m^-2')
             climt.set_constant('stellar_irradiance',
                                value=self.solar_constant,
                                units='W m^-2')
             self.rad_lw = climt.RRTMGLongwave()
-            self.rad_sw = climt.RRTMGShortwave()
+            self.rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
             self.state_lw = climt.get_default_state([self.rad_lw])
             self.state_sw = climt.get_default_state([self.rad_sw])
         
