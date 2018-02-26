@@ -60,9 +60,6 @@ class Radiation(metaclass=abc.ABCMeta):
         self.current_solar_angle = ((self.zenith_angle + 90)
                                     + 90 * np.sin(2 * np.pi * time - np.pi / 2))
 
-        # Zenith angles above 90° refer to nighttime. Set those angles to 90°.
-        self.current_solar_angle = np.min((self.current_solar_angle, 90))
-
 
 class PSRAD(Radiation):
     """Radiation model using the ICON PSRAD radiation scheme."""
@@ -206,7 +203,7 @@ class RRTMG(Radiation):
         temperature = atmosphere.surface.temperature.data[0]
         albedo = float(atmosphere.surface.albedo.data)
         o2fraction = 0.21
-        zenith = np.deg2rad(self.zenith_angle)
+        zenith = np.deg2rad(self.current_solar_angle)
 
         state0['mid_levels'] = DataArray(np.arange(0, numlevels),
               dims=('mid_levels'), attrs={'label': 'mid_levels'})
