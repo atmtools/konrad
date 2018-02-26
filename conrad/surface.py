@@ -14,8 +14,8 @@ from . import (constants, utils)
 __all__ = [
     'Surface',
     'SurfaceFixedTemperature',
-    'SurfaceNoHeatCapacity',
     'SurfaceHeatCapacity',
+    'SurfaceHeatSink',
 ]
 
 
@@ -114,29 +114,6 @@ class SurfaceFixedTemperature(Surface):
         return
 
 
-class SurfaceNoHeatCapacity(Surface):
-    """Surface model with adjustable temperature."""
-    def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
-        """Increase the surface temperature by given surface fluxes.
-
-        Parameters:
-            sw_down (float): Shortwave downward flux [W / m**2].
-            sw_up (float): Shortwave upward flux [W / m**2].
-            lw_down (float): Longwave downward flux [W / m**2].
-            lw_up (float): Longwave upward flux [W / m**2].
-            timestep (float): Timestep in days.
-
-        Notes:
-            The surface is assumed to have no heat capacity.
-        """
-        net_down_flux = (sw_down - sw_up) + lw_down
-        t_new = (net_down_flux / constants.stefan_boltzmann)**0.25
-
-        self['temperature'].values[0] = t_new
-
-        logger.debug(f'Surface temperature: {t_new:.4f} K')
-
-
 class SurfaceHeatCapacity(Surface):
     """Surface model with adjustable temperature.
 
@@ -171,6 +148,45 @@ class SurfaceHeatCapacity(Surface):
         logger.debug(f'Net flux: {net_flux:.2f} W /m^2')
 
         self['temperature'] += (timestep * net_flux /
+                                (self.cp * self.rho * self.dz))
+
+        logger.debug('Surface temperature: '
+                     f'{self.temperature.values[0]:.4f} K')
+
+
+class SurfaceHeatSink(SurfaceHeatCapacity):
+
+    def __init__(self, *args, heat_flux=0, **kwargs):
+        """Surface model with adjustable temperature.
+
+        Parameters:
+            heat_flux (float): 
+        """
+        super().__init__(*args, **kwargs)
+        self['heat_flux'] = heat_flux
+
+        utils.append_description(self)
+
+    def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
+        """Increase the surface temperature using given radiative fluxes. Take
+        into account a heat sink at the surface, as if heat is transported out
+        of the tropics we are modelling.
+
+        Parameters:
+            sw_down (float): Shortwave downward flux [W / m**2].
+            sw_up (float): Shortwave upward flux [W / m**2].
+            lw_down (float): Longwave downward flux [W / m**2].
+            lw_up (float): Longwave upward flux [W / m**2].
+            timestep (float): Timestep in days.
+        """
+        timestep *= 24 * 60 * 60  # Convert timestep to seconds.
+
+        net_flux = (sw_down - sw_up) + (lw_down - lw_up)
+        sink = self.heat_flux
+
+        logger.debug(f'Net flux: {net_flux:.2f} W /m^2')
+
+        self['temperature'] += (timestep * (net_flux - sink) /
                                 (self.cp * self.rho * self.dz))
 
         logger.debug('Surface temperature: '
