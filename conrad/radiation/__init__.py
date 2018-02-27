@@ -55,10 +55,13 @@ class Radiation(metaclass=abc.ABCMeta):
             self.current_solar_angle = self.zenith_angle
             return
 
-        # The solar angle is described by a sinusoidal curve that
-        # oscillates around 90° (the horizon).
-        self.current_solar_angle = ((self.zenith_angle + 90)
-                                    + 90 * np.sin(2 * np.pi * time - np.pi / 2))
+        # The local zenith angle, calculated from the latitude and longitude.
+        # Seasons are not considered.
+        solar_angle = 180/np.pi * np.arccos(
+                np.cos(np.deg2rad(self.zenith_angle)
+                ) * np.cos(2 * np.pi * time))
+        
+        self.current_solar_angle = solar_angle
 
 
 class PSRAD(Radiation):
