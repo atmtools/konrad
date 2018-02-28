@@ -44,18 +44,19 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 class Convection(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
-    def stabilize(self, atmosphere, timestep):
+    def stabilize(self, atmosphere, lapse, timestep):
         """Stabilize the temperature profile by redistributing energy.
 
         Parameters:
               atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+              lapse (ndarray): Temperature lapse rate [K/day].
               timestep (float): Timestep width [day].
         """
 
 
 class NonConvective(Convection):
     """Do not apply convection."""
-    def stabilize(self, atmosphere, timestep):
+    def stabilize(self, *args, **kwargs):
         pass
 
 
