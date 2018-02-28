@@ -32,6 +32,7 @@ __all__ = [
     'create_pardirs',
     'max_mass_divergence',
     'return_if_type',
+    'argmin_in_range',
 ]
 
 logger = logging.getLogger(__name__)
@@ -483,3 +484,32 @@ def return_if_type(variable, variablename, expect, default):
         )
 
     return variable
+
+
+def argmin_in_range(y, x, xmin=-np.inf, xmax=np.inf):
+    """Returns the indices of the maximum values in a given range.
+
+    Note:
+        The function is only tested for one-dimensional input.
+
+    Parameters:
+        x (ndarray): Ordinate values.
+        y (ndarray): Coordinate values.
+        xmin (float): Lower threshold for coordinate range.
+        xmax (float): Upper threshold for coordinate range.
+
+    Returns:
+        int: Index.
+
+    Raises:
+        Exception: If input array dimension is greater than 1.
+    """
+    if len(y.shape) > 1 or len(y.shape) > 1:
+        raise Exception(
+            'The function is only valid for one '
+            'dimensional input arrays.')
+
+    range_indices = np.where(np.logical_and(x > xmin, x < xmax))
+    argmin_range = np.argmin(y[range_indices])
+
+    return range_indices[0][argmin_range]
