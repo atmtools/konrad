@@ -10,7 +10,7 @@ from typhon.atmosphere import vmr
 class Humidity(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all humidity handlers."""
     def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=170e2,
-                 vmr_strato=None, transition_depth=None):
+                 vmr_strato=None, transition_depth=None, vmr_array=None):
         """Create a humidity handler.
 
         Parameters:
@@ -29,7 +29,7 @@ class Humidity(metaclass=abc.ABCMeta):
         self.vmr_strato = vmr_strato
         self.transition_depth = transition_depth
 
-        self.vmr = None  # Attribute may be used for chaching later one.
+        self.vmr = vmr_array  # Attribute may be used for chaching later one.
 
     def relative_humidity_profile(self, p):
         """Create a realistic relative humidity profile for the tropics.
