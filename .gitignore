@@ -1,0 +1,8 @@
+dist/
+*.log
+*.nc
+*.pdf
+*.pyc
+*so.1
+.idea
+.ipynb_checkpoints
