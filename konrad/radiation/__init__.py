@@ -151,7 +151,23 @@ class Radiation(metaclass=abc.ABCMeta):
 
 
 class PSRAD(Radiation):
-    """Radiation model using the ICON PSRAD radiation scheme."""
+    """Radiation model using the ICON PSRAD radiation scheme.
+
+    The PSRAD class relies on external radiative-transfer code. Currently this
+    functionality is provided by the PSRAD radiation scheme. You need a compiled
+    version of this code in order to install and run ``konrad``.
+
+    A stable version is accessible through the internal subversion repository:
+
+        $ svn co https://arts.mi.uni-hamburg.de/svn/internal/browser/psrad/trunk psrad
+
+    Follow the instructions given in the repository to compile PSRAD on your
+    machine. A part of the installation process is to set some environment
+    variables. Thos are also needed in order to run ``konrad``:
+
+        $ source config/psrad_env.bash
+
+    """
     @staticmethod
     def _extract_psrad_args(atmosphere):
         """Returns tuple of mixing ratios to use with psrad.
