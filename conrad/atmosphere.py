@@ -460,7 +460,7 @@ class Atmosphere(Dataset):
 
         return max_plev
 
-    def get_convective_top(self, heatingrate, lim=-0.2):
+    def get_convective_top(self, heatingrate, lim=-0.1):
         """Find the pressure where the radiative heating has a certain value.
 
         Note:
