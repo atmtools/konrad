@@ -38,8 +38,6 @@ __all__ = [
     'utils',
 ]
 
-__version__ = '0.3dev'
-
 # Basic configuration for all loggers used within konrad.
 # NOTE: The process name is included for more verbose logs in multiprocessing.
 logging.basicConfig(

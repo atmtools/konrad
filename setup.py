@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import sys
+from os.path import (dirname, join)
 from distutils.core import setup
 from setuptools import find_packages
 
-from konrad import __version__
+
+__version__ = open(join(dirname(__file__), 'konrad', 'VERSION')).read().strip()
 
 if not sys.version_info >= (3, 5, 1):
     sys.exit('Only support Python version >=3.5.1\n'
@@ -11,8 +13,7 @@ if not sys.version_info >= (3, 5, 1):
 
 setup(
     name='konrad',
-    author='Lukas Kluft',
-    author_email='lukas.kluft@gmail.com',
+    author='The konrad developers',
     version=__version__,
     packages=find_packages(),
     license='MIT',
