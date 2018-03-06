@@ -1,4 +1,4 @@
-# Notation used in `conrad`
+# Notation used in `konrad`
 
 Variable name | Symbol | Unit | Description
 --------------|--------|------|-----

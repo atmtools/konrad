@@ -5,8 +5,8 @@ import logging
 
 import numpy as np
 
-from conrad import utils
-from conrad.radiation import RRTMG
+from konrad import utils
+from konrad.radiation import RRTMG
 
 
 logger = logging.getLogger()
@@ -21,8 +21,8 @@ class RCE:
 
     Examples:
         Create an object to setup and run a simulation:
-        >>> import conrad
-        >>> rce = conrad.RCE(...)
+        >>> import konrad
+        >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
     def __init__(self, atmosphere, radiation=None, outfile=None,
@@ -30,7 +30,7 @@ class RCE:
         """Set-up a radiative-convective model.
 
         Parameters:
-            atmosphere (Atmosphere): `conrad.atmosphere.Atmosphere`.
+            atmosphere (Atmosphere): `konrad.atmosphere.Atmosphere`.
             outfile (str): netCDF4 file to store output.
             writeevery(int or float): Set frequency in which to write output.
                 int: Every nth timestep is written.
@@ -63,7 +63,7 @@ class RCE:
 
         self.outfile = outfile
 
-        logging.info('Created ConRad object:\n{}'.format(self))
+        logging.info('Created Konrad object:\n{}'.format(self))
 
     def __repr__(self):
         retstr = '{}(\n'.format(self.__class__.__name__)

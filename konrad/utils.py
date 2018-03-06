@@ -12,7 +12,7 @@ from netCDF4 import Dataset
 from astropy.convolution import convolve, Box1DKernel
 from scipy.interpolate import interp1d
 
-from conrad import constants
+from konrad import constants
 
 
 __all__ = [

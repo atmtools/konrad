@@ -7,7 +7,7 @@
 """Perform radiative-equilibirum simulations for different temperature profiles
 that are shifted against each other.
 """
-import conrad
+import konrad
 import typhon
 
 
@@ -20,7 +20,7 @@ gf.refine_grid(p, axis=1)
 
 for shift in range(-30, 31, 15):
     # Create an atmosphere model.
-    a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+    a = konrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
 
     # Make isothermal atmosphere.
     rh = typhon.atmosphere.relative_humidity(a['H2O'], a['plev'], a['T'])
@@ -29,13 +29,13 @@ for shift in range(-30, 31, 15):
     a.apply_H2O_limits()
 
     # Create a sufrace model.
-    s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
+    s = konrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
 
     # Create a sufrace model.
-    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
+    r = konrad.radiation.PSRAD(atmosphere=a, surface=s)
 
     # Combine atmosphere and surface model into an RCE framework.
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=a,
         surface=s,
         radiation=r,
@@ -47,5 +47,5 @@ for shift in range(-30, 31, 15):
 
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
-    with conrad.radiation.utils.PsradSymlinks():
+    with konrad.radiation.utils.PsradSymlinks():
         rce.run()  # Start simulation.

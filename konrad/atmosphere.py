@@ -8,13 +8,13 @@ import numpy as np
 from scipy.interpolate import interp1d
 from xarray import Dataset, DataArray
 
-from conrad import constants
-from conrad import utils
-from conrad.convection import (Convection, HardAdjustment)
-from conrad.humidity import (Humidity, FixedRH)
-from conrad.lapserate import (LapseRate, MoistLapseRate)
-from conrad.surface import (Surface, SurfaceHeatCapacity)
-from conrad.upwelling import (Upwelling, NoUpwelling)
+from konrad import constants
+from konrad import utils
+from konrad.convection import (Convection, HardAdjustment)
+from konrad.humidity import (Humidity, FixedRH)
+from konrad.lapserate import (LapseRate, MoistLapseRate)
+from konrad.surface import (Surface, SurfaceHeatCapacity)
+from konrad.upwelling import (Upwelling, NoUpwelling)
 
 
 __all__ = [
@@ -41,14 +41,14 @@ class Atmosphere(Dataset):
         """Create an atmosphere model.
 
        Parameters:
-             convection (conrad.humidity.Convection): Convection scheme.
-                Defaults to ``conrad.convection.HardAdjustment``.
-             humidity (conrad.humidity.Humidity): Humidity handler.
-                Defaults to ``conrad.humidity.FixedRH``.
-             surface (conrad.surface.Surface): Surface model.
-                Defaults to ``conrad.surface.SurfaceHeatCapacity``.
-             lapse (conrad.lapse.LapseRate): Lapse rate handler.
-                Defaults to ``conrad.lapserate.MoistLapseRate``.
+             convection (konrad.humidity.Convection): Convection scheme.
+                Defaults to ``konrad.convection.HardAdjustment``.
+             humidity (konrad.humidity.Humidity): Humidity handler.
+                Defaults to ``konrad.humidity.FixedRH``.
+             surface (konrad.surface.Surface): Surface model.
+                Defaults to ``konrad.surface.SurfaceHeatCapacity``.
+             lapse (konrad.lapse.LapseRate): Lapse rate handler.
+                Defaults to ``konrad.lapserate.MoistLapseRate``.
         """
         # Initialize ``xarray.Dataset`` with given positional args and kwargs.
         super().__init__(**kwargs)

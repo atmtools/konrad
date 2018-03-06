@@ -21,7 +21,7 @@ import logging
 import multiprocessing
 import os
 
-import conrad
+import konrad
 import netCDF4
 import numpy as np
 
@@ -34,14 +34,14 @@ def scale_co2(factor, atmosphere='rce-rrtmg',
     # Load atmosphere and surface in equilibrium to prevent signals from
     # adjustment to model physics.
     ncfile = f'data/{atmosphere}.nc'
-    surface = conrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile)
+    surface = konrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile)
 
     with netCDF4.Dataset(ncfile) as dataset:
-        humidity = conrad.humidity.CoupledRH(
+        humidity = konrad.humidity.CoupledRH(
             p_tropo=dataset.variables['convective_top_plev'][-1],
         )
 
-    atmosphere = conrad.atmosphere.Atmosphere.from_netcdf(
+    atmosphere = konrad.atmosphere.Atmosphere.from_netcdf(
         ncfile=ncfile,
         humidity=humidity,
         surface=surface,
@@ -51,14 +51,14 @@ def scale_co2(factor, atmosphere='rce-rrtmg',
     atmosphere['CO2'] *= factor
 
     # Combine all submodels into a RCE framework.
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=atmosphere,
-        radiation=conrad.radiation.RRTMG(),
+        radiation=konrad.radiation.RRTMG(),
         delta=1e-5,  # Run full number of itertations.
         timestep=0.05,  # 4.8 hour time step.
         writeevery=10.,  # Write netCDF output every day.
         max_iterations=80000,  # 1000 days maximum simulation time.
-        outfile=conrad.utils.get_filepath(atmosphere, experiment, factor),
+        outfile=konrad.utils.get_filepath(atmosphere, experiment, factor),
     )
 
     # Start actual simulation.

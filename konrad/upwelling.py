@@ -3,7 +3,7 @@
 import abc
 
 import numpy as np
-from conrad import constants
+from konrad import constants
 
 
 class Upwelling(metaclass=abc.ABCMeta):
@@ -13,7 +13,7 @@ class Upwelling(metaclass=abc.ABCMeta):
     def cool(self, atmosphere, radheat, timestep):
         """ Cool the atmosphere according to an upwelling.
         Parameters:
-              atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+              atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
               radheat (ndarray): Radiative heatingrate [K/day].
               timestep (float): Timestep width [day].
         """

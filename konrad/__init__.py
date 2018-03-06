@@ -21,7 +21,7 @@ from . import radiation
 from . import surface
 from . import upwelling
 from . import utils
-from .conrad import RCE
+from .konrad import RCE
 
 
 __all__ = [
@@ -40,7 +40,7 @@ __all__ = [
 
 __version__ = '0.3dev'
 
-# Basic configuration for all loggers used within conrad.
+# Basic configuration for all loggers used within konrad.
 # NOTE: The process name is included for more verbose logs in multiprocessing.
 logging.basicConfig(
     # filename='log.txt',

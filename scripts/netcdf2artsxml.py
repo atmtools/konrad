@@ -6,7 +6,7 @@ Usage:
 """
 import sys
 
-from conrad.atmosphere import Atmosphere
+from konrad.atmosphere import Atmosphere
 from typhon.arts import xml
 
 

@@ -22,7 +22,7 @@ import multiprocessing
 
 import typhon
 
-import conrad
+import konrad
 
 
 logger = logging.getLogger()
@@ -34,40 +34,40 @@ def use_levels(nlevels, atmosphere='tropical-standard',
     gf = typhon.arts.xml.load(f'data/{atmosphere}.xml')
 
     # Refine original pressure grid.
-    p = conrad.utils.refined_pgrid(1013e2, 0.01e2, num=nlevels, shift=0.5)
+    p = konrad.utils.refined_pgrid(1013e2, 0.01e2, num=nlevels, shift=0.5)
     gf.refine_grid(p, axis=1, fill_value='extrapolate')
 
     # # Load atmosphere and surface model from netCDF file.
     # # The models used as initial state are in equilibrium to avoid signals
     # # from pure adjustment in the results.
-    # ncfile = conrad.utils.get_filepath(
+    # ncfile = konrad.utils.get_filepath(
     #     atmosphere=atmosphere,
     #     experiment='nlayers-convective',
     #     scale=nlevels,
     # )
-    # a = conrad.atmosphere.AtmosphereConvective.from_netcdf(ncfile)
-    # s = conrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile, dz=100)
+    # a = konrad.atmosphere.AtmosphereConvective.from_netcdf(ncfile)
+    # s = konrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile, dz=100)
     # a['CO2'] *= 2  # Scale the CO2 concentration.
 
-    a = conrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
-    s = conrad.surface.SurfaceHeatCapacity.from_atmosphere(a)
+    a = konrad.atmosphere.AtmosphereConvective.from_atm_fields_compact(gf)
+    s = konrad.surface.SurfaceHeatCapacity.from_atmosphere(a)
 
     # Create synthetic relative humidity profile.
-    rh = conrad.utils.create_relative_humidity_profile(p, 0.75)
+    rh = konrad.utils.create_relative_humidity_profile(p, 0.75)
     a.relative_humidity = rh
     a.apply_H2O_limits()
 
     # Create a radiation model.
-    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
+    r = konrad.radiation.PSRAD(atmosphere=a, surface=s)
 
     # Combine all submodels into a RCE framework.
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=a, surface=s, radiation=r,
         delta=0.000,  # Run full number of itertations.
         timestep=0.2,  # 4.8 hour time step.
         writeevery=1.,  # Write netCDF output every day.
         max_iterations=15000,  # 1000 days maximum simulation time.
-        outfile=conrad.utils.get_filepath(atmosphere, experiment, nlevels),
+        outfile=konrad.utils.get_filepath(atmosphere, experiment, nlevels),
     )
 
     # Start the actual simulation.
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
-    with conrad.radiation.utils.PsradSymlinks():
+    with konrad.radiation.utils.PsradSymlinks():
         pool = multiprocessing.Pool(8)
         pool.map(use_levels, level_numbers)
 

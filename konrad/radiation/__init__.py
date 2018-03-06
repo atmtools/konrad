@@ -9,8 +9,8 @@ import xarray as xr
 from typhon.physics import vmr2specific_humidity
 
 from . import utils
-from conrad import constants
-from conrad.utils import append_description
+from konrad import constants
+from konrad.utils import append_description
 
 
 logger = logging.getLogger()
@@ -185,7 +185,7 @@ class PSRAD(Radiation):
         """Returns the shortwave, longwave and net heatingrates.
 
         Parameters:
-            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
 
         Returns:
             xarray.Dataset: Dataset containing for the simulated heating rates.
@@ -271,7 +271,7 @@ class RRTMG(Radiation):
         model.
         
         Parameters:
-            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             state0 (dictionary): atmospheric state in the format for climt
         
         Returns:
@@ -381,7 +381,7 @@ class RRTMG(Radiation):
         """Returns shortwave and longwave fluxes and heating rates.
         
         Parameters:
-            atmosphere (conrad.atmosphere.Atmosphere): atmosphere model
+            atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
         
         Returns:
             tuple: containing two dictionaries, one of air temperature
@@ -412,7 +412,7 @@ class RRTMG(Radiation):
         our model.
 
         Parameters:
-            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
 
         Returns:
             xarray.Dataset: Dataset containing for the simulated heating rates.

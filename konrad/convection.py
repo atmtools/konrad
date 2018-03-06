@@ -6,8 +6,8 @@ import numpy as np
 import typhon
 from scipy.interpolate import interp1d
 
-from conrad import constants
-from conrad.surface import SurfaceFixedTemperature
+from konrad import constants
+from konrad.surface import SurfaceFixedTemperature
 
 
 __all__ = [
@@ -48,7 +48,7 @@ class Convection(metaclass=abc.ABCMeta):
         """Stabilize the temperature profile by redistributing energy.
 
         Parameters:
-              atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+              atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
               lapse (ndarray): Temperature lapse rate [K/day].
               timestep (float): Timestep width [day].
         """

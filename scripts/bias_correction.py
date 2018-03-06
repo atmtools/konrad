@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 import os
 
-import conrad
+import konrad
 import netCDF4
 import numpy as np
 import xarray as xr
@@ -16,23 +16,23 @@ def bias_corrected_ecs(factor):
     ncfile = 'data/rce-rrtmg.nc'
 
     with netCDF4.Dataset(ncfile) as dataset:
-        hmd = conrad.humidity.CoupledRH(
+        hmd = konrad.humidity.CoupledRH(
             p_tropo=dataset.variables['convective_top_plev'][-1],
         )
 
-    atm = conrad.atmosphere.Atmosphere.from_netcdf(
+    atm = konrad.atmosphere.Atmosphere.from_netcdf(
         ncfile=ncfile,
         humidity=hmd,
-        surface=conrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile)
+        surface=konrad.surface.SurfaceHeatCapacity.from_netcdf(ncfile)
     )
 
     # Bias-corrected reference state.
     with xr.open_dataset('results/bias-correction/radiation-bias_1.nc') as ds:
         bias_correction = {k: ds[k].data for k in ds.data_vars}
 
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=atm,
-        radiation=conrad.radiation.RRTMG(bias=bias_correction),
+        radiation=konrad.radiation.RRTMG(bias=bias_correction),
         delta=1e-5,  # Run full number of itertations.
         timestep=0.01,  # 4.8 hour time step.
         writeevery=10,
@@ -48,9 +48,9 @@ def bias_corrected_ecs(factor):
 
     atm['CO2'] *= factor
 
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=atm,
-        radiation=conrad.radiation.RRTMG(bias=bias_correction),
+        radiation=konrad.radiation.RRTMG(bias=bias_correction),
         delta=1e-5,  # Run full number of itertations.
         timestep=0.2,  # 4.8 hour time step.
         writeevery=10.,

@@ -3,14 +3,14 @@ import sys
 from distutils.core import setup
 from setuptools import find_packages
 
-from conrad import __version__
+from konrad import __version__
 
 if not sys.version_info >= (3, 5, 1):
     sys.exit('Only support Python version >=3.5.1\n'
              'Found version is {}'.format(sys.version))
 
 setup(
-    name='conrad',
+    name='konrad',
     author='Lukas Kluft',
     author_email='lukas.kluft@gmail.com',
     version=__version__,

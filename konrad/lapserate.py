@@ -7,7 +7,7 @@ import numpy as np
 from typhon.physics import (e_eq_water_mk, vmr2specific_humidity)
 from scipy.interpolate import interp1d
 
-from conrad import constants
+from konrad import constants
 
 
 class LapseRate(metaclass=abc.ABCMeta):

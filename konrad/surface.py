@@ -66,7 +66,7 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         """Initialize a Surface object using the lowest atmosphere layer.
 
         Parameters:
-            atmosphere (conrad.atmosphere.Atmosphere): Atmosphere model.
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
         """
         # Extrapolate surface height from geopotential height of lowest two
         # atmospheric layers.

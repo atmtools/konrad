@@ -12,8 +12,8 @@ import multiprocessing
 from typhon.physics import e_eq_water_mk
 from scipy.interpolate import interp1d
 
-import conrad
-from conrad import constants
+import konrad
+from konrad import constants
 
 
 def ozoneshift(a, shift):
@@ -88,30 +88,30 @@ def scaleozone(co2factor, squash, w, hardadj=False): #sst=290,
     wname = str(w).replace('.', '')
 
     if hardadj:
-        myfile = '/scratch/local1/m300580/conrad/rrtmg_sun/hardadj/w-0/CO2-1/dirunal_lat0_and_surfacesink717/200levels_squash{}.nc'.format(squashname)
+        myfile = '/scratch/local1/m300580/konrad/rrtmg_sun/hardadj/w-0/CO2-1/dirunal_lat0_and_surfacesink717/200levels_squash{}.nc'.format(squashname)
     else:
-        myfile = '/scratch/local1/m300580/conrad/rrtmg_sun/rlxadj/w-0/CO2-1/dirunal_lat0_and_surfacesink726/200levels_squash{}.nc'.format(squashname)
+        myfile = '/scratch/local1/m300580/konrad/rrtmg_sun/rlxadj/w-0/CO2-1/dirunal_lat0_and_surfacesink726/200levels_squash{}.nc'.format(squashname)
 
-    a = conrad.atmosphere.Atmosphere.from_netcdf(myfile,
-                                                 humidity=conrad.humidity.FixedRH(rh_tropo=0), #, vmr_strato=4*10**-6, transition_depth=1),
-                                                 convection=conrad.convection.RelaxedAdjustment(),
-                                                 lapse=conrad.lapserate.MoistLapseRate(),
-                                                 #upwelling=conrad.upwelling.StratosphericUpwelling(w=w) #w=17.28)
-                                                 surface=conrad.surface.SurfaceHeatSink.from_netcdf(myfile, heat_flux=72.6, rho=1025, cp=3850, dz=50)
+    a = konrad.atmosphere.Atmosphere.from_netcdf(myfile,
+                                                 humidity=konrad.humidity.FixedRH(rh_tropo=0), #, vmr_strato=4*10**-6, transition_depth=1),
+                                                 convection=konrad.convection.RelaxedAdjustment(),
+                                                 lapse=konrad.lapserate.MoistLapseRate(),
+                                                 #upwelling=konrad.upwelling.StratosphericUpwelling(w=w) #w=17.28)
+                                                 surface=konrad.surface.SurfaceHeatSink.from_netcdf(myfile, heat_flux=72.6, rho=1025, cp=3850, dz=50)
                                                  )
     if w == 0:
-        a.attrs.update({'upwelling': conrad.upwelling.NoUpwelling()})
+        a.attrs.update({'upwelling': konrad.upwelling.NoUpwelling()})
 
     # Refine the pressure grid to cover 200 vertical levels.
-    pgrid = conrad.utils.refined_pgrid(1013e2, 0.01e2, 200)
+    pgrid = konrad.utils.refined_pgrid(1013e2, 0.01e2, 200)
     a = a.refine_plev(pgrid)
 
 #    ds = Dataset(myfile)
 #    ll = np.min(np.where(ds['net_htngrt'][-1, :] > -0.0001))
-#    a.attrs.update({'upwelling': conrad.upwelling.StratosphericUpwelling(w=w, lowest_level=ll)})
+#    a.attrs.update({'upwelling': konrad.upwelling.StratosphericUpwelling(w=w, lowest_level=ll)})
 
     if hardadj:
-        a.attrs.update({'convection': conrad.convection.HardAdjustment()})
+        a.attrs.update({'convection': konrad.convection.HardAdjustment()})
     else:
         tau0 = 1/24 # 1 hour
         tau = tau0*np.exp(101300 / pgrid)
@@ -127,19 +127,19 @@ def scaleozone(co2factor, squash, w, hardadj=False): #sst=290,
 
 
     # RRTMG radiation
-    #rad = conrad.radiation.RRTMG(zenith_angle=47.88)
-    rad = conrad.radiation.RRTMG(zenith_angle=0, solar_constant=1360.85, diurnal_cycle=True)
+    #rad = konrad.radiation.RRTMG(zenith_angle=47.88)
+    rad = konrad.radiation.RRTMG(zenith_angle=0, solar_constant=1360.85, diurnal_cycle=True)
 
     # folder to save files in
     if hardadj:
-        filepath = '/scratch/local1/m300580/conrad/rrtmg_sun/hardadj/w-{}/CO2-{}/dirunal_lat0_and_surfacesink717/'.format(wname, co2name)
+        filepath = '/scratch/local1/m300580/konrad/rrtmg_sun/hardadj/w-{}/CO2-{}/dirunal_lat0_and_surfacesink717/'.format(wname, co2name)
     else:
-        filepath = '/scratch/local1/m300580/conrad/rrtmg_sun/rlxadj/w-{}/CO2-{}/dirunal_lat0_and_surfacesink726/'.format(wname, co2name)#50levels_squash{}.nc'.format(squashname)
+        filepath = '/scratch/local1/m300580/konrad/rrtmg_sun/rlxadj/w-{}/CO2-{}/dirunal_lat0_and_surfacesink726/'.format(wname, co2name)#50levels_squash{}.nc'.format(squashname)
     if not os.path.exists(filepath):
         os.makedirs(filepath)
 
     # Combine atmosphere and surface model into an RCE framework.
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=a,
         radiation=rad,
         delta=0,#0.001,
@@ -151,7 +151,7 @@ def scaleozone(co2factor, squash, w, hardadj=False): #sst=290,
 
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
-    with conrad.radiation.utils.PsradSymlinks():
+    with konrad.radiation.utils.PsradSymlinks():
         rce.run()  # Start simulation.
 
 #if __name__ == '__main__':
@@ -161,7 +161,7 @@ def scaleozone(co2factor, squash, w, hardadj=False): #sst=290,
 #    co2factors = [0.25, 0.5, 1, 2, 4]
 #    # The with block is not required for the model to run but prevents
 #    # creating and removing of symlinks during each iteration.
-#    with conrad.radiation.utils.PsradSymlinks():
+#    with konrad.radiation.utils.PsradSymlinks():
 #        time.sleep(5)  # workaround for multiprocessing on slow file systems.
 #        for adj in [True, False]:
 #            for w in 0, 0.2, 0.5:

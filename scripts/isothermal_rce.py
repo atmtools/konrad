@@ -7,7 +7,7 @@
 """Perform radiative-equilibirum simulations for isothermal temperature
 structures.
 """
-import conrad
+import konrad
 import typhon
 
 
@@ -28,7 +28,7 @@ scenarios = [
 
 for scenario_name, temp in scenarios:
     # Create an atmosphere model.
-    a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+    a = konrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
 
     # Make isothermal atmosphere.
     a.set('T', temp)
@@ -37,13 +37,13 @@ for scenario_name, temp in scenarios:
     a.apply_H2O_limits()
 
     # Create a sufrace model.
-    s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
+    s = konrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
 
     # Create a sufrace model.
-    r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
+    r = konrad.radiation.PSRAD(atmosphere=a, surface=s)
 
     # Combine atmosphere and surface model into an RCE framework.
-    rce = conrad.RCE(
+    rce = konrad.RCE(
         atmosphere=a,
         surface=s,
         radiation=r,
@@ -55,5 +55,5 @@ for scenario_name, temp in scenarios:
 
     # The with block is not required for the model to run but prevents
     # creating and removing of symlinks during each iteration.
-    with conrad.radiation.utils.PsradSymlinks():
+    with konrad.radiation.utils.PsradSymlinks():
         rce.run()  # Start simulation.

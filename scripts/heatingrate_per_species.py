@@ -9,7 +9,7 @@
 import numpy as np
 import typhon
 
-import conrad
+import konrad
 
 
 # Load the FASCOD atmosphere.
@@ -21,18 +21,18 @@ p = typhon.math.nlogspace(1013e2, 0.1e2, 200)
 gf.refine_grid(p, axis=1)
 
 # Create an atmosphere model.
-a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
-rh_profile = conrad.utils.create_relative_humidity_profile(p, 0.75)
+a = konrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+rh_profile = konrad.utils.create_relative_humidity_profile(p, 0.75)
 a.relative_humidity = rh_profile
 
 # Create a sufrace model.
-s = conrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
+s = konrad.surface.SurfaceAdjustableTemperature.from_atmosphere(a)
 
 # Create a sufrace model.
-r = conrad.radiation.PSRAD(atmosphere=a, surface=s)
+r = konrad.radiation.PSRAD(atmosphere=a, surface=s)
 
 # Combine atmosphere and surface model into an RCE framework.
-rce = conrad.RCE(
+rce = konrad.RCE(
     atmosphere=a,
     surface=s,
     radiation=r,
@@ -41,20 +41,20 @@ rce = conrad.RCE(
     max_iterations=1,
     )
 
-with conrad.radiation.utils.PsradSymlinks():
+with konrad.radiation.utils.PsradSymlinks():
     rce.run()  # Start simulation.
     hr_ref = rce.heatingrates['net_htngrt'][0, :].values.copy()
 
     K = np.zeros(p.size)  # pre-allocate Jacobian matrix.
     for layer in range(p.size):
         # Reset atmosphere.
-        a = conrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
+        a = konrad.atmosphere.AtmosphereFixedRH.from_atm_fields_compact(gf)
         a.relative_humidity = rh_profile
         a_ref = a['O3'][0, layer].values.copy()
         factor = 1.1
         a['O3'][0, layer] *= factor  # Perturbate humidity profile.
 
-        rce = conrad.RCE(
+        rce = konrad.RCE(
             atmosphere=a,
             surface=s,
             radiation=r,
