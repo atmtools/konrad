@@ -15,6 +15,7 @@ setup(
     name='konrad',
     author='The konrad developers',
     version=__version__,
+    url='https://github.com/atmtools/konrad',
     packages=find_packages(),
     license='MIT',
     description='Implementation of a radiative-convective equilibrium model.',
