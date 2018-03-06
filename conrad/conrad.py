@@ -4,11 +4,9 @@
 import logging
 
 import numpy as np
-import xarray as xr
-from typhon.atmosphere import relative_humidity
 
 from conrad import utils
-from conrad.radiation import PSRAD
+from conrad.radiation import RRTMG
 
 
 logger = logging.getLogger()
@@ -45,7 +43,7 @@ class RCE:
         # Sub-models.
         self.atmosphere = atmosphere
         if radiation is None:
-            self.radiation = PSRAD()
+            self.radiation = RRTMG()
         else:
             self.radiation = radiation
 

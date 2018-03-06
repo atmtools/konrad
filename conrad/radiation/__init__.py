@@ -5,11 +5,13 @@ import abc
 import logging
 
 import numpy as np
+import xarray as xr
 from typhon.physics import vmr2specific_humidity
-from xarray import Dataset
 
 from . import utils
+from conrad import constants
 from conrad.utils import append_description
+
 
 logger = logging.getLogger()
 
@@ -19,10 +21,20 @@ __all__ = [
     'RRTMG',
 ]
 
+# Subclasses of `Radiation` need to define a `Radiation.calc_radiation()`
+# method that returns a `xr.Dataset` containing at least following variables:
+REQUIRED_VARIABLES = [
+    'net_htngrt',
+    'lw_flxd',
+    'lw_flxu',
+    'sw_flxd',
+    'sw_flxu',
+]
+
 
 class Radiation(metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, zenith_angle=47.88, diurnal_cycle=False):
+    def __init__(self, zenith_angle=47.88, diurnal_cycle=False, bias=None):
         """Return a radiation model.
 
         Parameters:
@@ -31,6 +43,9 @@ class Radiation(metaclass=abc.ABCMeta):
                 solar insolation at the top of the atmosphere when used
                 together with a solar constant of 510 W/m^2.
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
+            bias (dict-like): A dict-like object that stores bias
+                corrections for the diagnostic variable specified by its key,
+                e.g. `bias = {'net_htngrt': 2}`.
         """
         super().__init__()
         
@@ -39,10 +54,81 @@ class Radiation(metaclass=abc.ABCMeta):
 
         self.current_solar_angle = 0
 
+        self.bias = bias
+
     @abc.abstractmethod
+    def calc_radiation(self, atmosphere):
+        return xr.Dataset()
+
     def get_heatingrates(self, atmosphere):
-        """Returns the shortwave, longwave and net heatingrates."""
-        pass
+        """Returns `xr.Dataset` containing radiative transfer results."""
+        rad_dataset = self.calc_radiation(atmosphere)
+
+        self.correct_bias(rad_dataset)
+
+        self.derive_diagnostics(rad_dataset)
+
+        append_description(rad_dataset)
+
+        self.check_dataset(rad_dataset)
+
+        return rad_dataset
+
+    @staticmethod
+    def check_dataset(dataset):
+        """Check if a given dataset contains all required variables."""
+        for key in REQUIRED_VARIABLES:
+            if key not in dataset.variables:
+                raise KeyError(
+                    f'"{key}" not present in radiative transfer results.'
+                )
+
+    def correct_bias(self, dataset):
+        """Apply bias correction."""
+        if self.bias is not None:
+            for key, value in self.bias.items():
+                if key not in dataset.indexes:
+                    dataset[key] -= value
+
+        # TODO: Add interpolation for biases passed as `xr.Dataset`.
+
+    def derive_diagnostics(self, dataset):
+        """Derive diagnostic variables from radiative transfer results."""
+        # Net heating rate.
+        dataset['net_htngrt'] = xr.DataArray(
+            data=dataset.lw_htngrt + dataset.sw_htngrt,
+            dims=['time', 'plev'],
+        )
+
+        # Radiation budget at top of the atmosphere (TOA).
+        dataset['toa'] = xr.DataArray(
+            data=((dataset.sw_flxd.values[:, -1] +
+                   dataset.lw_flxd.values[:, -1]) -
+                  (dataset.sw_flxu.values[:, -1] +
+                   dataset.lw_flxu.values[:, -1])
+                  ),
+            dims=['time'],
+        )
+
+    @staticmethod
+    def heatingrates_from_fluxes(pressure, downward_flux, upward_flux):
+        """Calculate heating rates from radiative fluxes.
+
+        Parameters:
+            pressure (ndarray): Pressure half-levels [Pa].
+            downward_flux (ndarray): Downward radiative flux [W/m^2].
+            upward_flux (ndarray): Upward radiative flux [W/m^2].
+
+        Returns:
+            ndarray: Radiative heating rate [K/day].
+        """
+        c_p = constants.isobaric_mass_heat_capacity
+        g = constants.earth_standard_gravity
+
+        Q = g / c_p *  np.diff(upward_flux - downward_flux) / np.diff(pressure)
+        Q *= 3600 * 24
+
+        return Q
 
     def adjust_solar_angle(self, time):
         """Adjust the zenith angle of the sun according to time of day.
@@ -66,7 +152,8 @@ class Radiation(metaclass=abc.ABCMeta):
 
 class PSRAD(Radiation):
     """Radiation model using the ICON PSRAD radiation scheme."""
-    def _extract_psrad_args(self, atmosphere):
+    @staticmethod
+    def _extract_psrad_args(atmosphere):
         """Returns tuple of mixing ratios to use with psrad.
 
         Paramteres:
@@ -94,7 +181,7 @@ class PSRAD(Radiation):
         return tuple(ret)
 
     @utils.PsradSymlinks()
-    def get_heatingrates(self, atmosphere):
+    def calc_radiation(self, atmosphere):
         """Returns the shortwave, longwave and net heatingrates.
 
         Parameters:
@@ -138,7 +225,7 @@ class PSRAD(Radiation):
          vis_frc, par_dn, nir_dff, vis_diff,
          par_diff) = self.psrad.get_sw_fluxes()
 
-        ret = Dataset({
+        ret = xr.Dataset({
             # General atmospheric properties.
             'z': atmosphere['z'],
             # Longwave fluxes and heatingrates.
@@ -158,12 +245,6 @@ class PSRAD(Radiation):
             'sw_flxd': (['time', 'phlev'], sw_flxd[:, ::-1]),
             'sw_flxu_clr': (['time', 'phlev'], sw_flxu_clr[:, ::-1]),
             'sw_flxd_clr': (['time', 'phlev'], sw_flxd_clr[:, ::-1]),
-            # Net heatingrate.
-            'net_htngrt': (['time', 'plev'], lw_hr[:, :] + sw_hr[:, ::-1]),
-            # Radiation budget at top of the atmosphere (TOA).
-            'toa': (['time'], (
-                (sw_flxd[:, 0] + lw_flxd[:, -1])
-                - (sw_flxu[:, 0] + lw_flxu[:, -1]))),
             },
             coords={
                 'time': [0],
@@ -171,8 +252,6 @@ class PSRAD(Radiation):
                 'phlev': atmosphere['phlev'].values,
             }
             )
-
-        append_description(ret)  # Append variable descriptions.
 
         return ret
 
@@ -327,7 +406,7 @@ class RRTMG(Radiation):
         
         return lw_fluxes, sw_fluxes
     
-    def get_heatingrates(self, atmosphere):
+    def calc_radiation(self, atmosphere):
         """Returns the shortwave, longwave and net heatingrates.
         Converts output from radiative_fluxes to be in the format required for
         our model.
@@ -343,7 +422,7 @@ class RRTMG(Radiation):
         lw_fluxes = lw_dT_fluxes[1]
         sw_fluxes = sw_dT_fluxes[1]
         
-        ret = Dataset({
+        ret = xr.Dataset({
             # General atmospheric properties.
             'z': atmosphere['z'],
             # Longwave fluxes and heatingrates.
@@ -370,16 +449,6 @@ class RRTMG(Radiation):
                             sw_fluxes['upwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data),
             'sw_flxd_clr': (['time', 'phlev'],
                             sw_fluxes['downwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data),
-            # Net heatingrate.
-            'net_htngrt': (['time', 'plev'],
-                           lw_fluxes['longwave_heating_rate'][0].data
-                           + sw_fluxes['shortwave_heating_rate'][0].data),
-            # Radiation budget at top of the atmosphere (TOA).
-            'toa': (['time'],
-                np.array([sw_fluxes['downwelling_shortwave_flux_in_air'][0, 0, -1].data
-                - sw_fluxes['upwelling_shortwave_flux_in_air'][0, 0, -1].data
-                + lw_fluxes['downwelling_longwave_flux_in_air'][0, 0, -1].data
-                - lw_fluxes['upwelling_longwave_flux_in_air'][0, 0, -1].data])),
             },
             coords={
                 'time': [0],
@@ -388,7 +457,4 @@ class RRTMG(Radiation):
             }
             )
 
-        append_description(ret)  # Append variable descriptions.
-
         return ret
-    
