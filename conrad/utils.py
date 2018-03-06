@@ -197,7 +197,7 @@ def append_description(dataset, description=None):
     if description is None:
         description = constants.variable_description
 
-    for key in dataset.keys():
+    for key in dataset.variables:
         if key in description:
             dataset[key].attrs = constants.variable_description[key]
 
