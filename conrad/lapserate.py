@@ -64,6 +64,8 @@ class MoistLapseRate(LapseRate):
         Cp = constants.isobaric_mass_heat_capacity
 
         gamma_d = g / Cp  # dry lapse rate
+
+        #TODO: Use proper conversion `vmr2mixing_ratio()`.
         q_saturated = vmr2specific_humidity(e_eq_water_mk(T) / p)
 
         gamma_m = (gamma_d * ((1 + (L * q_saturated) / (Rd * T)) /
