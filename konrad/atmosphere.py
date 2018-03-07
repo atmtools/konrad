@@ -265,6 +265,25 @@ class Atmosphere(Dataset):
 
         return atmfield
 
+    def to_netcdf(self, *args, **kwargs):
+        """Write atmosphere contents to a netCDF file.
+
+        Note:
+             This is a wrapper simple for `xr.Dataset.to_netcdf`. The method
+             converts all attributes (e.g. humidity, convection) to strings.
+             This is necessary because the netCDF standard only allows
+             string attributes.
+
+        """
+        attributes = self.attrs.copy()
+
+        self.attrs = {attr: self.attrs[attr].__class__.__name__
+                      for attr in self.attrs}
+
+        super().to_netcdf(*args, **kwargs)
+
+        self.attrs = attributes
+
     def refine_plev(self, pgrid, axis=1, **kwargs):
         """Refine the pressure grid of an atmosphere object.
 

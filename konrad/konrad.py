@@ -124,15 +124,10 @@ class RCE:
         """Create netCDF4 file to store simulation results."""
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
         data.merge(self.atmosphere.surface, inplace=True)
-        # TODO: **Dirty** hack to restore netCDF functionality.
-        # xarray.to_netcdf can only store basic types.
-        attrs = data.attrs
-        data.attrs = {}
-        data.to_netcdf(self.outfile,
-                       mode='w',
-                       unlimited_dims=['time'],
-                       )
-        data.attrs = attrs
+
+        # The `Atmosphere.to_netcdf()` function is overloaded and able to
+        # handle attributes in a proper way (saving the object's class name).
+        data.to_netcdf(self.outfile, mode='w', unlimited_dims=['time'])
 
         logger.info(f'Created "{self.outfile}".')
 
