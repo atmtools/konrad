@@ -8,7 +8,6 @@ import numpy as np
 import xarray as xr
 from typhon.physics import vmr2specific_humidity
 
-from . import utils
 from konrad import constants
 from konrad.utils import append_description
 
@@ -196,7 +195,6 @@ class PSRAD(Radiation):
 
         return tuple(ret)
 
-    @utils.PsradSymlinks()
     def calc_radiation(self, atmosphere):
         """Returns the shortwave, longwave and net heatingrates.
 
