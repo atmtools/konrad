@@ -23,31 +23,7 @@ class LapseRate(metaclass=abc.ABCMeta):
         Returns:
               ndarray: Temperature lapse rate [K/m].
         """
-
-class MoistLapseRate2(LapseRate):
-    """ Moist adiabatic temperature lapse rate, with
-    temperature varying latent heat and no simplification for q_saturated.
-    
-    Currently behaving strangly near the surface.
-    """
-    def get(self, atmosphere):
-        T_surface = atmosphere.surface.temperature
-        p_surface = atmosphere.surface.pressure
-        z_surface = atmosphere.surface.height
-        T_a = atmosphere['T'][0, :]
-        T = np.hstack((T_surface, T_a))
-        p = np.hstack((p_surface, atmosphere['plev'][:]))
-        z = np.hstack((z_surface, atmosphere['z'][0, :]))
-        g = constants.earth_standard_gravity
-        Cp = constants.isobaric_mass_heat_capacity
-        L = 2500800 - 2360*(T_a-273) + 1.6*(T_a-273)**2 - 0.06*(T_a-273)**3
-        #L = constants.heat_of_vaporization
-        gamma_d = g / Cp
-        q_saturated = vmr2specific_humidity(e_eq_water_mk(T) / p)
-        dqdz = np.diff(q_saturated) / np.diff(z)
-        gamma_m = gamma_d + L/Cp*dqdz
-        gamma_m[np.min(np.where(gamma_m > gamma_d)):] = gamma_d
-        return gamma_m
+        
 
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
