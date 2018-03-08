@@ -21,7 +21,7 @@ from . import radiation
 from . import surface
 from . import upwelling
 from . import utils
-from .konrad import RCE
+from .core import RCE
 
 
 __all__ = [
