@@ -137,9 +137,7 @@ class Atmosphere(Dataset):
             arts_key = constants.variable_description[var].get('arts_name')
 
             # Extract profile from atm_fields_compact
-            profile = typhon.arts.atm_fields_compact_get(
-                [arts_key], atmfield).squeeze()
-
+            profile = atmfield.get(arts_key, keep_dims=False)
             d[var] = DataArray(profile[np.newaxis, :], dims=('time', 'plev',))
 
         # Calculate the geopotential height.
