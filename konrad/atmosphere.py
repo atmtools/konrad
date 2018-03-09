@@ -124,7 +124,7 @@ class Atmosphere(Dataset):
         """
         # Create a Dataset with time and pressure dimension.
         plev = atmfield.grids[1]
-        phlev = utils.calculate_halflevel_pressure(plev)
+        phlev = utils.phlev_from_plev(plev)
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
@@ -180,7 +180,7 @@ class Atmosphere(Dataset):
 
         # Create a Dataset with time and pressure dimension.
         plev = dictionary['plev']
-        phlev = utils.calculate_halflevel_pressure(plev)
+        phlev = utils.phlev_from_plev(plev)
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
                         'phlev': phlev,  # pressure at halflevels
@@ -210,7 +210,7 @@ class Atmosphere(Dataset):
         with netCDF4.Dataset(ncfile) as dataset:
             # Create a Dataset with time and pressure dimension.
             plev = dataset.variables['plev'][:]
-            phlev = utils.calculate_halflevel_pressure(plev)
+            phlev = utils.phlev_from_plev(plev)
             d = cls(coords={'plev': plev,  # pressure level
                             'time': [0],  # time dimension
                             'phlev': phlev,  # pressure at halflevels
