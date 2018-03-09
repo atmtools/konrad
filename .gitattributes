@@ -1,2 +1,2 @@
 config/* linguist-vendored
-scripts/* linguist-vendored
+*.ipynb linguist-language=python
