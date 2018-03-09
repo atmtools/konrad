@@ -1,6 +1,7 @@
 """Define an interface for the RRTMG radiation scheme (through CliMT). """
 import numpy as np
 import xarray as xr
+from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
 
 from .radiation import Radiation
@@ -33,8 +34,6 @@ class RRTMG(Radiation):
         Returns:
             dictionary: updated state
         """
-        from sympl import DataArray
-
         plev = atmosphere['plev'].values
         phlev = atmosphere['phlev'].values
         numlevels = len(plev)
