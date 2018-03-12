@@ -85,7 +85,13 @@ class HardAdjustment(Convection):
         profile to this one.
 
         Parameters:
-            timestep: float, only required for slow convection
+            p (ndarray): pressure levels
+            phlev (ndarray): half pressure levels
+            T_rad (ndarray): old atmospheric temperature profile
+            lapse (konrad.lapserate): lapse rate in K/km
+            surface (konrad.surface):
+                surface associated with old temperature profile
+            timestep (float): only required for slow convection
         """
         near_zero = 0.00001
         density1 = typhon.physics.density(p, T_rad)
@@ -95,6 +101,7 @@ class HardAdjustment(Convection):
 
         g = constants.earth_standard_gravity
         lp = -lapse / (g * density)
+        lp = lp.data
 
         # find energy difference if there is no change to surface temp due to
         # convective adjustment. in this case the new profile should be
@@ -166,9 +173,14 @@ class HardAdjustment(Convection):
         the convectively adjusted atmosphere is warmer than the radiative one.
 
         Parameters:
-            surfaceT: float, surface temperature of the new profile
-            lp: lapse rate in K/Pa
-            timestep: float, not required in this case
+            T_rad (ndarray): old atmospheric temperature profile
+            p (ndarray): pressure levels
+            phlev (ndarray): half pressure levels
+            surface (konrad.surface):
+                surface associated with old temperature profile 
+            surfaceT (float): surface temperature of the new profile
+            lp (ndarray): lapse rate in K/Pa
+            timestep (float): not required in this case
 
         Returns:
             ndarray: new atmospheric temperature profile
@@ -178,7 +190,7 @@ class HardAdjustment(Convection):
         dp = np.diff(phlev)
         # for lapse rate integral
         dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p)))
-        T_con = surfaceT - np.cumsum(dp_lapse * lp.data)
+        T_con = surfaceT - np.cumsum(dp_lapse * lp)
         if np.any(T_con > T_rad):
             contop = np.max(np.where(T_con > T_rad))
             T_con[contop+1:] = T_rad[contop+1:]
@@ -188,7 +200,6 @@ class HardAdjustment(Convection):
 
         # If run with a fixed surface temperature, always return the
         # convective profile starting from the current surface temperature.
-        # TODO: Check if this is the best place to account for that case.
         if isinstance(surface, SurfaceFixedTemperature):
             return T_con, 0.
 
@@ -206,14 +217,29 @@ class RelaxedAdjustment(HardAdjustment):
     This convection scheme allows for a transition regime between a
     convectively driven troposphere and the radiatively balanced stratosphere.
     """
-    # TODO (Sally): Could you fill the docstring?
-    def __init__(self, tau=0):
+    def __init__(self, tau=None):
         """
+        Parameters:
+            tau (ndarray): Array of convective timescale values [days]
+        """        
+        self.convective_tau = tau
+
+    def get_convective_tau(self, p):
+        """Return a convective timescale profile.
 
         Parameters:
-            tau (ndarray):
+            p (ndarray): Pressure levels [Pa].
+
+        Returns:
+            ndarray: Convective timescale profile [days].
         """
-        self.convective_tau = tau
+        if self.convective_tau is not None:
+            return self.convective_tau
+
+        tau0 = 1/24 # 1 hour
+        tau = tau0*np.exp(101300 / p)
+        
+        return tau
 
     def test_profile(self, T_rad, p, phlev, surface, surfaceT, lp,
                      timestep=0.1):
@@ -222,9 +248,14 @@ class RelaxedAdjustment(HardAdjustment):
         profile, using the convective timescale and specified lapse rate (lp).
 
         Parameters:
-            surfaceT: float, surface temperature of the new profile
-            lp: lapse rate in K/Pa
-            timestep: float, timestep of simulation
+            T_rad (ndarray): old atmospheric temperature profile
+            p (ndarray): pressure levels
+            phlev (ndarray): half pressure levels
+            surface (konrad.surface):
+                surface associated with old temperature profile 
+            surfaceT (float): surface temperature of the new profile
+            lp (ndarray): lapse rate in K/Pa
+            timestep (float): not required in this case
 
         Returns:
             ndarray: new atmospheric temperature profile
@@ -233,12 +264,13 @@ class RelaxedAdjustment(HardAdjustment):
         dp = np.diff(phlev)
         dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p)))
 
-        tf = 1 - np.exp(-timestep / self.convective_tau)
-        T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp.data))
+        tau = self.get_convective_tau(p)
+            
+        tf = 1 - np.exp(-timestep / tau)
+        T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp))
         
         # If run with a fixed surface temperature, always return the
         # convective profile starting from the current surface temperature.
-        # TODO: Check if this is the best place to account for that case.
         if isinstance(surface, SurfaceFixedTemperature):
             return T_con, 0.
         
