@@ -237,7 +237,7 @@ class RelaxedAdjustment(HardAdjustment):
             return self.convective_tau
 
         tau0 = 1/24 # 1 hour
-        tau = tau0*np.exp(101300 / p)
+        tau = tau0*np.exp(p[0] / p)
         
         return tau
 
