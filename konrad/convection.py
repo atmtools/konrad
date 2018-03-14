@@ -75,7 +75,7 @@ class HardAdjustment(Convection):
         )
         # Update atmospheric temperatures as well as surface temperature.
         atmosphere['T'].values[0, :] = T_new
-        atmosphere.surface.temperature[0] = T_s_new
+        atmosphere.surface.temperature.values[0] = T_s_new
 
     def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
                               timestep=0.1):
