@@ -39,6 +39,6 @@ setup(
     ],
     dependency_links=[
         'git+https://github.com/CliMT/climt.git@develop#egg=climt-dev',
-        'git+https://git@github.com/JoyMonteiro/sympl.git#egg=sympl-dev',
+        'git+https://github.com/JoyMonteiro/sympl.git#egg=sympl-dev',
     ],
 )
