@@ -34,11 +34,7 @@ setup(
         'scipy>=0.19.0',
         'typhon>=0.5.0',
         'xarray>=0.9.1',
-        'climt==dev',
-        'sympl==dev',
-    ],
-    dependency_links=[
-        'git+https://github.com/CliMT/climt.git@develop#egg=climt-dev',
-        'git+https://github.com/JoyMonteiro/sympl.git#egg=sympl-dev',
+        'climt>=0.9.3',
+        'sympl>=0.3.2',
     ],
 )

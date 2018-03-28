@@ -13,5 +13,5 @@ But of course, any other Python distribution is also working.
 You can use ``pip`` to install the ``konrad`` package
 to your Python distribution. On the top directory level, run:
 ```bash
-pip install --process-dependency-links -e .
+pip install --editable .
 ```
