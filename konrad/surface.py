@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class Surface(Dataset, metaclass=abc.ABCMeta):

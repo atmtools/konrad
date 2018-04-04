@@ -8,7 +8,7 @@ from typhon.atmosphere import vmr as rh2vmr
 from scipy.stats import skewnorm
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class Humidity(metaclass=abc.ABCMeta):

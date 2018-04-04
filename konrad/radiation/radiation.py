@@ -9,7 +9,7 @@ from konrad import constants
 from konrad.utils import append_description
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 __all__ = [
     'Radiation',

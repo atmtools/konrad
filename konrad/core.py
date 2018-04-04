@@ -9,7 +9,7 @@ from konrad import utils
 from konrad.radiation import RRTMG
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 __all__ = [
     'RCE',

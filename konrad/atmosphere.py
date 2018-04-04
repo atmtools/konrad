@@ -21,7 +21,7 @@ __all__ = [
     'Atmosphere',
 ]
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 atmosphere_variables = [
     'T',
