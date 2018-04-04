@@ -519,6 +519,20 @@ class Atmosphere(Dataset):
 
         return contop_plev
 
+    def get_coldpoint_plev(self, pmin=10e2):
+        """Return the cold point pressure.
+
+        Parameters:
+            pmin (float): Minimum pressure threshold. The function does not
+                return pressure values smaller than this. This prevents
+                finding the upper most level, which is likely to be the
+                coldest level.
+        """
+        T = self['T'].values[-1, :]
+        plev = self['plev'].values[:]
+
+        return plev[np.argmin(T[plev > pmin])]
+
     def tracegases_rcemip(self):
         """Set trace gas concentrations according to the RCE-MIP configuration.
 
