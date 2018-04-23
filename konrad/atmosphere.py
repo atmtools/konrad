@@ -15,6 +15,7 @@ from konrad.humidity import (Humidity, FixedRH)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.upwelling import (Upwelling, NoUpwelling)
+from konrad.ozone import (Ozone, Ozone_pressure)
 
 
 __all__ = [
@@ -37,7 +38,7 @@ atmosphere_variables = [
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
     def __init__(self, convection=None, humidity=None, surface=None,
-                 lapse=None, upwelling=None, **kwargs):
+                 lapse=None, upwelling=None, ozone=None, **kwargs):
         """Create an atmosphere model.
 
        Parameters:
@@ -68,6 +69,9 @@ class Atmosphere(Dataset):
 
         upwelling = utils.return_if_type(upwelling, 'upwelling',
                                          Upwelling, NoUpwelling())
+        
+        ozone = utils.return_if_type(ozone, 'ozone',
+                                     Ozone, Ozone_pressure())
 
         # Set additional attributes for the Atmosphere object. They can be
         # accessed through point notation but do not need to be of type
@@ -78,6 +82,7 @@ class Atmosphere(Dataset):
             'lapse': lapse,
             'surface': surface,
             'upwelling': upwelling,
+            'ozone': ozone,
         })
 
     def adjust(self, heatingrate, timestep, **kwargs):
@@ -87,6 +92,9 @@ class Atmosphere(Dataset):
             heatingrate (ndarray): Radiative heatingrate [K/day].
             timestep (float): Timestep width [day].
         """
+        # Calculate cold point pressure
+        cp = self.get_cold_point_pressure()
+        
         # Caculate critical lapse rate.
         lapse = self.lapse.get(self)
 
@@ -101,10 +109,21 @@ class Atmosphere(Dataset):
         self.upwelling.cool(atmosphere=self, radheat=heatingrate,
                             timestep=timestep)
         
+        # Calculate new cold point pressure
+        cp_new = self.get_cold_point_pressure()
+        
+        # Update the ozone profile.
+        self['O3'][0, :] = self.ozone.get(
+                o3=self.get_values('O3', keepdims=False),
+                z=self.get_values('z', keepdims=False),
+                z_new=self.calculate_height(),
+                p=self['plev'], cp=cp, cp_new=cp_new,
+                )
+        
         # Calculate the geopotential height field.
-        self.calculate_height()
+        self.update_height()
 
-        # Preserve the initial relative humidity profile.
+        # Update the humidity profile.
         self['H2O'][0, :] = self.humidity.get(
             plev=self.get_values('plev'),
             T=self.get_values('T', keepdims=False),
@@ -141,7 +160,7 @@ class Atmosphere(Dataset):
             d[var] = DataArray(profile[np.newaxis, :], dims=('time', 'plev',))
 
         # Calculate the geopotential height.
-        d.calculate_height()
+        d.update_height()
 
         # Append variable descriptions to the Dataset.
         utils.append_description(d)
@@ -192,7 +211,7 @@ class Atmosphere(Dataset):
             d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
 
         # Calculate the geopotential height.
-        d.calculate_height()
+        d.update_height()
 
         # Append variable descriptions to the Dataset.
         utils.append_description(d)
@@ -225,7 +244,7 @@ class Atmosphere(Dataset):
                 )
 
         # Calculate the geopotential height.
-        d.calculate_height()
+        d.update_height()
 
         # Append variable descriptions to the Dataset.
         utils.append_description(d)
@@ -326,7 +345,7 @@ class Atmosphere(Dataset):
         new_atmosphere.attrs = {**self.attrs}
 
         # Calculate the geopotential height.
-        new_atmosphere.calculate_height()
+        new_atmosphere.update_height()
 
         # Append variable descriptions to the Dataset.
         utils.append_description(new_atmosphere)
@@ -381,13 +400,26 @@ class Atmosphere(Dataset):
         # Use the hydrostatic equation to calculate geopotential height from
         # given pressure, density and gravity.
         z = np.cumsum(-dp / (rho_phlev * g))
-
+        return z
+        
+    def update_height(self):
+        """Update the value for height."""
+        z = self.calculate_height()
         # If height is already in Dataset, update its values.
         if 'z' in self:
             self['z'].values[0, :] = z
         # Otherwise create the DataArray.
         else:
             self['z'] = DataArray(z[np.newaxis, :], dims=('time', 'plev'))
+    
+    def get_cold_point_pressure(self):
+        """Find the pressure at the cold point.
+        The cold point is taken at the coldest temperature below 100 Pa, to
+        avoid cold temperatures high in the atmosphere (below about 10 Pa)."""
+        p = self['plev'].values
+        T = self['T'].values[0, :]
+        cp = p[np.argmin(T[np.where(p > 100)])]
+        return cp
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
