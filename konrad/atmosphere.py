@@ -91,10 +91,7 @@ class Atmosphere(Dataset):
         Parameters:
             heatingrate (ndarray): Radiative heatingrate [K/day].
             timestep (float): Timestep width [day].
-        """
-        # Calculate cold point pressure
-        cp = self.get_cold_point_pressure()
-        
+        """    
         # Caculate critical lapse rate.
         lapse = self.lapse.get(self)
 
@@ -109,19 +106,15 @@ class Atmosphere(Dataset):
         self.upwelling.cool(atmosphere=self, radheat=heatingrate,
                             timestep=timestep)
         
-        # Calculate new cold point pressure
-        cp_new = self.get_cold_point_pressure()
+        # Calculate the geopotential height field.
+        self.update_height()
         
         # Update the ozone profile.
         self['O3'][0, :] = self.ozone.get(
-                o3=self.get_values('O3', keepdims=False),
-                z=self.get_values('z', keepdims=False),
-                z_new=self.calculate_height(),
-                p=self['plev'], cp=cp, cp_new=cp_new,
+                height_new=self.get_values('z', keepdims=False),
+                p=self.get_values('plev'),
+                norm_new=float(self.get_convective_top(heatingrate[0, :]))
                 )
-        
-        # Calculate the geopotential height field.
-        self.update_height()
 
         # Update the humidity profile.
         self['H2O'][0, :] = self.humidity.get(

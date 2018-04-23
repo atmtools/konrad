@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 """This module contains classes handling different treatments of ozone."""
 
-
 import abc
 import logging
-
-import numpy as np
 from scipy.interpolate import interp1d
 
 __all__ = [
     'Ozone',
     'Ozone_pressure',
     'Ozone_height',
+    'Ozone_normed_pressure',
 ]
 
 logger = logging.getLogger(__name__)
@@ -19,14 +17,24 @@ logger = logging.getLogger(__name__)
 class Ozone(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for ozone treatments."""
 
-    @abc.abstractmethod
-    def get(self, o3, z, z_new, p, cp, cp_new):
-        """Return the new ozone profile.
+    def __init__(self, initial_ozone=None, initial_height=None,
+                 norm_level=None):
 
+        #TO DO: include a default initial ozone profile
+        self.initial_ozone = initial_ozone
+
+        self.initial_height = initial_height
+        self.norm_level = norm_level
+
+    @abc.abstractmethod
+    def get(self, height_new, p, norm_new, **kwargs):
+        """Return the new ozone profile.
         Parameters:
-            o3 (ndarray): old ozone profile
-            z (ndarray): old height profile
-            z_new (ndarray): new height profile
+            height_new (ndarray): height array of the current atmosphere
+                (for Ozone_height)
+            p (ndarray): pressure array (for Ozone_normed_pressure)
+            norm_new (float): normalisation pressure value
+                (for Ozone_normed_pressure)
 
         Returns:
             ndarray: new ozone profile
@@ -35,20 +43,23 @@ class Ozone(metaclass=abc.ABCMeta):
 
 class Ozone_pressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
-    def get(self, o3, *args, **kwargs):
-        return o3
+    def get(self, *args, **kwargs):
+        return self.initial_ozone
 
 
 class Ozone_height(Ozone):
     """Ozone fixed with height."""
-    def get(self, o3, z, z_new, *args, **kwargs):
-        f = interp1d(z, o3, fill_value='extrapolate')
-        return f(z_new)
+    def get(self, height_new, *args, **kwargs):
+        f = interp1d(self.initial_height, self.initial_ozone,
+                     fill_value='extrapolate')
+        return f(height_new)
 
 
 class Ozone_normed_pressure(Ozone):
-    """Ozone shifts with cold point."""
-    def get(self, o3, z, z_new, p, cp, cp_new):
-        f = interp1d(np.log(p/cp), o3, fill_value='extrapolate')
-        return f(np.log(p/cp_new))
+    """Ozone shifts with the normalisation level (chosen to be the convective
+    top)."""
+    def get(self, height_new, p, norm_new):
+        f = interp1d(p/self.norm_level, self.initial_ozone,
+                     fill_value='extrapolate')
+        return f(p/norm_new)
 
