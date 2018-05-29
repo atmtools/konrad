@@ -110,6 +110,7 @@ class Atmosphere(Dataset):
             T=self.get_values('T', keepdims=False),
             z=self.get_values('z', keepdims=False),
             p_tropo=self.get_convective_top(heatingrate[0, :]),
+            T_s=self.surface['temperature'].values[-1],
         )
 
     @classmethod
@@ -273,10 +274,16 @@ class Atmosphere(Dataset):
              string attributes.
 
         """
+        def stringify(obj):
+            """Return strings, integers and floats. Else return class name."""
+            if isinstance(obj, (str, int, float)):
+                return obj
+            else:
+                return obj.__class__.__name__
+
         attributes = self.attrs.copy()
 
-        self.attrs = {attr: self.attrs[attr].__class__.__name__
-                      for attr in self.attrs}
+        self.attrs = {key: stringify(val) for key, val in self.attrs.items()}
 
         super().to_netcdf(*args, **kwargs)
 

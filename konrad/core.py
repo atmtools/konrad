@@ -2,6 +2,7 @@
 """Implementation of a radiative-convective equilibrium model (RCE).
 """
 import logging
+from datetime import datetime
 
 import numpy as np
 
@@ -25,20 +26,21 @@ class RCE:
         >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
-    def __init__(self, atmosphere, radiation=None, outfile=None,
+    def __init__(self, atmosphere, radiation=None, outfile=None, experiment='',
                  timestep=1, delta=0.01, writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
             atmosphere (Atmosphere): `konrad.atmosphere.Atmosphere`.
             outfile (str): netCDF4 file to store output.
+            experiment (str): Experiment description (stored in netCDF).
+            timestep (float): Iteration time step in days.
+            delta (float): Stop criterion. If the heating rate is below this
+                threshold for all levels, skip further iterations.
             writeevery(int or float): Set frequency in which to write output.
                 int: Every nth timestep is written.
                 float: Every nth day is written.
-            timestep (float): Iteration time step in days.
             max_iterations (int): Maximum number of iterations.
-            delta (float): Stop criterion. If the heating rate is below this
-                threshold for all levels, skip further iterations.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -62,6 +64,7 @@ class RCE:
         self.niter = 0
 
         self.outfile = outfile
+        self.experiment = experiment
 
         logging.info('Created Konrad object:\n{}'.format(self))
 
@@ -124,6 +127,15 @@ class RCE:
         """Create netCDF4 file to store simulation results."""
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
         data.merge(self.atmosphere.surface, inplace=True)
+
+        # Add experiment and date information to newly created netCDF file.
+        data.attrs.update(experiment=self.experiment)
+        data.attrs.update(date=datetime.now().strftime("%Y-%m-%d %H:%M"))
+
+        # Not all Radiation classes provide an `solar_constant` attribute.
+        # For thos who do (e.g. `RRTMG`) store the value in the netCDF file.
+        if hasattr(self.radiation, 'solar_constant'):
+            data.attrs.update(solar_constant=self.radiation.solar_constant)
 
         # The `Atmosphere.to_netcdf()` function is overloaded and able to
         # handle attributes in a proper way (saving the object's class name).
