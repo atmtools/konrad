@@ -110,6 +110,7 @@ class Atmosphere(Dataset):
             T=self.get_values('T', keepdims=False),
             z=self.get_values('z', keepdims=False),
             p_tropo=self.get_convective_top(heatingrate[0, :]),
+            T_s=self.surface['temperature'].values[-1],
         )
 
     @classmethod

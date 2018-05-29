@@ -171,6 +171,38 @@ class FixedRH(Humidity):
         return self.get_vmr_profile(plev, T, z)
 
 
+class Manabe67(Humidity):
+    """Relative humidity model following Manabe and Wetherald (1967)."""
+    def __init__(self, rh_surface=0.8):
+        super().__init__(rh_surface=rh_surface, rh_tropo=0.)
+
+    def get_relative_humidity_profile(self, p):
+        return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
+
+    def get(self, plev, T, z, **kwargs):
+        return self.get_vmr_profile(plev, T, z)
+
+
+class Cess76(FixedRH):
+    """Relative humidity model following Cess (1976)."""
+    def __init__(self, rh_surface=0.8, T_s=288):
+        super().__init__(rh_surface=rh_surface, rh_tropo=0.)
+        self.T_s = T_s
+
+    @property
+    def omega(self):
+        """Incorporated the surface temperature dependence of RH."""
+        return 1.0 - 0.03 * (self.T_s - 288)
+
+    def get_relative_humidity_profile(self, p):
+        return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
+
+    def get(self, plev, T, z, T_s=288, **kwargs):
+        self.T_s = T_s
+
+        return self.get_vmr_profile(plev, T, z)
+
+
 class CoupledRH(Humidity):
     """Couple the relative humidity profile to the top of convection.
 
