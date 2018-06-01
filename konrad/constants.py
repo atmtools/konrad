@@ -13,6 +13,8 @@ heat_of_vaporization = Lv = 2501000  # J k^-1
 specific_gas_constant_dry_air = Rd = tyc.gas_constant_dry_air  # J kg^-1 K^-1
 specific_gas_constant_water_vapor = Rv = tyc.gas_constant_water_vapor  # J kg^-1 K^-1
 gas_constant_ratio = epsilon = Rd / Rv  # 1
+density_sea_water = 1025  # kg m^-3
+specific_heat_capacity_sea_water = 4185.5  # J kg^-1 K^-1
 
 # Variable descriptions
 variable_description = {
@@ -177,20 +179,20 @@ variable_description = {
         'units': 'K',
         'standard_name': 'surface_temperature',
     },
-    'cp': {
+    'c_p': {
         'units': 'J / kg / K',
-        'standard_name': 'surface_heat_capacity',
+        'standard_name': 'specific_heat_capacity_sea_water',
     },
     'rho': {
         'units': 'kg / m**3',
-        'standard_name': 'soil_density',
+        'standard_name': 'surface_density',
     },
-    'dz': {
+    'depth': {
         'units': 'm',
-        'standard_name': 'surface_thickness',
+        'standard_name': 'surface_depth',
     },
-    'height': {
-        'units': 'm',
-        'standard_name': 'surface_height',
+    'heat_capacity': {
+        'units': 'J / K',
+        'standard_name': 'surface_heat_capacity',
     },
 }

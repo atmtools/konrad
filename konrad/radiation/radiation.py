@@ -4,6 +4,7 @@ import logging
 
 import numpy as np
 import xarray as xr
+from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.utils import append_description
@@ -79,12 +80,24 @@ class Radiation(metaclass=abc.ABCMeta):
 
     def correct_bias(self, dataset):
         """Apply bias correction."""
+        # Interpolate biases passed as `xr.Dataset`.
+        if isinstance(self.bias, xr.Dataset):
+            bias_dict = {}
+            for key in self.bias.data_vars:
+                zdim = self.bias[key].dims[0]
+                x = self.bias[zdim].values
+                y = self.bias[key].values
+
+                f_interp = interp1d(x, y, fill_value='extrapolate')
+                bias_dict[key] = f_interp(dataset[zdim].values)
+
+            self.bias = bias_dict
+
         if self.bias is not None:
             for key, value in self.bias.items():
                 if key not in dataset.indexes:
                     dataset[key] -= value
 
-        # TODO: Add interpolation for biases passed as `xr.Dataset`.
 
     def derive_diagnostics(self, dataset):
         """Derive diagnostic variables from radiative transfer results."""

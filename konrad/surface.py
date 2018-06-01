@@ -100,6 +100,7 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         return cls(temperature=t, height=z, **kwargs)
 
 
+#TODO: Rename `FixedTemperature`?
 class SurfaceFixedTemperature(Surface):
     """Surface model with fixed temperature."""
     def adjust(self, *args, **kwargs):
@@ -114,20 +115,21 @@ class SurfaceFixedTemperature(Surface):
         return
 
 
+#TODO: Rename `SlabOcean`?
 class SurfaceHeatCapacity(Surface):
     """Surface model with adjustable temperature.
 
     Parameters:
-          cp (float): Heat capacity [J kg^-1 K^-1 ].
-          rho (float): Soil density [kg m^-3].
-          dz (float): Surface thickness [m].
+          depth (float): Ocean depth [m].
           **kwargs: Additional keyword arguments are passed to `Surface`.
     """
-    def __init__(self, *args, cp=1000, rho=1000, dz=100, **kwargs):
+    def __init__(self, *args, depth=50., **kwargs):
         super().__init__(*args, **kwargs)
-        self['cp'] = cp
-        self['rho'] = rho
-        self['dz'] = dz
+        self['rho'] = constants.density_sea_water
+        self['c_p'] = constants.specific_heat_capacity_sea_water
+        self['depth'] = depth
+
+        self['heat_capacity'] = self.rho * self.c_p * depth
 
         utils.append_description(self)
 
@@ -147,21 +149,20 @@ class SurfaceHeatCapacity(Surface):
 
         logger.debug(f'Net flux: {net_flux:.2f} W /m^2')
 
-        self['temperature'] += (timestep * net_flux /
-                                (self.cp * self.rho * self.dz))
+        self['temperature'] += (timestep * net_flux / self.heat_capacity)
 
         logger.debug('Surface temperature: '
                      f'{self.temperature.values[0]:.4f} K')
 
 
 class SurfaceHeatSink(SurfaceHeatCapacity):
+    """Surface model with adjustable temperature.
 
+    Parameters:
+        heat_flux (float):
+        **kwargs: Additional keyword arguments are passed to `Surface`.
+    """
     def __init__(self, *args, heat_flux=0, **kwargs):
-        """Surface model with adjustable temperature.
-
-        Parameters:
-            heat_flux (float): 
-        """
         super().__init__(*args, **kwargs)
         self['heat_flux'] = heat_flux
 
@@ -187,7 +188,7 @@ class SurfaceHeatSink(SurfaceHeatCapacity):
         logger.debug(f'Net flux: {net_flux:.2f} W /m^2')
 
         self['temperature'] += (timestep * (net_flux - sink) /
-                                (self.cp * self.rho * self.dz))
+                                self.heat_capacity)
 
         logger.debug('Surface temperature: '
                      f'{self.temperature.values[0]:.4f} K')

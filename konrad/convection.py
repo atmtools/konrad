@@ -93,10 +93,12 @@ class HardAdjustment(Convection):
                 surface associated with old temperature profile
             timestep (float): only required for slow convection
         """
-        near_zero = 0.00001
-        density1 = typhon.physics.density(p, T_rad)
+        # The threshold is scaled with the effective heat capacity of the
+        # surface. Otherwise very thick surfaces may never reach the target.
+        near_zero = float(surface.heat_capacity / 1e13)
 
         # Interpolate density and lapse rate on pressure half-levels.
+        density1 = typhon.physics.density(p, T_rad)
         density = interp1d(p, density1, fill_value='extrapolate')(phlev[:-1])
 
         g = constants.earth_standard_gravity
@@ -128,7 +130,7 @@ class HardAdjustment(Convection):
         # taking the surface temperature as the coldest temperature in the
         # radiative profile gives us a lower bound.
         surfaceTneg = np.array([np.min(T_rad)])
-        eff_Cp_s = surface.rho * surface.cp * surface.dz
+        eff_Cp_s = surface.heat_capacity
         diffneg = eff_Cp_s.data * (surfaceTneg - surface.temperature.data)
         # good guess for energy-conserving profile (unlikely!)
         if np.abs(diffneg) < near_zero:
@@ -155,6 +157,7 @@ class HardAdjustment(Convection):
             else:
                 diffneg = diff
                 surfaceTneg = surfaceT
+
             # to avoid getting stuck in a loop if something weird is going on
             counter += 1
             if counter == 100:
@@ -203,7 +206,7 @@ class HardAdjustment(Convection):
         if isinstance(surface, SurfaceFixedTemperature):
             return T_con, 0.
 
-        eff_Cp_s = surface.rho * surface.cp * surface.dz
+        eff_Cp_s = surface.heat_capacity
 
         diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
                                  dp, eff_Cp_s)
@@ -274,7 +277,7 @@ class RelaxedAdjustment(HardAdjustment):
         if isinstance(surface, SurfaceFixedTemperature):
             return T_con, 0.
         
-        eff_Cp_s = surface.rho * surface.cp * surface.dz
+        eff_Cp_s = surface.heat_capacity
 
         diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
                                  dp, eff_Cp_s)

@@ -171,6 +171,74 @@ class FixedRH(Humidity):
         return self.get_vmr_profile(plev, T, z)
 
 
+class Manabe67(Humidity):
+    """Relative humidity model following Manabe and Wetherald (1967)."""
+    def __init__(self, rh_surface=0.77, vmr_min=4.8e-6):
+        """Initialize a humidity model.
+
+        Parameters:
+            rh_surface (float): Relative humidity at the surface.
+            vmr_min (float): Minimum water vapor volume mixing ratio.
+                Values below this threshold are clipped. The default value
+                of `4.8e-6` resembles the *mass* mixing ratio of 3 ppm given
+                in the literature.
+        """
+        super().__init__(rh_surface=rh_surface)
+
+        self.vmr_min = vmr_min
+
+    def get_relative_humidity_profile(self, p):
+        return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
+
+    def adjust_stratospheric_vmr(self, vmr, p, T, z, cold_point_min=1e2):
+        return vmr.clip(min=self.vmr_min)
+
+    def get(self, plev, T, z, **kwargs):
+        return self.get_vmr_profile(plev, T, z)
+
+
+class Cess76(FixedRH):
+    """Relative humidity model following Cess (1976).
+
+    The relative humidity profile depends on the surface temperature.
+    This results in moister atmospheres at warmer temperatures.
+    """
+    def __init__(self, rh_surface=0.8, T_surface=288):
+        """Initialize a humidity model.
+
+        Parameters:
+            rh_surface (float): Relative humidity at the surface.
+            T_surface (float): Surface temperature [K].
+        """
+        super().__init__(rh_surface=rh_surface, rh_tropo=0.)
+
+        self.T_surface = T_surface
+
+    @property
+    def omega(self):
+        """Temperature dependent scaling factor for the RH profile."""
+        return 1.0 - 0.03 * (self.T_surface - 288)
+
+    def get_relative_humidity_profile(self, p):
+        return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
+
+    def get(self, plev, T, z, T_surface=288, **kwargs):
+        """Determine the humidity profile based on atmospheric state.
+
+        Parameters:
+            plev (ndarray): Pressure levels [Pa].
+            T (ndarray): Temperature [K].
+            z (ndarray): Height [m].
+            T_surface (float): Surface temperature [K].
+
+        Returns:
+            ndarray: Water vapor profile [VMR].
+        """
+        self.T_surface = T_surface
+
+        return self.get_vmr_profile(plev, T, z)
+
+
 class CoupledRH(Humidity):
     """Couple the relative humidity profile to the top of convection.
 
@@ -195,6 +263,17 @@ class CoupledRH(Humidity):
                 setattr(self, attr, None)
 
     def get(self, plev, T, z, p_tropo=None, **kwargs):
+        """Determine the humidity profile based on atmospheric state.
+
+        Parameters:
+            plev (ndarray): Pressure levels [Pa].
+            T (ndarray): Temperature [K].
+            z (ndarray): Height [m].
+            p_tropo (float): Pressure level of second humidity maximum [Pa].
+
+        Returns:
+            ndarray: Water vapor profile [VMR].
+        """
         if p_tropo is not None:
             self.p_tropo = p_tropo
 
