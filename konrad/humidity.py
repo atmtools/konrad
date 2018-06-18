@@ -126,7 +126,15 @@ class Humidity(metaclass=abc.ABCMeta):
         if self.vmr_strato is None:
             vmr[cp_index:] = vmr[cp_index]
         else:
-            vmr[np.argmax(vmr < self.vmr_strato):] = self.vmr_strato
+            # If the VMR falls below the stratospheric background...
+            if np.any(vmr[p > cold_point_min] < self.vmr_strato):
+                # ... set all values equal to the background from there.
+                vmr[np.argmax(vmr < self.vmr_strato):] = self.vmr_strato
+            else:
+                # Otherwise find the smallest VMR and use the background value
+                # from there on, this at least minimizes the discontinuity at
+                # the transition point.
+                vmr[np.argmin(vmr[p > cold_point_min]):] = self.vmr_strato
 
         return vmr
 
