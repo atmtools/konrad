@@ -40,9 +40,8 @@ class StratosphericUpwelling(Upwelling):
         """Apply cooling above the convective top (level where the net
         radiative heating becomes small)."""
 
-        # profile if the whole of the atmosphere is cooled
         Q = self.coolingrates(atmosphere)
-        T = atmosphere['T'][0, :].data
+        T = atmosphere['T'][0, :]
 
         if self.lowest_level is not None:
             contopi = self.lowest_level
