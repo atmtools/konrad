@@ -98,9 +98,9 @@ class Atmosphere(Dataset):
                                   timestep=timestep)
 
         # Upwelling induced cooling
-        self.upwelling.cool(atmosphere=self, radheat=heatingrate,
+        self.upwelling.cool(atmosphere=self, radheat=heatingrate[0, :],
                             timestep=timestep)
-        
+
         # Calculate the geopotential height field.
         self.calculate_height()
 
