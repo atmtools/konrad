@@ -160,25 +160,20 @@ class FixedRH(Humidity):
 
 class Manabe67(Humidity):
     """Relative humidity model following Manabe and Wetherald (1967)."""
-    def __init__(self, rh_surface=0.77, vmr_min=4.8e-6):
+    def __init__(self, rh_surface=0.77, vmr_strato=4.8e-6):
         """Initialize a humidity model.
 
         Parameters:
             rh_surface (float): Relative humidity at the surface.
-            vmr_min (float): Minimum water vapor volume mixing ratio.
+            vmr_strato (float): Minimum water vapor volume mixing ratio.
                 Values below this threshold are clipped. The default value
                 of `4.8e-6` resembles the *mass* mixing ratio of 3 ppm given
                 in the literature.
         """
-        super().__init__(rh_surface=rh_surface)
-
-        self.vmr_min = vmr_min
+        super().__init__(rh_surface=rh_surface, vmr_strato=vmr_strato)
 
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
-
-    def adjust_stratospheric_vmr(self, vmr, p, T, z, cold_point_min=1e2):
-        return vmr.clip(min=self.vmr_min)
 
     def get(self, plev, T, z, **kwargs):
         return self.get_vmr_profile(plev, T, z)

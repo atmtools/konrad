@@ -19,7 +19,6 @@ __all__ = [
     'refined_pgrid',
     'ozonesquash',
     'ozone_profile_rcemip',
-    'equilibrium_sensitivity',
 ]
 
 logger = logging.getLogger(__name__)
@@ -192,26 +191,3 @@ def ozone_profile_rcemip(plev, g1=3.6478, g2=0.83209, g3=11.3515):
     """
     p = plev / 100
     return g1 * p**g2 * np.exp(-p / g3) * 1e-6
-
-
-def equilibrium_sensitivity(temperature, forcing):
-    """Calculate the equilibrium climate sensitivity.
-
-    The equilibrium climate sensitivity is given by the temperature difference
-    between the first and last timestep divided by the initial radiative
-    forcing.
-
-    Parameters:
-          temperature (ndarray): Surface temperature [K].
-          forcing (ndarray): Radiative forcing [W/m^2].
-    Returns:
-          float, float: Climate sensitivity [K / (W/m^2)],
-            initial radiative forcing [W/m^2].
-
-    Examples:
-        >>> temperature = np.linspace(300, 304, 25)
-        >>> forcing = np.linspace(3.7, 0., temperature.size)
-        >>> equilibrium_sensitivity(temperature, forcing)
-        (1.0810810810810809, 3.7000000000000002)
-    """
-    return (temperature[-1] - temperature[0]) / forcing[0], forcing[0]
