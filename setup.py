@@ -32,7 +32,7 @@ setup(
         'netcdf4>=1.2.7',
         'numpy>=1.12.0',
         'scipy>=0.19.0',
-        'typhon>=0.5.0',
+        'typhon>=0.6.0',
         'xarray>=0.9.1',
         'climt>=0.9.3',
         'sympl>=0.3.2',
