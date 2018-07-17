@@ -16,6 +16,7 @@ setup(
     author='The konrad developers',
     version=__version__,
     url='https://github.com/atmtools/konrad',
+    download_url='https://github.com/atmtools/konrad/tarball/v' + __version__,
     packages=find_packages(),
     license='MIT',
     description='Implementation of a radiative-convective equilibrium model.',
@@ -25,6 +26,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
     include_package_data=True,
     install_requires=[
