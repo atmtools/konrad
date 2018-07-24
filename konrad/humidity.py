@@ -78,17 +78,21 @@ class Humidity(metaclass=abc.ABCMeta):
 
         return rh
 
-    def get_vmr_profile(self, p, T, z):
+    def get_vmr_profile(self, atmos):
         """Return a water vapor volume mixing ratio profile.
 
         Parameters:
-            p (ndarray): Pressure levels [Pa].
-            T (ndarray): Temperature [K].
-            z (ndarray): Altitude [m].
+            atmos (konrad.atmosphere): Atmosphere object,
+                including profiles of temperature [K], pressure [Pa],
+                altitude [m]
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
+        p = atmos.get_values('plev')
+        T = atmos.get_values('T', keepdims=False)
+        z = atmos.get_values('z', keepdims=False)
+
         if self.vmr_profile is None:
             vmr = rh2vmr(self.get_relative_humidity_profile(p), p, T)
         else:
@@ -141,11 +145,11 @@ class Humidity(metaclass=abc.ABCMeta):
 
 class FixedVMR(Humidity):
     """Keep the water vapor volume mixing ratio constant."""
-    def get(self, plev, T, z, **kwargs):
+    def get(self, atmos, **kwargs):
         if self.vmr_profile is None:
-            self.vmr_profile = self.get_vmr_profile(plev, T, z)
+            self.vmr_profile = self.get_vmr_profile(atmos)
 
-        return self.get_vmr_profile(plev, T, z)
+        return self.get_vmr_profile(atmos)
 
 
 class FixedRH(Humidity):
@@ -154,8 +158,8 @@ class FixedRH(Humidity):
     The relative humidity is kept constant under temperature changes,
     allowing for a moistening in a warming climate.
     """
-    def get(self, plev, T, z, **kwargs):
-        return self.get_vmr_profile(plev, T, z)
+    def get(self, atmos, **kwargs):
+        return self.get_vmr_profile(atmos)
 
 
 class Manabe67(Humidity):
@@ -175,8 +179,8 @@ class Manabe67(Humidity):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
 
-    def get(self, plev, T, z, **kwargs):
-        return self.get_vmr_profile(plev, T, z)
+    def get(self, atmos, **kwargs):
+        return self.get_vmr_profile(atmos)
 
 
 class Cess76(FixedRH):
@@ -204,21 +208,19 @@ class Cess76(FixedRH):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
 
-    def get(self, plev, T, z, T_surface=288, **kwargs):
+    def get(self, atmos, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
-            plev (ndarray): Pressure levels [Pa].
-            T (ndarray): Temperature [K].
-            z (ndarray): Height [m].
-            T_surface (float): Surface temperature [K].
+            atmos (konrad.atmosphere): Atmosphere object,
+                including temperature, pressure, altitude, surface
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        self.T_surface = T_surface
+        self.T_surface = atmos.surface['temperature'].values[-1]
 
-        return self.get_vmr_profile(plev, T, z)
+        return self.get_vmr_profile(atmos)
 
 
 class CoupledRH(Humidity):
@@ -244,13 +246,12 @@ class CoupledRH(Humidity):
                 )
                 setattr(self, attr, None)
 
-    def get(self, plev, T, z, p_tropo=None, **kwargs):
+    def get(self, atmos, p_tropo=None, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
-            plev (ndarray): Pressure levels [Pa].
-            T (ndarray): Temperature [K].
-            z (ndarray): Height [m].
+            atmos (konrad.atmosphere): Atmosphere object,
+                including temperature, pressure, altitude
             p_tropo (float): Pressure level of second humidity maximum [Pa].
 
         Returns:
@@ -259,4 +260,5 @@ class CoupledRH(Humidity):
         if p_tropo is not None:
             self.p_tropo = p_tropo
 
-        return self.get_vmr_profile(plev, T, z)
+        return self.get_vmr_profile(atmos)
+

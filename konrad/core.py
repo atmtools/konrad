@@ -8,6 +8,7 @@ import numpy as np
 
 from konrad import utils
 from konrad.radiation import RRTMG
+from konrad.humidity import (Humidity, FixedRH)
 
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,9 @@ class RCE:
         >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
-    def __init__(self, atmosphere, radiation=None, outfile=None, experiment='',
-                 timestep=1, delta=0.01, writeevery=1, max_iterations=5000):
+    def __init__(self, atmosphere, radiation=None, humidity=None,
+                 outfile=None, experiment='', timestep=1, delta=0.01,
+                 writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -48,6 +50,9 @@ class RCE:
             self.radiation = RRTMG()
         else:
             self.radiation = radiation
+
+        self.humidity = utils.return_if_type(humidity, 'humidity',
+                                             Humidity, FixedRH())
 
         # Control parameters.
         self.delta = delta
@@ -200,6 +205,13 @@ class RCE:
                 self.timestep,
                 surface=self.atmosphere.surface,
                 )
+
+            # Update the humidity profile.
+            self.atmosphere['H2O'][0, :] = self.humidity.get(
+                    self.atmosphere,
+                    p_tropo=self.atmosphere.get_convective_top(
+                            self.heatingrates['net_htngrt'][0, :]),
+                    )
 
             # Calculate temperature change for convergence check.
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T

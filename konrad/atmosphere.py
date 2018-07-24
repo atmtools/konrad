@@ -11,7 +11,6 @@ from xarray import Dataset, DataArray
 from konrad import constants
 from konrad import utils
 from konrad.convection import (Convection, HardAdjustment)
-from konrad.humidity import (Humidity, FixedRH)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.upwelling import (Upwelling, NoUpwelling)
@@ -36,15 +35,13 @@ atmosphere_variables = [
 
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
-    def __init__(self, convection=None, humidity=None, surface=None,
-                 lapse=None, upwelling=None, **kwargs):
+    def __init__(self, convection=None, surface=None, lapse=None,
+                 upwelling=None, **kwargs):
         """Create an atmosphere model.
 
        Parameters:
              convection (konrad.humidity.Convection): Convection scheme.
                 Defaults to ``konrad.convection.HardAdjustment``.
-             humidity (konrad.humidity.Humidity): Humidity handler.
-                Defaults to ``konrad.humidity.FixedRH``.
              surface (konrad.surface.Surface): Surface model.
                 Defaults to ``konrad.surface.SurfaceHeatCapacity``.
              lapse (konrad.lapse.LapseRate): Lapse rate handler.
@@ -56,9 +53,6 @@ class Atmosphere(Dataset):
         # Check input types.
         surface = utils.return_if_type(surface, 'surface',
                                        Surface, SurfaceHeatCapacity())
-
-        humidity = utils.return_if_type(humidity, 'humidity',
-                                        Humidity, FixedRH())
 
         convection = utils.return_if_type(convection, 'convection',
                                           Convection, HardAdjustment())
@@ -74,7 +68,6 @@ class Atmosphere(Dataset):
         # ``xarrayy.DataArray``.
         self.attrs.update({
             'convection': convection,
-            'humidity': humidity,
             'lapse': lapse,
             'surface': surface,
             'upwelling': upwelling,
@@ -103,15 +96,6 @@ class Atmosphere(Dataset):
 
         # Calculate the geopotential height field.
         self.calculate_height()
-
-        # Preserve the initial relative humidity profile.
-        self['H2O'][0, :] = self.humidity.get(
-            plev=self.get_values('plev'),
-            T=self.get_values('T', keepdims=False),
-            z=self.get_values('z', keepdims=False),
-            p_tropo=self.get_convective_top(heatingrate[0, :]),
-            T_surface=self.surface['temperature'].values[-1],
-        )
 
     @classmethod
     def from_atm_fields_compact(cls, atmfield, **kwargs):
