@@ -78,17 +78,21 @@ class Humidity(metaclass=abc.ABCMeta):
 
         return rh
 
-    def get_vmr_profile(self, p, T, z):
+    def get_vmr_profile(self, atmosphere):
         """Return a water vapor volume mixing ratio profile.
 
         Parameters:
-            p (ndarray): Pressure levels [Pa].
-            T (ndarray): Temperature [K].
-            z (ndarray): Altitude [m].
+            atmosphere (konrad.atmosphere): atmosphere object,
+                including profiles of temperature [K], pressure [Pa],
+                altitude [m]
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
+        p = atmosphere.get_values('plev')
+        T = atmosphere.get_values('T', keepdims=False)
+        z = atmosphere.get_values('z', keepdims=False)
+
         if self.vmr_profile is None:
             vmr = rh2vmr(self.get_relative_humidity_profile(p), p, T)
         else:
@@ -141,11 +145,11 @@ class Humidity(metaclass=abc.ABCMeta):
 
 class FixedVMR(Humidity):
     """Keep the water vapor volume mixing ratio constant."""
-    def get(self, plev, T, z, **kwargs):
+    def get(self, atmosphere, **kwargs):
         if self.vmr_profile is None:
-            self.vmr_profile = self.get_vmr_profile(plev, T, z)
+            self.vmr_profile = self.get_vmr_profile(atmosphere)
 
-        return self.get_vmr_profile(plev, T, z)
+        return self.get_vmr_profile(atmosphere)
 
 
 class FixedRH(Humidity):
@@ -154,8 +158,8 @@ class FixedRH(Humidity):
     The relative humidity is kept constant under temperature changes,
     allowing for a moistening in a warming climate.
     """
-    def get(self, plev, T, z, **kwargs):
-        return self.get_vmr_profile(plev, T, z)
+    def get(self, atmosphere, **kwargs):
+        return self.get_vmr_profile(atmosphere)
 
 
 class Manabe67(Humidity):
@@ -175,8 +179,8 @@ class Manabe67(Humidity):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
 
-    def get(self, plev, T, z, **kwargs):
-        return self.get_vmr_profile(plev, T, z)
+    def get(self, atmosphere, **kwargs):
+        return self.get_vmr_profile(atmosphere)
 
 
 class Cess76(FixedRH):
@@ -204,21 +208,20 @@ class Cess76(FixedRH):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
 
-    def get(self, plev, T, z, T_surface=288, **kwargs):
+    def get(self, atmosphere, surface, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
-            plev (ndarray): Pressure levels [Pa].
-            T (ndarray): Temperature [K].
-            z (ndarray): Height [m].
-            T_surface (float): Surface temperature [K].
+            atmosphere (konrad.atmosphere): atmosphere object,
+                including temperature, pressure, altitude
+            surface (konrad.surface): Surface object
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        self.T_surface = T_surface
+        self.T_surface = surface['temperature'].values[-1]
 
-        return self.get_vmr_profile(plev, T, z)
+        return self.get_vmr_profile(atmosphere)
 
 
 class CoupledRH(Humidity):
@@ -244,19 +247,21 @@ class CoupledRH(Humidity):
                 )
                 setattr(self, attr, None)
 
-    def get(self, plev, T, z, p_tropo=None, **kwargs):
+    def get(self, atmosphere, net_heatingrate, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
-            plev (ndarray): Pressure levels [Pa].
-            T (ndarray): Temperature [K].
-            z (ndarray): Height [m].
-            p_tropo (float): Pressure level of second humidity maximum [Pa].
+            atmosphere (konrad.atmosphere): atmosphere object,
+                including temperature, pressure, altitude
+            net_heatingrate (ndarray): net radiative heating rate to calculate
+                the convective top
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
+        p_tropo = atmosphere.get_convective_top(net_heatingrate)
         if p_tropo is not None:
             self.p_tropo = p_tropo
 
-        return self.get_vmr_profile(plev, T, z)
+        return self.get_vmr_profile(atmosphere)
+

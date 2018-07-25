@@ -52,12 +52,12 @@ class Radiation(metaclass=abc.ABCMeta):
         self.bias = bias
 
     @abc.abstractmethod
-    def calc_radiation(self, atmosphere):
+    def calc_radiation(self, atmosphere, surface):
         return xr.Dataset()
 
-    def get_heatingrates(self, atmosphere):
+    def get_heatingrates(self, atmosphere, surface):
         """Returns `xr.Dataset` containing radiative transfer results."""
-        rad_dataset = self.calc_radiation(atmosphere)
+        rad_dataset = self.calc_radiation(atmosphere, surface)
 
         self.correct_bias(rad_dataset)
 

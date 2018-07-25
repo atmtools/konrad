@@ -22,12 +22,13 @@ class RRTMG(Radiation):
 
         self.solar_constant = solar_constant
 
-    def update_radiative_state(self, atmosphere, state0, sw=True):
+    def update_radiative_state(self, atmosphere, surface, state0, sw=True):
         """ Update CliMT formatted atmospheric state using parameters from our
         model.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            surface (konrad.surface): Surface model.
             state0 (dictionary): atmospheric state in the format for climt
             sw (bool): Toggle between shortwave and longwave calculations.
 
@@ -37,8 +38,8 @@ class RRTMG(Radiation):
         plev = atmosphere['plev'].values
         phlev = atmosphere['phlev'].values
         numlevels = len(plev)
-        temperature = atmosphere.surface.temperature.data[0]
-        albedo = float(atmosphere.surface.albedo.data)
+        temperature = surface.temperature.data[0]
+        albedo = float(surface.albedo.data)
         o2fraction = 0.21
         zenith = np.deg2rad(self.current_solar_angle)
 
@@ -180,11 +181,12 @@ class RRTMG(Radiation):
 
         return state0
 
-    def radiative_fluxes(self, atmosphere):
+    def radiative_fluxes(self, atmosphere, surface):
         """Returns shortwave and longwave fluxes and heating rates.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
+            surface (konrad.surface): surface model
 
         Returns:
             tuple: containing two dictionaries, one of air temperature
@@ -200,27 +202,28 @@ class RRTMG(Radiation):
             self.state_lw = climt.get_default_state([self.rad_lw])
             self.state_sw = climt.get_default_state([self.rad_sw])
 
-        self.update_radiative_state(atmosphere, self.state_lw, sw=False)
-        self.update_radiative_state(atmosphere, self.state_sw, sw=True)
+        self.update_radiative_state(atmosphere, surface, self.state_lw, sw=False)
+        self.update_radiative_state(atmosphere, surface, self.state_sw, sw=True)
 
         lw_fluxes = self.rad_lw(self.state_lw)
         sw_fluxes = self.rad_sw(self.state_sw)
 
         return lw_fluxes, sw_fluxes
 
-    def calc_radiation(self, atmosphere):
+    def calc_radiation(self, atmosphere, surface):
         """Returns the shortwave, longwave and net heatingrates.
         Converts output from radiative_fluxes to be in the format required for
         our model.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            surface (konrad.surface): Surface model.
 
         Returns:
             xarray.Dataset: Dataset containing for the simulated heating rates.
                 The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
         """
-        lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere)
+        lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere, surface)
         lw_fluxes = lw_dT_fluxes[1]
         sw_fluxes = sw_dT_fluxes[1]
 
