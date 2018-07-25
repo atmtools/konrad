@@ -208,17 +208,18 @@ class Cess76(FixedRH):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
 
-    def get(self, atmos, **kwargs):
+    def get(self, atmos, surface, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
             atmos (konrad.atmosphere): Atmosphere object,
-                including temperature, pressure, altitude, surface
+                including temperature, pressure, altitude
+            surface (konrad.surface): Surface object
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        self.T_surface = atmos.surface['temperature'].values[-1]
+        self.T_surface = surface['temperature'].values[-1]
 
         return self.get_vmr_profile(atmos)
 
@@ -246,17 +247,19 @@ class CoupledRH(Humidity):
                 )
                 setattr(self, attr, None)
 
-    def get(self, atmos, p_tropo=None, **kwargs):
+    def get(self, atmos, net_heatingrate, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
             atmos (konrad.atmosphere): Atmosphere object,
                 including temperature, pressure, altitude
-            p_tropo (float): Pressure level of second humidity maximum [Pa].
+            net_heatingrate (ndarray): net radiative heating rate to calculate
+                the convective top
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
+        p_tropo = atmos.get_convective_top(net_heatingrate)
         if p_tropo is not None:
             self.p_tropo = p_tropo
 

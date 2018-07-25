@@ -12,7 +12,6 @@ from konrad import constants
 from konrad import utils
 from konrad.convection import (Convection, HardAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
-from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.upwelling import (Upwelling, NoUpwelling)
 
 
@@ -35,15 +34,13 @@ atmosphere_variables = [
 
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
-    def __init__(self, convection=None, surface=None, lapse=None,
+    def __init__(self, convection=None, lapse=None,
                  upwelling=None, **kwargs):
         """Create an atmosphere model.
 
        Parameters:
              convection (konrad.humidity.Convection): Convection scheme.
                 Defaults to ``konrad.convection.HardAdjustment``.
-             surface (konrad.surface.Surface): Surface model.
-                Defaults to ``konrad.surface.SurfaceHeatCapacity``.
              lapse (konrad.lapse.LapseRate): Lapse rate handler.
                 Defaults to ``konrad.lapserate.MoistLapseRate``.
         """
@@ -51,9 +48,6 @@ class Atmosphere(Dataset):
         super().__init__(**kwargs)
 
         # Check input types.
-        surface = utils.return_if_type(surface, 'surface',
-                                       Surface, SurfaceHeatCapacity())
-
         convection = utils.return_if_type(convection, 'convection',
                                           Convection, HardAdjustment())
 
@@ -69,11 +63,10 @@ class Atmosphere(Dataset):
         self.attrs.update({
             'convection': convection,
             'lapse': lapse,
-            'surface': surface,
             'upwelling': upwelling,
         })
 
-    def adjust(self, heatingrate, timestep, **kwargs):
+    def adjust(self, heatingrate, timestep, surface, **kwargs):
         """Adjust temperature according to given heating rates.
 
         Parameters:
@@ -88,7 +81,7 @@ class Atmosphere(Dataset):
 
         # Convective adjustment
         self.convection.stabilize(atmosphere=self, lapse=lapse,
-                                  timestep=timestep)
+                                  timestep=timestep, surface=surface)
 
         # Upwelling induced cooling
         self.upwelling.cool(atmosphere=self, radheat=heatingrate[0, :],
@@ -362,13 +355,14 @@ class Atmosphere(Dataset):
 
         plev = self['plev'].values  # Air pressure at full-levels.
         phlev = self['phlev'].values  # Air pressure at half-levels.
-        T = np.hstack((self.surface.temperature, self['T'][0, :]))
-        p = np.hstack((phlev[0], plev))
+
+        # Air temperature on half levels
+        T_phlev = interp1d(plev, self['T'][0, :],
+                           fill_value='extrapolate')(phlev)
         # Calculate the air density from current atmospheric state.
-        rho = typhon.physics.density(p, T)
+        rho_phlev = typhon.physics.density(phlev[:-1], T_phlev[:-1])
 
         dp = np.hstack((np.array([plev[0] - phlev[0]]), np.diff(plev)))
-        rho_phlev = interp1d(p, rho)(phlev[:-1])
         # Use the hydrostatic equation to calculate geopotential height from
         # given pressure, density and gravity.
         z = np.cumsum(-dp / (rho_phlev * g))

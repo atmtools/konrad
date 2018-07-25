@@ -44,12 +44,13 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 class Convection(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
-    def stabilize(self, atmosphere, lapse, timestep):
+    def stabilize(self, atmosphere, lapse, surface, timestep):
         """Stabilize the temperature profile by redistributing energy.
 
         Parameters:
               atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
               lapse (ndarray): Temperature lapse rate [K/day].
+              surface (konrad.surface): Surface model.
               timestep (float): Timestep width [day].
         """
 
@@ -62,7 +63,7 @@ class NonConvective(Convection):
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
-    def stabilize(self, atmosphere, lapse, timestep):
+    def stabilize(self, atmosphere, lapse, surface, timestep):
 
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
@@ -70,12 +71,12 @@ class HardAdjustment(Convection):
             phlev=atmosphere['phlev'].values,
             T_rad=atmosphere['T'].values[0, :],
             lapse=lapse,
-            surface=atmosphere.surface,
+            surface=surface,
             timestep=timestep,
         )
         # Update atmospheric temperatures as well as surface temperature.
         atmosphere['T'].values[0, :] = T_new
-        atmosphere.surface.temperature.values[0] = T_s_new
+        surface.temperature.values[0] = T_s_new
 
     def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
                               timestep=0.1):
@@ -112,7 +113,7 @@ class HardAdjustment(Convection):
         T_con, diffpos = self.test_profile(T_rad, p, phlev, surface,
                                            surfaceTpos, lp,
                                            timestep=timestep)
-        
+
         # this is the temperature profile required if we have a set-up with a
         # fixed surface temperature, then the energy does not matter.
         if isinstance(surface, SurfaceFixedTemperature):
@@ -180,7 +181,7 @@ class HardAdjustment(Convection):
             p (ndarray): pressure levels
             phlev (ndarray): half pressure levels
             surface (konrad.surface):
-                surface associated with old temperature profile 
+                surface associated with old temperature profile
             surfaceT (float): surface temperature of the new profile
             lp (ndarray): lapse rate in K/Pa
             timestep (float): not required in this case
@@ -224,7 +225,7 @@ class RelaxedAdjustment(HardAdjustment):
         """
         Parameters:
             tau (ndarray): Array of convective timescale values [days]
-        """        
+        """
         self.convective_tau = tau
 
     def get_convective_tau(self, p):
@@ -241,7 +242,7 @@ class RelaxedAdjustment(HardAdjustment):
 
         tau0 = 1/24 # 1 hour
         tau = tau0*np.exp(p[0] / p)
-        
+
         return tau
 
     def test_profile(self, T_rad, p, phlev, surface, surfaceT, lp,
@@ -255,7 +256,7 @@ class RelaxedAdjustment(HardAdjustment):
             p (ndarray): pressure levels
             phlev (ndarray): half pressure levels
             surface (konrad.surface):
-                surface associated with old temperature profile 
+                surface associated with old temperature profile
             surfaceT (float): surface temperature of the new profile
             lp (ndarray): lapse rate in K/Pa
             timestep (float): not required in this case
@@ -268,15 +269,15 @@ class RelaxedAdjustment(HardAdjustment):
         dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p)))
 
         tau = self.get_convective_tau(p)
-            
+
         tf = 1 - np.exp(-timestep / tau)
         T_con = T_rad * (1 - tf) + tf * (surfaceT - np.cumsum(dp_lapse * lp))
-        
+
         # If run with a fixed surface temperature, always return the
         # convective profile starting from the current surface temperature.
         if isinstance(surface, SurfaceFixedTemperature):
             return T_con, 0.
-        
+
         eff_Cp_s = surface.heat_capacity
 
         diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
