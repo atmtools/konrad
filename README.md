@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/konrad.svg)](https://badge.fury.io/py/konrad)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1313687.svg)](https://doi.org/10.5281/zenodo.1313687)
 
 # konrad - Radiative-convective equilibrium framework
