@@ -22,13 +22,15 @@ class RRTMG(Radiation):
 
         self.solar_constant = solar_constant
 
-    def update_radiative_state(self, atmosphere, surface, state0, sw=True):
+    def update_radiative_state(self, atmosphere, surface, cloud, state0,
+                               sw=True):
         """ Update CliMT formatted atmospheric state using parameters from our
         model.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             surface (konrad.surface): Surface model.
+            cloud (konrad.cloud): Cloud model.
             state0 (dictionary): atmospheric state in the format for climt
             sw (bool): Toggle between shortwave and longwave calculations.
 
@@ -99,26 +101,17 @@ class RRTMG(Radiation):
                 dims=('mid_levels',),
                 attrs={'units': 'mole/mole'})
 
-        # Set cloud quantities to zero.
-        for quant in ['cloud_ice_particle_size',
-                      'mass_content_of_cloud_liquid_water_in_atmosphere_layer',
-                      'mass_content_of_cloud_ice_in_atmosphere_layer',
-                      'cloud_water_droplet_radius',
-                      'cloud_area_fraction_in_atmosphere_layer']:
-            units = state0[quant].units
-            state0[quant] = DataArray(
-                np.zeros(numlevels,),
-                dims=('mid_levels',),
-                attrs={'units': units})
+        # Take cloud quantities to from cloud class.
+        state0['cloud_ice_particle_size'] = cloud.cloud_ice_particle_size
+        state0['mass_content_of_cloud_liquid_water_in_atmosphere_layer'] = cloud.mass_content_of_cloud_liquid_water_in_atmosphere_layer
+        state0['mass_content_of_cloud_ice_in_atmosphere_layer'] = cloud.mass_content_of_cloud_ice_in_atmosphere_layer
+        state0['cloud_water_droplet_radius'] = cloud.cloud_water_droplet_radius
+        state0['cloud_area_fraction_in_atmosphere_layer'] = cloud.cloud_area_fraction_in_atmosphere_layer
 
         if not sw:  # Longwave specific changes
             num_lw_bands = len(state0['num_longwave_bands'])
 
-            state0['longwave_optical_thickness_due_to_cloud'] = DataArray(
-                np.zeros((1, num_lw_bands, 1, numlevels)),
-                dims=('longitude', 'num_longwave_bands',
-                      'latitude', 'mid_levels'),
-                attrs={'units': 'dimensionless'})
+            state0['longwave_optical_thickness_due_to_cloud'] = cloud.longwave_optical_thickness_due_to_cloud
 
             state0['longwave_optical_thickness_due_to_aerosol'] = DataArray(
                 np.zeros((1, 1, numlevels, num_lw_bands)),
@@ -129,15 +122,10 @@ class RRTMG(Radiation):
         if sw:  # Shortwave specific changes
             num_sw_bands = len(state0['num_shortwave_bands'])
 
-            for quant in ['cloud_forward_scattering_fraction',
-                          'cloud_asymmetry_parameter',
-                          'shortwave_optical_thickness_due_to_cloud',
-                          'single_scattering_albedo_due_to_cloud']:
-                state0[quant] = DataArray(
-                    np.zeros((1, num_sw_bands, 1, numlevels)),
-                    dims=('longitude', 'num_shortwave_bands',
-                          'latitude', 'mid_levels'),
-                    attrs={'units': 'dimensionless'})
+            state0['cloud_forward_scattering_fraction'] = cloud.cloud_forward_scattering_fraction
+            state0['cloud_asymmetry_parameter'] = cloud.cloud_asymmetry_parameter
+            state0['shortwave_optical_thickness_due_to_cloud'] = cloud.shortwave_optical_thickness_due_to_cloud
+            state0['single_scattering_albedo_due_to_cloud'] = cloud.single_scattering_albedo_due_to_cloud
 
             num_aerosols = len(state0['num_ecmwf_aerosols'])
             state0['aerosol_optical_depth_at_55_micron'] = DataArray(
@@ -181,12 +169,13 @@ class RRTMG(Radiation):
 
         return state0
 
-    def radiative_fluxes(self, atmosphere, surface):
+    def radiative_fluxes(self, atmosphere, surface, cloud):
         """Returns shortwave and longwave fluxes and heating rates.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
             surface (konrad.surface): surface model
+            cloud (konrad.cloud): cloud model
 
         Returns:
             tuple: containing two dictionaries, one of air temperature
@@ -202,15 +191,17 @@ class RRTMG(Radiation):
             self.state_lw = climt.get_default_state([self.rad_lw])
             self.state_sw = climt.get_default_state([self.rad_sw])
 
-        self.update_radiative_state(atmosphere, surface, self.state_lw, sw=False)
-        self.update_radiative_state(atmosphere, surface, self.state_sw, sw=True)
+        self.update_radiative_state(atmosphere, surface, cloud, self.state_lw,
+                                    sw=False)
+        self.update_radiative_state(atmosphere, surface, cloud, self.state_sw,
+                                    sw=True)
 
         lw_fluxes = self.rad_lw(self.state_lw)
         sw_fluxes = self.rad_sw(self.state_sw)
 
         return lw_fluxes, sw_fluxes
 
-    def calc_radiation(self, atmosphere, surface):
+    def calc_radiation(self, atmosphere, surface, cloud):
         """Returns the shortwave, longwave and net heatingrates.
         Converts output from radiative_fluxes to be in the format required for
         our model.
@@ -218,12 +209,14 @@ class RRTMG(Radiation):
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             surface (konrad.surface): Surface model.
+            cloud (konrad.cloud): cloud model
 
         Returns:
             xarray.Dataset: Dataset containing for the simulated heating rates.
                 The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
         """
-        lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere, surface)
+        lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere, surface,
+                                                           cloud)
         lw_fluxes = lw_dT_fluxes[1]
         sw_fluxes = sw_dT_fluxes[1]
 

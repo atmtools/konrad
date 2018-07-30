@@ -10,6 +10,7 @@ from konrad import utils
 from konrad.radiation import RRTMG
 from konrad.humidity import (Humidity, FixedRH)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
+from konrad.cloud import (Cloud, ClearSky)
 
 
 logger = logging.getLogger(__name__)
@@ -29,8 +30,8 @@ class RCE:
         >>> rce.run()
     """
     def __init__(self, atmosphere, radiation=None, humidity=None, surface=None,
-                 outfile=None, experiment='', timestep=1, delta=0.01,
-                 writeevery=1, max_iterations=5000):
+                 cloud=None, outfile=None, experiment='', timestep=1,
+                 delta=0.01, writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -41,6 +42,8 @@ class RCE:
                 Defaults to ``konrad.humidity.FixedRH``.
             surface (konrad.surface): Surface model.
                 Defaults to ``konrad.surface.SurfaceHeatCapacity``.
+            cloud (konrad.cloud): Cloud model.
+                Defaults to ``konrad.cloud.ClearSky``.
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF).
             timestep (float): Iteration time step in days.
@@ -62,6 +65,8 @@ class RCE:
                                              Humidity, FixedRH())
         self.surface = utils.return_if_type(surface, 'surface',
                                             Surface, SurfaceHeatCapacity())
+        self.cloud = utils.return_if_type(cloud, 'cloud',
+                                          Cloud, ClearSky())
 
         # Control parameters.
         self.delta = delta
@@ -104,6 +109,7 @@ class RCE:
         self.heatingrates = self.radiation.get_heatingrates(
             atmosphere=self.atmosphere,
             surface=self.surface,
+            cloud=self.cloud,
             )
 
     def is_converged(self):
