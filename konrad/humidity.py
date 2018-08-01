@@ -5,7 +5,7 @@ import logging
 
 import numpy as np
 from typhon.atmosphere import vmr as rh2vmr
-from scipy.stats import skewnorm
+from scipy.stats import (norm, skewnorm)
 
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class Humidity(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all humidity handlers."""
-    def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=170e2,
+    def __init__(self, rh_surface=0.85, rh_tropo=0.4, p_tropo=170e2, offset=0,
                  vmr_strato=None, vmr_profile=None, rh_profile=None):
         """Create a humidity handler.
 
@@ -31,6 +31,7 @@ class Humidity(metaclass=abc.ABCMeta):
         self.rh_surface = rh_surface
         self.rh_tropo = rh_tropo
         self.p_tropo = p_tropo
+        self.offset = offset
         self.vmr_strato = vmr_strato
 
         self.vmr_profile = vmr_profile
@@ -63,20 +64,16 @@ class Humidity(metaclass=abc.ABCMeta):
             return self.rh_profile
 
         # Exponential decay from the surface value throughout the atmosphere.
-        rh = self.rh_surface * (p / p[0]) ** 1.15
+        rh = self.rh_surface * (p / p[0]) ** 1.25
 
         # Add skew-normal distribution.
-        rh += self.rh_tropo * skewnorm.pdf(
+        uth = self.rh_tropo * norm.pdf(
             x=np.log(p),
-            # NOTE: Subtract 20e2 hPa to match the passed value of `p_tropo`
-            # with the actual peak of the skewnorm distribution.
-            loc=np.log(self.p_tropo - 20e2),
-            # Shape parameters are fitted to an ERA5 climatology.
-            a=4,
-            scale=0.75,
+            loc=np.log(self.p_tropo + self.offset),
+            scale=0.4,
         )
 
-        return rh
+        return np.maximum(rh, uth)
 
     def get_vmr_profile(self, p, T, z):
         """Return a water vapor volume mixing ratio profile.
