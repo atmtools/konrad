@@ -5,7 +5,7 @@ import copy
 import logging
 
 import numpy as np
-import typhon
+import typhon as ty
 from netCDF4 import Dataset
 
 from konrad import constants
@@ -17,6 +17,7 @@ __all__ = [
     'return_if_type',
     'phlev_from_plev',
     'refined_pgrid',
+    'get_pressure_grids',
     'ozonesquash',
     'ozone_profile_rcemip',
 ]
@@ -142,11 +143,33 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
     Returns:
         ndarray: Pressure grid.
     """
-    grid = typhon.math.squeezable_logspace(
+    grid = ty.math.squeezable_logspace(
         start=start, stop=stop, num=num, squeeze=shift, fixpoint=fixpoint
     )
 
     return grid
+
+
+def get_pressure_grids(start=1000e2, stop=1, num=200, squeeze=0.5):
+    """Create matching pressure levels and half-levels.
+
+    Parameters:
+        start (float): Pressure of the lowest half-level (surface) [Pa].
+        stop (float): Pressure of the highest half-level (TOA) [Pa].
+        num (int): Number of **full** pressure levels.
+        squeeze (float): Factor with which the first step width is
+            squeezed in logspace. Has to be between ``(0, 2)``.
+            Values smaller than one compress the half-levels,
+            while values greater than 1 stretch the spacing.
+            The default is ``0.5`` (bottom heavy.)
+
+    Returns:
+        ndarray, ndarray: Full-level pressure, half-level pressure [Pa].
+    """
+    phlev = ty.math.squeezable_logspace(start, stop, num + 1, squeeze=squeeze)
+    plev = np.exp(0.5 * (np.log(phlev[1:]) + np.log(phlev[:-1])))
+
+    return plev, phlev
 
 
 def ozonesquash(o3, z, squash):
