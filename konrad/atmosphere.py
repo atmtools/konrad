@@ -21,19 +21,21 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-atmosphere_variables = [
-    'T',
-    'H2O',
-    'N2O',
-    'O3',
-    'CO2',
-    'CO',
-    'CH4',
-]
-
 
 class Atmosphere(Dataset):
     """Abstract base class to define requirements for atmosphere models."""
+    atmosphere_variables = [
+        'T',
+        'H2O',
+        'N2O',
+        'O3',
+        'CO2',
+        'CO',
+        'CH4',
+        'CFC11',
+        'CFC12',
+    ]
+
     def __init__(self, convection=None, lapse=None,
                  upwelling=None, **kwargs):
         """Create an atmosphere model.
@@ -110,7 +112,7 @@ class Atmosphere(Dataset):
                 **kwargs,
                 )
 
-        for var in atmosphere_variables:
+        for var in cls.atmosphere_variables:
             # Get ARTS variable name from variable description.
             arts_key = constants.variable_description[var].get('arts_name')
 
@@ -166,8 +168,11 @@ class Atmosphere(Dataset):
                 **kwargs,
                 )
 
-        for var in atmosphere_variables:
-            d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
+        for var in cls.atmosphere_variables:
+            try:
+                d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
+            except KeyError:
+                logger.warning(f"Did not set '{var}'.")
 
         # Calculate the geopotential height.
         d.calculate_height()
@@ -196,11 +201,14 @@ class Atmosphere(Dataset):
                     **kwargs,
                     )
 
-            for var in atmosphere_variables:
-                d[var] = DataArray(
-                    data=dataset.variables[var][[timestep], :],
-                    dims=('time', 'plev',)
-                )
+            for var in cls.atmosphere_variables:
+                try:
+                    d[var] = DataArray(
+                        data=dataset.variables[var][[timestep], :],
+                        dims=('time', 'plev',)
+                    )
+                except KeyError:
+                    logger.warning(f"Did not set '{var}'.")
 
         # Calculate the geopotential height.
         d.calculate_height()
@@ -213,7 +221,7 @@ class Atmosphere(Dataset):
     def to_atm_fields_compact(self):
         """Convert an atmosphere into an ARTS atm_fields_compact."""
         # Store all atmosphere variables including geopotential height.
-        variables = atmosphere_variables + ['z']
+        variables = self.atmosphere_variables + ['z']
 
         # Get ARTS variable name from variable description.
         species = [constants.variable_description[var].get('arts_name')
@@ -292,7 +300,7 @@ class Atmosphere(Dataset):
         datadict['plev'] = pgrid  # Store new pressure grid.
 
         # Loop over all atmospheric variables...
-        for variable in atmosphere_variables:
+        for variable in self.atmosphere_variables:
             # and create an interpolation function using the original data.
             f = interp1d(self['plev'].values, self[variable],
                          axis=axis, fill_value='extrapolate', **kwargs)
@@ -333,7 +341,7 @@ class Atmosphere(Dataset):
         else:
             self[variable].values.fill(value)
 
-    def get_values(self, variable, keepdims=True):
+    def get_values(self, variable, default=None, keepdims=True):
         """Get values of a given variable.
 
         Parameters:
@@ -344,10 +352,15 @@ class Atmosphere(Dataset):
         Returns:
             ndarray: Array containing the values assigned to the variable.
         """
-        if keepdims:
-            return self[variable].values
-        else:
-            return self[variable].values.ravel()
+        try:
+            values = self[variable].values
+        except KeyError:
+            if default is not None:
+                values = np.zeros(self['plev'].size)
+            else:
+                raise KeyError(f"'{variable}' and no default given.")
+
+        return values if keepdims else values.ravel()
 
     def calculate_height(self):
         """Calculate the geopotential height."""
