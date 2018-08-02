@@ -5,7 +5,7 @@ from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
 
 from .radiation import Radiation
-
+from konrad.cloud import ClearSky
 
 __all__ = [
     'RRTMG',
@@ -22,48 +22,112 @@ class RRTMG(Radiation):
 
         self.solar_constant = solar_constant
 
-    def update_radiative_state(self, atmosphere, surface, cloud, state0,
-                               sw=True):
+    def init_radiative_state(self, atmosphere):
+
+        import climt
+        climt.set_constant('stellar_irradiance',
+                           value=self.solar_constant,
+                           units='W m^-2')
+        self.rad_lw = climt.RRTMGLongwave()
+        self.rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
+        state_lw = climt.get_default_state([self.rad_lw])
+        state_sw = climt.get_default_state([self.rad_sw])
+
+        plev = atmosphere['plev'].values
+        phlev = atmosphere['phlev'].values
+        numlevels = len(plev)
+        o2fraction = 0.21
+
+        for state0 in state_lw, state_sw:
+            state0['mid_levels'] = DataArray(
+                    np.arange(0, numlevels),
+                    dims=('mid_levels',),
+                    attrs={'label': 'mid_levels'})
+
+            state0['interface_levels'] = DataArray(
+                    np.arange(0, numlevels+1),
+                    dims=('interface_levels',),
+                    attrs={'label': 'interface_levels'})
+
+            state0['air_pressure'] = DataArray(
+                    plev,
+                    dims=('mid_levels',),
+                    attrs={'units': 'Pa'})
+
+            state0['air_pressure_on_interface_levels'] = DataArray(
+                    phlev,
+                    dims=('interface_levels',),
+                    attrs={'units': 'Pa'})
+
+            state0['mole_fraction_of_oxygen_in_air'] = DataArray(
+                    o2fraction * np.ones(numlevels,),
+                    dims=('mid_levels',),
+                    attrs={'units': 'mole/mole'})
+
+        ### Aerosols ###
+        # TODO: Should all the aerosol values be zero?!
+        # Longwave specific
+        num_lw_bands = len(state_lw['num_longwave_bands'])
+
+        state_lw['longwave_optical_thickness_due_to_aerosol'] = DataArray(
+                np.zeros((1, 1, numlevels, num_lw_bands)),
+                dims=('longitude', 'latitude',
+                      'mid_levels', 'num_longwave_bands'),
+                attrs={'units': 'dimensionless'})
+
+        # Shortwave specific changes
+        num_sw_bands = len(state_sw['num_shortwave_bands'])
+
+        num_aerosols = len(state_sw['num_ecmwf_aerosols'])
+        state_sw['aerosol_optical_depth_at_55_micron'] = DataArray(
+                np.zeros((1, 1, numlevels, num_aerosols)),
+                dims=('longitude', 'latitude',
+                      'mid_levels', 'num_ecmwf_aerosols'),
+                attrs={'units': 'dimensionless'})
+
+        for quant in ['shortwave_optical_thickness_due_to_aerosol',
+                      'single_scattering_albedo_due_to_aerosol',
+                      'aerosol_asymmetry_parameter']:
+            state_sw[quant] = DataArray(
+                np.zeros((1, 1, numlevels, num_sw_bands)),
+                dims=('longitude', 'latitude',
+                      'mid_levels', 'num_shortwave_bands'),
+                attrs={'units': 'dimensionless'})
+
+        return state_lw, state_sw
+
+    def update_cloudy_radiative_state(self, cloud, state0, sw=True):
+
+        # Take cloud quantities from cloud class.
+        state0['cloud_ice_particle_size'] = cloud.cloud_ice_particle_size
+        state0['mass_content_of_cloud_liquid_water_in_atmosphere_layer'] = cloud.mass_content_of_cloud_liquid_water_in_atmosphere_layer
+        state0['mass_content_of_cloud_ice_in_atmosphere_layer'] = cloud.mass_content_of_cloud_ice_in_atmosphere_layer
+        state0['cloud_water_droplet_radius'] = cloud.cloud_water_droplet_radius
+        state0['cloud_area_fraction_in_atmosphere_layer'] = cloud.cloud_area_fraction_in_atmosphere_layer
+
+        if not sw:
+            state0['longwave_optical_thickness_due_to_cloud'] = cloud.longwave_optical_thickness_due_to_cloud
+        else:
+            state0['cloud_forward_scattering_fraction'] = cloud.cloud_forward_scattering_fraction
+            state0['cloud_asymmetry_parameter'] = cloud.cloud_asymmetry_parameter
+            state0['shortwave_optical_thickness_due_to_cloud'] = cloud.shortwave_optical_thickness_due_to_cloud
+            state0['single_scattering_albedo_due_to_cloud'] = cloud.single_scattering_albedo_due_to_cloud
+
+        return
+
+    def update_radiative_state(self, atmosphere, surface, state0, sw=True):
         """ Update CliMT formatted atmospheric state using parameters from our
         model.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             surface (konrad.surface): Surface model.
-            cloud (konrad.cloud): Cloud model.
             state0 (dictionary): atmospheric state in the format for climt
             sw (bool): Toggle between shortwave and longwave calculations.
 
         Returns:
             dictionary: updated state
         """
-        plev = atmosphere['plev'].values
-        phlev = atmosphere['phlev'].values
-        numlevels = len(plev)
-        temperature = surface.temperature.data[0]
-        albedo = float(surface.albedo.data)
-        o2fraction = 0.21
-        zenith = np.deg2rad(self.current_solar_angle)
-
-        state0['mid_levels'] = DataArray(
-            np.arange(0, numlevels),
-            dims=('mid_levels',),
-            attrs={'label': 'mid_levels'})
-
-        state0['interface_levels'] = DataArray(
-            np.arange(0, numlevels+1),
-            dims=('interface_levels',),
-            attrs={'label': 'interface_levels'})
-
-        state0['air_pressure'] = DataArray(
-            plev,
-            dims=('mid_levels',),
-            attrs={'units': 'Pa'})
-
-        state0['air_pressure_on_interface_levels'] = DataArray(
-            phlev,
-            dims=('interface_levels',),
-            attrs={'units': 'Pa'})
 
         state0['air_temperature'] = DataArray(
             atmosphere['T'][0, :].data,
@@ -76,11 +140,6 @@ class RRTMG(Radiation):
             specific_humidity,
             dims=('mid_levels',),
             attrs={'units': 'g/g'})
-
-        state0['mole_fraction_of_oxygen_in_air'] = DataArray(
-            o2fraction * np.ones(numlevels,),
-            dims=('mid_levels',),
-            attrs={'units': 'mole/mole'})
 
         # Set trace gas concentrations
         trace_gas_mapping = [
@@ -100,53 +159,9 @@ class RRTMG(Radiation):
                 dims=('mid_levels',),
                 attrs={'units': 'mole/mole'})
 
-        # Take cloud quantities to from cloud class.
-        state0['cloud_ice_particle_size'] = cloud.cloud_ice_particle_size
-        state0['mass_content_of_cloud_liquid_water_in_atmosphere_layer'] = cloud.mass_content_of_cloud_liquid_water_in_atmosphere_layer
-        state0['mass_content_of_cloud_ice_in_atmosphere_layer'] = cloud.mass_content_of_cloud_ice_in_atmosphere_layer
-        state0['cloud_water_droplet_radius'] = cloud.cloud_water_droplet_radius
-        state0['cloud_area_fraction_in_atmosphere_layer'] = cloud.cloud_area_fraction_in_atmosphere_layer
-
-        if not sw:  # Longwave specific changes
-            num_lw_bands = len(state0['num_longwave_bands'])
-
-            state0['longwave_optical_thickness_due_to_cloud'] = cloud.longwave_optical_thickness_due_to_cloud
-
-            state0['longwave_optical_thickness_due_to_aerosol'] = DataArray(
-                np.zeros((1, 1, numlevels, num_lw_bands)),
-                dims=('longitude', 'latitude',
-                      'mid_levels', 'num_longwave_bands'),
-                attrs={'units': 'dimensionless'})
-
-        if sw:  # Shortwave specific changes
-            num_sw_bands = len(state0['num_shortwave_bands'])
-
-            state0['cloud_forward_scattering_fraction'] = cloud.cloud_forward_scattering_fraction
-            state0['cloud_asymmetry_parameter'] = cloud.cloud_asymmetry_parameter
-            state0['shortwave_optical_thickness_due_to_cloud'] = cloud.shortwave_optical_thickness_due_to_cloud
-            state0['single_scattering_albedo_due_to_cloud'] = cloud.single_scattering_albedo_due_to_cloud
-
-            num_aerosols = len(state0['num_ecmwf_aerosols'])
-            state0['aerosol_optical_depth_at_55_micron'] = DataArray(
-                np.zeros((1, 1, numlevels, num_aerosols)),
-                dims=('longitude', 'latitude',
-                      'mid_levels', 'num_ecmwf_aerosols'),
-                attrs={'units': 'dimensionless'})
-
-            for quant in ['shortwave_optical_thickness_due_to_aerosol',
-                          'single_scattering_albedo_due_to_aerosol',
-                          'aerosol_asymmetry_parameter']:
-                state0[quant] = DataArray(
-                    np.zeros((1, 1, numlevels, num_sw_bands)),
-                    dims=('longitude', 'latitude',
-                          'mid_levels', 'num_shortwave_bands'),
-                    attrs={'units': 'dimensionless'})
-
-        # TODO: Should all the aerosol values be zero?!
-
         # Surface quantities
         state0['surface_temperature'] = DataArray(
-            np.array([[temperature]]),
+            np.array([[surface.temperature.data[0]]]),
             dims={'longitude', 'latitude'},
             attrs={'units': 'degK'})
 
@@ -156,13 +171,13 @@ class RRTMG(Radiation):
                                    'surface_albedo_for_diffuse_shortwave',
                                    'surface_albedo_for_direct_shortwave']:
                 state0[surface_albedo] = DataArray(
-                    np.array([[albedo]]),
+                    np.array([[float(surface.albedo.data)]]),
                     dims={'longitude', 'latitude'},
                     attrs={'units': 'dimensionless'})
 
             # Sun
             state0['zenith_angle'] = DataArray(
-                np.array([[zenith]]),
+                np.array([[np.deg2rad(self.current_solar_angle)]]),
                 dims={'longitude', 'latitude'},
                 attrs={'units': 'radians'})
 
@@ -180,19 +195,19 @@ class RRTMG(Radiation):
             tuple: containing two dictionaries, one of air temperature
             values and the other of fluxes and heating rates
         """
-        if self.state_lw is None or self.state_sw is None:
-            import climt
-            climt.set_constant('stellar_irradiance',
-                               value=self.solar_constant,
-                               units='W m^-2')
-            self.rad_lw = climt.RRTMGLongwave()
-            self.rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
-            self.state_lw = climt.get_default_state([self.rad_lw])
-            self.state_sw = climt.get_default_state([self.rad_sw])
+        if self.state_lw is None or self.state_sw is None: # first time only
+            self.state_lw, self.state_sw = self.init_radiative_state(atmosphere)
+            self.update_cloudy_radiative_state(cloud, self.state_lw, sw=False)
+            self.update_cloudy_radiative_state(cloud, self.state_sw, sw=True)
 
-        self.update_radiative_state(atmosphere, surface, cloud, self.state_lw,
+        # if there are clouds update the cloud properties for the radiation
+        if not isinstance(cloud, ClearSky):
+            self.update_cloudy_radiative_state(cloud, self.state_lw, sw=False)
+            self.update_cloudy_radiative_state(cloud, self.state_sw, sw=True)
+
+        self.update_radiative_state(atmosphere, surface, self.state_lw,
                                     sw=False)
-        self.update_radiative_state(atmosphere, surface, cloud, self.state_sw,
+        self.update_radiative_state(atmosphere, surface, self.state_sw,
                                     sw=True)
 
         lw_fluxes = self.rad_lw(self.state_lw)
