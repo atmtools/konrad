@@ -116,10 +116,13 @@ def phlev_from_plev(fulllevels):
         ndarray: Coordinates at halflevel.
 
     """
-    inter = (fulllevels[1:] + fulllevels[:-1]) / 2
-    bottom = fulllevels[0] - 0.5 * (fulllevels[1] - fulllevels[0])
-    top = 0
-    return np.hstack((bottom, inter, top))
+    plev_log = np.log(fulllevels)  # Perform inter-/extrapolation in log-space
+
+    inter = 0.5 * (plev_log[1:] + plev_log[:-1])
+    bottom = plev_log[0] + 0.5 * (plev_log[0] - plev_log[1])
+    top = plev_log[-1] - 0.5 * (plev_log[-2] - plev_log[-1])
+
+    return np.exp(np.hstack((bottom, inter, top)))
 
 
 def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
