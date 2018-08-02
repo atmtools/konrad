@@ -348,6 +348,8 @@ class Atmosphere(Dataset):
             variable (str): Variable key.
             keepdims (bool): If this is set to False, single-dimensions are
                 removed. Otherwise dimensions are kept (default).
+            default (float): Default value assigned to all pressure levels,
+                if the variable is not found.
 
         Returns:
             ndarray: Array containing the values assigned to the variable.
@@ -358,7 +360,7 @@ class Atmosphere(Dataset):
             if default is not None:
                 values = default * np.ones(self['plev'].size)
             else:
-                raise KeyError(f"'{variable}' and no default given.")
+                raise KeyError(f"'{variable}' not found and no default given.")
 
         return values if keepdims else values.ravel()
 
