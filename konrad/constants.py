@@ -87,6 +87,16 @@ variable_description = {
         'standard_name': 'cfc12_mixing_ratio',
         'arts_name': 'abs_species-CFC12',
     },
+    'CFC22': {
+        'units': '1',
+        'standard_name': 'cfc22_mixing_ratio',
+        'arts_name': 'abs_species-CFC22',
+    },
+    'CCl4': {
+        'units': '1',
+        'standard_name': 'carbon_tetrachloride_mixing_ratio',
+        'arts_name': 'abs_species-CCl4',
+    },
     'diabatic_convergence_max_plev': {
         'units': 'Pa',
         'standard_name': 'diabatic_convergence_max_plev',
