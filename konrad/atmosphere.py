@@ -347,7 +347,7 @@ class Atmosphere(Dataset):
         Parameters:
             variable (str): Variable key.
             keepdims (bool): If this is set to False, single-dimensions are
-                removed. Otherwise dimensions are keppt (default).
+                removed. Otherwise dimensions are kept (default).
 
         Returns:
             ndarray: Array containing the values assigned to the variable.
@@ -356,7 +356,7 @@ class Atmosphere(Dataset):
             values = self[variable].values
         except KeyError:
             if default is not None:
-                values = np.zeros(self['plev'].size)
+                values = default * np.ones(self['plev'].size)
             else:
                 raise KeyError(f"'{variable}' and no default given.")
 
