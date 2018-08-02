@@ -77,6 +77,16 @@ variable_description = {
         'standard_name': 'methane_mixing_ratio',
         'arts_name': 'abs_species-CH4',
         },
+    'CFC11': {
+        'units': '1',
+        'standard_name': 'cfc11_mixing_ratio',
+        'arts_name': 'abs_species-CFC11',
+    },
+    'CFC12': {
+        'units': '1',
+        'standard_name': 'cfc12_mixing_ratio',
+        'arts_name': 'abs_species-CFC12',
+    },
     'diabatic_convergence_max_plev': {
         'units': 'Pa',
         'standard_name': 'diabatic_convergence_max_plev',
