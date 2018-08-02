@@ -81,21 +81,20 @@ class RRTMG(Radiation):
             attrs={'units': 'mole/mole'})
 
         # Set trace gas concentrations
-        for gasname, gas in [('mole_fraction_of_methane_in_air', 'CH4'),
-                             ('mole_fraction_of_carbon_dioxide_in_air', 'CO2'),
-                             ('mole_fraction_of_nitrous_oxide_in_air', 'N2O'),
-                             ('mole_fraction_of_ozone_in_air', 'O3'),
-                             ('mole_fraction_of_cfc11_in_air', 'CFC11'),
-                             ('mole_fraction_of_cfc12_in_air', 'CFC12')]:
-            state0[gasname] = DataArray(
-                atmosphere.get_values(gas, default=0, keepdims=False),
-                dims=('mid_levels',),
-                attrs={'units': 'mole/mole'})
+        trace_gas_mapping = [
+            ('mole_fraction_of_methane_in_air', 'CH4'),
+            ('mole_fraction_of_carbon_dioxide_in_air', 'CO2'),
+            ('mole_fraction_of_nitrous_oxide_in_air', 'N2O'),
+            ('mole_fraction_of_ozone_in_air', 'O3'),
+            ('mole_fraction_of_cfc11_in_air', 'CFC11'),
+            ('mole_fraction_of_cfc12_in_air', 'CFC12'),
+            ('mole_fraction_of_cfc22_in_air', 'CFC22'),
+            ('mole_fraction_of_carbon_tetrachloride_in_air', 'CCl4'),
+        ]
 
-        for gasname in ['mole_fraction_of_carbon_tetrachloride_in_air',
-                        'mole_fraction_of_cfc22_in_air']:
-            state0[gasname] = DataArray(
-                np.zeros(numlevels,),
+        for climt_key, konrad_key in trace_gas_mapping:
+            state0[climt_key] = DataArray(
+                atmosphere.get_values(konrad_key, default=0, keepdims=False),
                 dims=('mid_levels',),
                 attrs={'units': 'mole/mole'})
 
