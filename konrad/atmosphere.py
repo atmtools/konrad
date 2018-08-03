@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import collections
 import logging
 
 import typhon
@@ -23,17 +22,20 @@ logger = logging.getLogger(__name__)
 
 
 class Atmosphere(Dataset):
-    """Abstract base class to define requirements for atmosphere models."""
+    """Implementation of the atmosphere component."""
     atmosphere_variables = [
         'T',
         'H2O',
         'N2O',
         'O3',
+        'O2',
         'CO2',
         'CO',
         'CH4',
         'CFC11',
         'CFC12',
+        'CFC22',
+        'CCl4',
     ]
 
     def __init__(self, convection=None, lapse=None,
@@ -92,41 +94,56 @@ class Atmosphere(Dataset):
         # Calculate the geopotential height field.
         self.calculate_height()
 
+    def create_variable(self, name, data=None, dims=None):
+        """Createa a variable entry in the dataframe."""
+        if dims is None:
+            dims = constants.variable_description[name].get('dims')
+
+        if data is None:
+            data = self.get_default_profile(name)
+
+        ndim = len(dims)
+        if ndim == 2:
+            self[name] = DataArray(data[np.newaxis, :], dims=dims)
+        elif ndim == 1:
+            self[name] = DataArray(data, dims=dims)
+        else:
+            raise Exception(f'Variables with ndim = {ndim} are not supported.')
+
+        self[name].attrs = constants.variable_description.get(name, {})
+
+    def get_default_profile(self, name):
+        """Return a profile with default values."""
+        try:
+            vmr = constants.variable_description[name]['default_vmr']
+        except KeyError:
+            raise Exception(f'No default specified for "{name}".')
+        else:
+            return vmr * np.ones(self.plev.size)
+
     @classmethod
-    def from_atm_fields_compact(cls, atmfield, **kwargs):
+    def from_atm_fields_compact(cls, atm_fields_compact, **kwargs):
         """Convert an ARTS atm_fields_compact [0] into an atmosphere.
 
         [0] http://arts.mi.uni-hamburg.de/docserver-trunk/variables/atm_fields_compact
 
         Parameters:
-            atmfield (typhon.arts.types.GriddedField4): A compact set of
-                atmospheric fields.
+            atm_fields_compact (typhon.arts.types.GriddedField4):
+                Compact set of atmospheric fields.
         """
-        # Create a Dataset with time and pressure dimension.
-        plev = atmfield.grids[1]
-        phlev = utils.phlev_from_plev(plev)
-        d = cls(coords={'plev': plev,  # pressure level
-                        'time': [0],  # time dimension
-                        'phlev': phlev,  # pressure at halflevels
-                        },
-                **kwargs,
-                )
+        def _extract_profile(atmfield, species):
+            try:
+                arts_key = constants.variable_description[species]['arts_name']
+            except KeyError:
+                logger.warning(f'No variabel description for "{species}".')
+            else:
+                return atmfield.get(arts_key, keep_dims=False)
 
-        for var in cls.atmosphere_variables:
-            # Get ARTS variable name from variable description.
-            arts_key = constants.variable_description[var].get('arts_name')
+        datadict = {var: _extract_profile(atm_fields_compact, var)
+                    for var in cls.atmosphere_variables}
+        datadict['plev'] = atm_fields_compact.grids[1]
 
-            # Extract profile from atm_fields_compact
-            profile = atmfield.get(arts_key, keep_dims=False)
-            d[var] = DataArray(profile[np.newaxis, :], dims=('time', 'plev',))
-
-        # Calculate the geopotential height.
-        d.calculate_height()
-
-        # Append variable descriptions to the Dataset.
-        utils.append_description(d)
-
-        return d
+        return cls.from_dict(datadict, **kwargs)
 
     @classmethod
     def from_xml(cls, xmlfile, **kwargs):
@@ -160,6 +177,7 @@ class Atmosphere(Dataset):
 
         # Create a Dataset with time and pressure dimension.
         plev = dictionary['plev']
+        #TODO: [Discussion] Do we want to read the actual half-level pressure?
         phlev = utils.phlev_from_plev(plev)
         d = cls(coords={'plev': plev,  # pressure level
                         'time': [0],  # time dimension
@@ -169,10 +187,7 @@ class Atmosphere(Dataset):
                 )
 
         for var in cls.atmosphere_variables:
-            try:
-                d[var] = DataArray(dictionary[var], dims=('time', 'plev',))
-            except KeyError:
-                logger.warning(f"Did not set '{var}'.")
+            d.create_variable(var, dictionary.get(var))
 
         # Calculate the geopotential height.
         d.calculate_height()
@@ -191,32 +206,13 @@ class Atmosphere(Dataset):
             timestep (int): Timestep to read (default is last timestep).
         """
         with netCDF4.Dataset(ncfile) as dataset:
-            # Create a Dataset with time and pressure dimension.
-            plev = dataset.variables['plev'][:]
-            phlev = utils.phlev_from_plev(plev)
-            d = cls(coords={'plev': plev,  # pressure level
-                            'time': [0],  # time dimension
-                            'phlev': phlev,  # pressure at halflevels
-                            },
-                    **kwargs,
-                    )
+            datadict = {var: dataset[var][:].ravel()
+                        for var in cls.atmosphere_variables
+                        if var in dataset.variables
+                        }
+            datadict['plev'] = dataset['plev'][:]
 
-            for var in cls.atmosphere_variables:
-                try:
-                    d[var] = DataArray(
-                        data=dataset.variables[var][[timestep], :],
-                        dims=('time', 'plev',)
-                    )
-                except KeyError:
-                    logger.warning(f"Did not set '{var}'.")
-
-        # Calculate the geopotential height.
-        d.calculate_height()
-
-        # Append variable descriptions to the Dataset.
-        utils.append_description(d)
-
-        return d
+        return cls.from_dict(datadict)
 
     def to_atm_fields_compact(self):
         """Convert an atmosphere into an ARTS atm_fields_compact."""
@@ -274,7 +270,7 @@ class Atmosphere(Dataset):
 
         self.attrs = attributes
 
-    def refine_plev(self, pgrid, axis=1, **kwargs):
+    def refine_plev(self, pgrid, **kwargs):
         """Refine the pressure grid of an atmosphere object.
 
         Note:
@@ -283,8 +279,6 @@ class Atmosphere(Dataset):
 
         Parameters:
               pgrid (ndarray): New pressure grid [Pa].
-              axis (int): Index of pressure axis (should be 1).
-                This keyword is only there for possible changes in future.
             **kwargs: Additional keyword arguments are collected
                 and passed to :func:`scipy.interpolate.interp1d`
 
@@ -303,10 +297,12 @@ class Atmosphere(Dataset):
         for variable in self.atmosphere_variables:
             # and create an interpolation function using the original data.
             f = interp1d(self['plev'].values, self[variable],
-                         axis=axis, fill_value='extrapolate', **kwargs)
+                         axis=-1, fill_value='extrapolate', **kwargs)
 
             # Store the interpolated new data in the data directory.
-            datadict[variable] = DataArray(f(pgrid), dims=('time', 'plev'))
+            # dims = self.default_dimensions[variable]
+            # datadict[variable] = DataArray(f(pgrid), dims=dims)
+            datadict[variable] = f(pgrid).ravel()
 
         # Create a new atmosphere object from the filled data directory.
         # This method also calculates the new phlev coordinates.
@@ -325,9 +321,6 @@ class Atmosphere(Dataset):
 
         return new_atmosphere
 
-    # TODO: This function could handle the nasty time dimension in the future.
-    # Allowing to set two-dimensional variables using a 1d-array, if one
-    # coordinate has the dimension one.
     def set(self, variable, value):
         """Set the values of a variable.
 
@@ -336,10 +329,7 @@ class Atmosphere(Dataset):
             value (float or ndarray): Value to assign to the variable.
                 If a float is given, all values are filled with it.
         """
-        if isinstance(value, collections.Container):
-            self[variable].values[0, :] = value
-        else:
-            self[variable].values.fill(value)
+        self[variable][:] = value
 
     def get_values(self, variable, default=None, keepdims=True):
         """Get values of a given variable.
@@ -382,12 +372,10 @@ class Atmosphere(Dataset):
         # given pressure, density and gravity.
         z = np.cumsum(-dp / (rho_phlev * g))
 
-        # If height is already in Dataset, update its values.
-        if 'z' in self:
-            self['z'].values[0, :] = z
-        # Otherwise create the DataArray.
+        if 'z' in self.data_vars:
+            self.set('z', z)
         else:
-            self['z'] = DataArray(z[np.newaxis, :], dims=('time', 'plev'))
+            self.create_variable('z', z)
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
@@ -469,11 +457,8 @@ class Atmosphere(Dataset):
         max_index = np.argmax(domega[plev[:-2] > pmin]) + 1
         max_plev = plev[max_index]
 
-        # Store found index and pressure level to atmosphere.
-        self['diabatic_convergence_max_index'] = DataArray([max_index],
-                                                           dims=('time',))
-        self['diabatic_convergence_max_plev'] = DataArray([max_plev],
-                                                          dims=('time',))
+        self.create_variable('diabatic_convergence_max_index',[max_index])
+        self.create_variable('diabatic_convergence_max_plev', [max_plev])
 
         return max_plev
 
@@ -511,11 +496,8 @@ class Atmosphere(Dataset):
         contop_plev = interp1d(heat_array, p_array)(lim)
         contop_T = interp1d(heat_array, T_array)(lim)
 
-        # Store interpolated pressure level and temperature values.
-        self['convective_top_plev'] = DataArray(
-            [contop_plev], dims=('time',))
-        self['convective_top_temperature'] = DataArray(
-            [contop_T], dims=('time',))
+        self.create_variable('convective_top_plev', [contop_plev])
+        self.create_variable('convective_top_temperature', [contop_T])
 
         return contop_plev
 
@@ -544,12 +526,12 @@ class Atmosphere(Dataset):
             'CH4': 1650e-9,
             'N2O': 306e-9,
             'CO': 0,
+            'O3': utils.ozone_profile_rcemip(self.get_values('plev')),
+            'CFC11': 0,
+            'CFC12': 0,
+            'CFC22': 0,
+            'CCl4': 0,
         }
-        plev = self['plev'].values
 
-        # Assign constant VMR values to all atmosphere levels.
         for gas, vmr in concentrations.items():
-            self[gas][0, :] = vmr * np.ones(plev.shape)
-
-        # Determine the ozone profile according to RCEMIP.
-        self['O3'][0, :] = utils.ozone_profile_rcemip(plev)
+            self.set(gas, vmr)

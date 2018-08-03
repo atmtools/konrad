@@ -118,6 +118,7 @@ class RCE:
         Returns:
             bool: ``True`` if converged, else ``False``.
         """
+        #TODO: Implement proper convergence criterion (e.g. include TOA).
         return np.all(np.abs(self.atmosphere['deltaT']) < self.delta)
 
     def check_if_write(self):
