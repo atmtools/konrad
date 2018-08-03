@@ -125,15 +125,24 @@ class ClearSky(Cloud):
 
 
 class HighCloud(Cloud):
-    def __init__(self, z):
+    def __init__(self, z, cloud_top=12000, depth=500, area_fraction=1,
+                 ice_density=0.5):
+        """
+        Parameters:
+            z (ndarray): altitude values [m]
+            cloud_top (int): Cloud top height [m]
+            depth (int): Cloud depth / thickness of cloud [m]
+            area_fraction (int/float): Area fraction covered by cloud
+            ice_density (float): density of ice in the cloud [g m^-3]
+        """
         cloud_fraction_array = np.zeros(z.shape)
-        cloud_fraction_array[(z < 12000) & (z > 11500)] = 1
+        cloud_fraction_array[(z < cloud_top) & (z > cloud_top-depth)] = area_fraction
         cloud_fraction = DataArray(
                 cloud_fraction_array,
                 dims=('mid_levels',),
                 attrs={'units': 'dimensionless'})
         dz = np.hstack((np.diff(z)[0], np.diff(z)))
-        mass_ice_array = cloud_fraction_array * 0.5 * 10**-3 * dz
+        mass_ice_array = cloud_fraction_array * ice_density * 10**-3 * dz
         mass_ice = DataArray(
                 mass_ice_array, dims=('mid_levels',),
                 attrs={'units': 'kg m^-2'})
