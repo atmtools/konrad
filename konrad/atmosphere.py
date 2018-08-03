@@ -103,12 +103,10 @@ class Atmosphere(Dataset):
             data = self.get_default_profile(name)
 
         ndim = len(dims)
-        if ndim == 2:
-            self[name] = DataArray(data[np.newaxis, :], dims=dims)
-        elif ndim == 1:
-            self[name] = DataArray(data, dims=dims)
-        else:
-            raise Exception(f'Variables with ndim = {ndim} are not supported.')
+        if ndim == 2 and data.ndim == 1:
+                data = data[np.newaxis, :]
+
+        self[name] = DataArray(data, dims=dims)
 
         self[name].attrs = constants.variable_description.get(name, {})
 
@@ -205,8 +203,12 @@ class Atmosphere(Dataset):
             ncfile (str): Path to netCDF file.
             timestep (int): Timestep to read (default is last timestep).
         """
+        def _return_profile(ds, var, ts):
+            return (ds[var][ts, :] if 'time' in ds[var].dimensions
+                    else ds[var][:])
+
         with netCDF4.Dataset(ncfile) as dataset:
-            datadict = {var: dataset[var][:].ravel()
+            datadict = {var: _return_profile(dataset, var, timestep)
                         for var in cls.atmosphere_variables
                         if var in dataset.variables
                         }
