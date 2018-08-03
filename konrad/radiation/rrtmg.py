@@ -40,7 +40,6 @@ class RRTMG(Radiation):
         numlevels = len(plev)
         temperature = surface.temperature.data[0]
         albedo = float(surface.albedo.data)
-        o2fraction = 0.21
         zenith = np.deg2rad(self.current_solar_angle)
 
         state0['mid_levels'] = DataArray(
@@ -75,13 +74,8 @@ class RRTMG(Radiation):
             dims=('mid_levels',),
             attrs={'units': 'g/g'})
 
-        state0['mole_fraction_of_oxygen_in_air'] = DataArray(
-            o2fraction * np.ones(numlevels,),
-            dims=('mid_levels',),
-            attrs={'units': 'mole/mole'})
-
-        # Set trace gas concentrations
-        trace_gas_mapping = [
+        # CliMT/konrad name mapping
+        gas_name_mapping = [
             ('mole_fraction_of_methane_in_air', 'CH4'),
             ('mole_fraction_of_carbon_dioxide_in_air', 'CO2'),
             ('mole_fraction_of_nitrous_oxide_in_air', 'N2O'),
@@ -90,9 +84,10 @@ class RRTMG(Radiation):
             ('mole_fraction_of_cfc12_in_air', 'CFC12'),
             ('mole_fraction_of_cfc22_in_air', 'CFC22'),
             ('mole_fraction_of_carbon_tetrachloride_in_air', 'CCl4'),
+            ('mole_fraction_of_oxygen_in_air', 'O2'),
         ]
 
-        for climt_key, konrad_key in trace_gas_mapping:
+        for climt_key, konrad_key in gas_name_mapping:
             state0[climt_key] = DataArray(
                 atmosphere.get_values(konrad_key, default=0, keepdims=False),
                 dims=('mid_levels',),
