@@ -3,14 +3,8 @@
 
 import abc
 import logging
-import numpy as np
-import pandas as pd
 from scipy.interpolate import interp1d
-from netCDF4 import Dataset
-from xarray import DataArray
 from konrad.utils import ozone_profile_rcemip, refined_pgrid
-from konrad import constants
-from konrad.upwelling import contop_index
 
 __all__ = [
     'Ozone',
