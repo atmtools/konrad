@@ -13,6 +13,7 @@ from konrad.humidity import (Humidity, FixedRH)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.cloud import (Cloud, ClearSky)
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
