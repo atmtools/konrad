@@ -3,13 +3,20 @@
 
 import abc
 import logging
+import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
+from netCDF4 import Dataset
+from xarray import DataArray
+from konrad.utils import ozone_profile_rcemip, refined_pgrid
+from konrad import constants
+from konrad.upwelling import contop_index
 
 __all__ = [
     'Ozone',
-    'Ozone_pressure',
-    'Ozone_height',
-    'Ozone_normed_pressure',
+    'OzonePressure',
+    'OzoneHeight',
+    'OzoneNormedPressure',
 ]
 
 logger = logging.getLogger(__name__)
@@ -17,49 +24,78 @@ logger = logging.getLogger(__name__)
 class Ozone(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for ozone treatments."""
 
-    def __init__(self, initial_ozone=None, initial_height=None,
-                 norm_level=None):
-
-        #TO DO: include a default initial ozone profile
+    def __init__(self, initial_ozone=None):
+        """
+        Parameters:
+            initial_ozone (ndarray): initial ozone vmr profile
+        """
+        if initial_ozone is None:
+            initial_ozone = ozone_profile_rcemip(
+                    refined_pgrid(1013e2, 0.01e2, 200))
         self.initial_ozone = initial_ozone
 
-        self.initial_height = initial_height
-        self.norm_level = norm_level
-
     @abc.abstractmethod
-    def get(self, height_new, p, norm_new, **kwargs):
-        """Return the new ozone profile.
-        Parameters:
-            height_new (ndarray): height array of the current atmosphere
-                (for Ozone_height)
-            p (ndarray): pressure array (for Ozone_normed_pressure)
-            norm_new (float): normalisation pressure value
-                (for Ozone_normed_pressure)
+    def get(self, atmos, timestep, zenith, radheat):
+        """Updates the ozone profile within the atmosphere class.
 
-        Returns:
-            ndarray: new ozone profile
+        Parameters:
+            atmos (konrad.atmosphere): atmosphere model containing ozone
+                concentration profile, height, temperature, pressure and half
+                pressure levels at the current timestep
+            timestep (float): timestep of run [days]
+            zenith (float): solar zenith angle,
+                angle of the Sun to the vertical [degrees]
+            radheat (ndarray): array of net radiative heating rates
         """
 
-
-class Ozone_pressure(Ozone):
+class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
-    def get(self, *args, **kwargs):
-        return self.initial_ozone
+    def get(self, atmos, **kwargs):
+        atmos['O3'].values[0, :] = self.initial_ozone
+        return
 
 
-class Ozone_height(Ozone):
+class OzoneHeight(Ozone):
     """Ozone fixed with height."""
-    def get(self, height_new, *args, **kwargs):
-        f = interp1d(self.initial_height, self.initial_ozone,
+    def __init__(self, initial_height=None, initial_ozone=None, **kwargs):
+        """
+        Parameters:
+            initial_height (ndarray): altitude profile [m]
+        """
+        super().__init__(initial_ozone=initial_ozone)
+        self.initial_height = initial_height
+
+        self.f = interp1d(self.initial_height, self.initial_ozone,
                      fill_value='extrapolate')
-        return f(height_new)
+
+    def get(self, atmos, **kwargs):
+        z = atmos.get_values('z', keepdims=False)
+        atmos['O3'].values[0, :] = self.f(z)
+        return
 
 
-class Ozone_normed_pressure(Ozone):
+class OzoneNormedPressure(Ozone):
     """Ozone shifts with the normalisation level (chosen to be the convective
     top)."""
-    def get(self, height_new, p, norm_new):
-        f = interp1d(p/self.norm_level, self.initial_ozone,
-                     fill_value='extrapolate')
-        return f(p/norm_new)
+    def __init__(self, norm_level=None, initial_ozone=None, **kwargs):
+        """
+        Parameters:
+            norm_level (float): pressure for the normalisation
+                normally chosen as the convective top pressure at the start of
+                the simulation [Pa]
+        """
+        super().__init__(initial_ozone=initial_ozone)
+        self.norm_level = norm_level
+        self.f = None
+
+    def get(self, atmos, radheat, **kwargs):
+        p = atmos.get_values('plev')
+        norm_new = float(atmos.get_convective_top(radheat))
+
+        if self.f is None:
+            self.f = interp1d(p/self.norm_level, self.initial_ozone,
+                              fill_value='extrapolate')
+
+        atmos['O3'].values[0, :] = self.f(p/norm_new)
+        return
 

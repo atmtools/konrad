@@ -5,7 +5,7 @@ import copy
 import logging
 
 import numpy as np
-import typhon
+import typhon as ty
 from netCDF4 import Dataset
 
 from konrad import constants
@@ -17,6 +17,7 @@ __all__ = [
     'return_if_type',
     'phlev_from_plev',
     'refined_pgrid',
+    'get_pressure_grids',
     'ozonesquash',
     'ozone_profile_rcemip',
 ]
@@ -115,10 +116,13 @@ def phlev_from_plev(fulllevels):
         ndarray: Coordinates at halflevel.
 
     """
-    inter = (fulllevels[1:] + fulllevels[:-1]) / 2
-    bottom = fulllevels[0] - 0.5 * (fulllevels[1] - fulllevels[0])
-    top = 0
-    return np.hstack((bottom, inter, top))
+    plev_log = np.log(fulllevels)  # Perform inter-/extrapolation in log-space
+
+    inter = 0.5 * (plev_log[1:] + plev_log[:-1])
+    bottom = plev_log[0] + 0.5 * (plev_log[0] - plev_log[1])
+    top = plev_log[-1] - 0.5 * (plev_log[-2] - plev_log[-1])
+
+    return np.exp(np.hstack((bottom, inter, top)))
 
 
 def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
@@ -142,11 +146,33 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
     Returns:
         ndarray: Pressure grid.
     """
-    grid = typhon.math.squeezable_logspace(
+    grid = ty.math.squeezable_logspace(
         start=start, stop=stop, num=num, squeeze=shift, fixpoint=fixpoint
     )
 
     return grid
+
+
+def get_pressure_grids(start=1000e2, stop=1, num=200, squeeze=0.5):
+    """Create matching pressure levels and half-levels.
+
+    Parameters:
+        start (float): Pressure of the lowest half-level (surface) [Pa].
+        stop (float): Pressure of the highest half-level (TOA) [Pa].
+        num (int): Number of **full** pressure levels.
+        squeeze (float): Factor with which the first step width is
+            squeezed in logspace. Has to be between ``(0, 2)``.
+            Values smaller than one compress the half-levels,
+            while values greater than 1 stretch the spacing.
+            The default is ``0.5`` (bottom heavy.)
+
+    Returns:
+        ndarray, ndarray: Full-level pressure, half-level pressure [Pa].
+    """
+    phlev = ty.math.squeezable_logspace(start, stop, num + 1, squeeze=squeeze)
+    plev = np.exp(0.5 * (np.log(phlev[1:]) + np.log(phlev[:-1])))
+
+    return plev, phlev
 
 
 def ozonesquash(o3, z, squash):
@@ -164,9 +190,9 @@ def ozonesquash(o3, z, squash):
     """
     i_max_o3 = np.argmax(o3)
 
-    sqz = (z - z[i_max_o3])*squash + z[i_max_o3]
+    sqz = (z[:i_max_o3] - z[i_max_o3])*squash + z[i_max_o3]
     new_o3 = copy.copy(o3)
-    new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3)
+    new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3[:i_max_o3])
     return new_o3
 
 

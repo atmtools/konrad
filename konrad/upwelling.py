@@ -23,6 +23,15 @@ class NoUpwelling(Upwelling):
     def cool(self, *args, **kwargs):
         pass
 
+def contop_index(radheat, radheatmin=0.0001):
+    try:
+        contopi = np.min(np.where(radheat > -radheatmin))
+    except ValueError:
+        # If a ValueError is thrown, no minimum in radiative heating has
+        # been found. Return the function without applying any upwelling.
+        return
+    return int(contopi)
+
 class StratosphericUpwelling(Upwelling):
 
     def __init__(self, w=0.2, lowest_level=None):
@@ -46,14 +55,8 @@ class StratosphericUpwelling(Upwelling):
         if self.lowest_level is not None:
             contopi = self.lowest_level
         else:
-            # arbitrary value close to 0, not too close to allow the upwelling to
-            # occur when the upper atmosphere is not yet in radiative equilibrium.
-            radheatmin = 0.0001
-            try:
-                contopi = np.min(np.where(radheat[0, :] > -radheatmin))
-            except ValueError:
-                # If a ValueError is thrown, no minimum in radiative heating has
-                # been found. Return the function without applying any upwelling.
+            contopi = contop_index(radheat)
+            if type(contopi) is not int:
                 return
         T_new = T[contopi:] + Q[contopi:] * timestep
         atmosphere['T'][0, contopi:] = T_new

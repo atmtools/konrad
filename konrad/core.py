@@ -8,7 +8,10 @@ import numpy as np
 
 from konrad import utils
 from konrad.radiation import RRTMG
-
+from konrad.ozone import (Ozone, OzonePressure)
+from konrad.humidity import (Humidity, FixedRH)
+from konrad.surface import (Surface, SurfaceHeatCapacity)
+from konrad.cloud import (Cloud, ClearSky)
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +29,21 @@ class RCE:
         >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
-    def __init__(self, atmosphere, radiation=None, outfile=None, experiment='',
+    def __init__(self, atmosphere, radiation=None, ozone=None, humidity=None,
+                 surface=None, cloud=None, outfile=None, experiment='',
                  timestep=1, delta=0.01, writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
             atmosphere (Atmosphere): `konrad.atmosphere.Atmosphere`.
+            radiation (konrad.radiation): Radiation model.
+                Defaults to RRTMG
+            humidity (konrad.humidity): Humidity model.
+                Defaults to ``konrad.humidity.FixedRH``.
+            surface (konrad.surface): Surface model.
+                Defaults to ``konrad.surface.SurfaceHeatCapacity``.
+            cloud (konrad.cloud): Cloud model.
+                Defaults to ``konrad.cloud.ClearSky``.
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF).
             timestep (float): Iteration time step in days.
@@ -48,6 +60,17 @@ class RCE:
             self.radiation = RRTMG()
         else:
             self.radiation = radiation
+
+        ozone = utils.return_if_type(ozone, 'ozone',
+                                     Ozone, OzonePressure())
+        self.ozone = ozone
+
+        self.humidity = utils.return_if_type(humidity, 'humidity',
+                                             Humidity, FixedRH())
+        self.surface = utils.return_if_type(surface, 'surface',
+                                            Surface, SurfaceHeatCapacity())
+        self.cloud = utils.return_if_type(cloud, 'cloud',
+                                          Cloud, ClearSky())
 
         # Control parameters.
         self.delta = delta
@@ -78,7 +101,7 @@ class RCE:
         return retstr
 
     def get_hours_passed(self):
-        """Return the number of house passed since model start.
+        """Return the number of hours passed since model start.
 
         Returns:
             float: Hours passed since model start.
@@ -89,6 +112,8 @@ class RCE:
         """Use the radiation sub-model to calculate heatingrates."""
         self.heatingrates = self.radiation.get_heatingrates(
             atmosphere=self.atmosphere,
+            surface=self.surface,
+            cloud=self.cloud,
             )
 
     def is_converged(self):
@@ -97,6 +122,7 @@ class RCE:
         Returns:
             bool: ``True`` if converged, else ``False``.
         """
+        #TODO: Implement proper convergence criterion (e.g. include TOA).
         return np.all(np.abs(self.atmosphere['deltaT']) < self.delta)
 
     def check_if_write(self):
@@ -126,7 +152,7 @@ class RCE:
     def create_outfile(self):
         """Create netCDF4 file to store simulation results."""
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.atmosphere.surface, inplace=True)
+        data.merge(self.surface, inplace=True)
 
         # Add experiment and date information to newly created netCDF file.
         data.attrs.update(experiment=self.experiment)
@@ -148,7 +174,7 @@ class RCE:
         in ``self.outfile``.
         """
         data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.atmosphere.surface, inplace=True)
+        data.merge(self.surface, inplace=True)
 
         utils.append_timestep_netcdf(
             filename=self.outfile,
@@ -162,7 +188,7 @@ class RCE:
 
         # Initialize surface pressure to be equal to lowest half-level
         # pressure. This is consistent with handling in PSrad.
-        self.atmosphere.surface['pressure'] = self.atmosphere['phlev'][0]
+        self.surface['pressure'] = self.atmosphere['phlev'][0]
 
         # Main loop to control all model iterations until maximum number is
         # reached or a given stop criterion is fulfilled.
@@ -182,7 +208,7 @@ class RCE:
             self.calculate_heatingrates()
 
             # Apply heatingrates/fluxes to the the surface.
-            self.atmosphere.surface.adjust(
+            self.surface.adjust(
                 sw_down=self.heatingrates['sw_flxd'].values[0, 0],
                 sw_up=self.heatingrates['sw_flxu'].values[0, 0],
                 lw_down=self.heatingrates['lw_flxd'].values[0, 0],
@@ -198,8 +224,23 @@ class RCE:
             self.atmosphere.adjust(
                 self.heatingrates['net_htngrt'],
                 self.timestep,
-                surface=self.atmosphere.surface,
+                self.surface,
                 )
+
+            # Update the ozone profile.
+            self.ozone.get(
+                atmos=self.atmosphere,
+                timestep=self.timestep,
+                zenith=self.radiation.current_solar_angle,
+                radheat=self.heatingrates['net_htngrt'][0, :]
+                )
+
+            # Update the humidity profile.
+            self.atmosphere['H2O'][0, :] = self.humidity.get(
+                    self.atmosphere,
+                    surface=self.surface,
+                    net_heatingrate=self.heatingrates['net_htngrt'][0, :],
+                    )
 
             # Calculate temperature change for convergence check.
             self.atmosphere['deltaT'] = self.atmosphere['T'] - T

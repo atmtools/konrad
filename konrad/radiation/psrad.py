@@ -56,11 +56,12 @@ class PSRAD(Radiation):
 
         return tuple(ret)
 
-    def calc_radiation(self, atmosphere):
+    def calc_radiation(self, atmosphere, surface):
         """Returns the shortwave, longwave and net heatingrates.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            surface (konrad.surface): Surface model.
 
         Returns:
             xarray.Dataset: Dataset containing for the simulated heating rates.
@@ -78,9 +79,9 @@ class PSRAD(Radiation):
         nlev = atmosphere['plev'].size
 
         # Extract surface properties.
-        P_sfc = atmosphere.surface.pressure.values / 100
-        T_sfc = atmosphere.surface.temperature.values[0]
-        albedo = atmosphere.surface.albedo.values
+        P_sfc = surface.pressure.values / 100
+        T_sfc = surface.temperature.values[0]
+        albedo = surface.albedo.values
 
         # Use the **current** solar angle as zenith angle for the simulation.
         zenith = self.current_solar_angle

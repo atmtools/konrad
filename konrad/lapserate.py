@@ -4,7 +4,7 @@ import abc
 import numbers
 
 import numpy as np
-from typhon.physics import (e_eq_water_mk, vmr2specific_humidity)
+from typhon.physics import (e_eq_water_mk, vmr2mixing_ratio)
 from scipy.interpolate import interp1d
 
 from konrad import constants
@@ -41,11 +41,10 @@ class MoistLapseRate(LapseRate):
 
         gamma_d = g / Cp  # dry lapse rate
 
-        #TODO: Use proper conversion `vmr2mixing_ratio()`.
-        q_saturated = vmr2specific_humidity(e_eq_water_mk(T) / p)
+        w_saturated = vmr2mixing_ratio(e_eq_water_mk(T) / p)
 
-        gamma_m = (gamma_d * ((1 + (L * q_saturated) / (Rd * T)) /
-                              (1 + (L**2 * q_saturated) / (Cp * Rv * T**2))
+        gamma_m = (gamma_d * ((1 + (L * w_saturated) / (Rd * T)) /
+                              (1 + (L**2 * w_saturated) / (Cp * Rv * T**2))
                               )
         )
         lapse = interp1d(p, gamma_m, fill_value='extrapolate')(phlev[:-1])
