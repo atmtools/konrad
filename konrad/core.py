@@ -11,6 +11,9 @@ from konrad.radiation import RRTMG
 from konrad.humidity import (Humidity, FixedRH)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.cloud import (Cloud, ClearSky)
+from konrad.convection import (Convection, HardAdjustment)
+from konrad.lapserate import (LapseRate, MoistLapseRate)
+from konrad.upwelling import (Upwelling, NoUpwelling)
 
 
 logger = logging.getLogger(__name__)
@@ -30,8 +33,9 @@ class RCE:
         >>> rce.run()
     """
     def __init__(self, atmosphere, radiation=None, humidity=None, surface=None,
-                 cloud=None, outfile=None, experiment='', timestep=1,
-                 delta=0.01, writeevery=1, max_iterations=5000):
+                 cloud=None, convection=None, lapse=None, upwelling=None,
+                 outfile=None, experiment='', timestep=1, delta=0.01,
+                 writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -44,6 +48,12 @@ class RCE:
                 Defaults to ``konrad.surface.SurfaceHeatCapacity``.
             cloud (konrad.cloud): Cloud model.
                 Defaults to ``konrad.cloud.ClearSky``.
+            convection (konrad.humidity.Convection): Convection scheme.
+                Defaults to ``konrad.convection.HardAdjustment``.
+            lapse (konrad.lapse.LapseRate): Lapse rate handler.
+                Defaults to ``konrad.lapserate.MoistLapseRate``.
+            upwelling (konrad.upwelling.Upwelling):
+                TODO(sally): Please fill in doc.
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF).
             timestep (float): Iteration time step in days.
@@ -67,6 +77,14 @@ class RCE:
                                             Surface, SurfaceHeatCapacity())
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud, ClearSky())
+        self.convection = utils.return_if_type(convection, 'convection',
+                                          Convection, HardAdjustment())
+
+        self.lapse = utils.return_if_type(lapse, 'lapse',
+                                     LapseRate, MoistLapseRate())
+
+        self.upwelling = utils.return_if_type(upwelling, 'upwelling',
+                                         Upwelling, NoUpwelling())
 
         # Control parameters.
         self.delta = delta
@@ -208,12 +226,30 @@ class RCE:
             # adjusted values to check if the model has converged.
             T = self.atmosphere['T'].values.copy()
 
-            # Apply heatingrates to the temperature profile.
-            self.atmosphere.adjust(
-                self.heatingrates['net_htngrt'],
-                self.timestep,
-                self.surface,
-                )
+            # Caculate critical lapse rate.
+            lapse = self.lapse.get(self.atmosphere)
+
+            # Apply heatingrates to temperature profile.
+            self.atmosphere['T'] += (self.heatingrates['net_htngrt'] *
+                                     self.timestep)
+
+            # Convective adjustment
+            self.convection.stabilize(
+                atmosphere=self.atmosphere,
+                lapse=lapse,
+                timestep=self.timestep,
+                surface=self.surface,
+            )
+
+            # Upwelling induced cooling
+            self.upwelling.cool(
+                atmosphere=self.atmosphere,
+                radheat=self.heatingrates['net_htngrt'][0, :],
+                timestep=self.timestep,
+            )
+
+            # Calculate the geopotential height field.
+            self.atmosphere.calculate_height()
 
             # Update the humidity profile.
             self.atmosphere['H2O'][0, :] = self.humidity.get(
