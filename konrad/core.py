@@ -104,14 +104,6 @@ class RCE:
         """
         return self.niter * 24 * self.timestep
 
-    def calculate_heatingrates(self):
-        """Use the radiation sub-model to calculate heatingrates."""
-        self.heatingrates = self.radiation.get_heatingrates(
-            atmosphere=self.atmosphere,
-            surface=self.surface,
-            cloud=self.cloud,
-            )
-
     def is_converged(self):
         """Check if the atmosphere is in radiative-convective equilibrium.
 
@@ -196,12 +188,12 @@ class RCE:
                 # All other iterations are only logged in DEBUG level.
                 logger.debug(f'Enter iteration {self.niter}.')
 
-            # Adjust the solar angle according to current time.
             self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
-
-            # Caculate shortwave, longwave and net heatingrates.
-            # Afterwards, they are accesible throug ``self.heatingrates``.
-            self.calculate_heatingrates()
+            self.heatingrates = self.radiation.get_heatingrates(
+                atmosphere=self.atmosphere,
+                surface=self.surface,
+                cloud=self.cloud,
+            )
 
             # Apply heatingrates/fluxes to the the surface.
             self.surface.adjust(
