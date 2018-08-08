@@ -3,6 +3,7 @@
 """
 import logging
 from datetime import datetime
+from numbers import Number
 
 import numpy as np
 
@@ -56,7 +57,10 @@ class RCE:
                 TODO(sally): Please fill in doc.
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF).
-            timestep (float): Iteration time step in days.
+            timestep (float or str): Iteration time step.
+                If float, time step shall be given in days.
+                If str, a timedelta string may be given
+                (see `konrad.utils.get_fraction_of_day`).
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
             writeevery(int or float): Set frequency in which to write output.
@@ -88,9 +92,12 @@ class RCE:
 
         # Control parameters.
         self.delta = delta
-        self.timestep = timestep
         self.writeevery = writeevery
         self.max_iterations = max_iterations
+        if isinstance(timestep, Number):
+            self.timestep = timestep
+        elif isinstance(timestep, str):
+            self.timestep = utils.get_fraction_of_day(timestep)
 
         # TODO: Maybe delete? One could use the return value of the radiation
         # model directly.

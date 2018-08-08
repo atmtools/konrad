@@ -3,6 +3,7 @@
 """
 import copy
 import logging
+from datetime import timedelta
 
 import numpy as np
 import typhon as ty
@@ -20,6 +21,7 @@ __all__ = [
     'get_pressure_grids',
     'ozonesquash',
     'ozone_profile_rcemip',
+    'get_fraction_of_day',
 ]
 
 logger = logging.getLogger(__name__)
@@ -217,3 +219,34 @@ def ozone_profile_rcemip(plev, g1=3.6478, g2=0.83209, g3=11.3515):
     """
     p = plev / 100
     return g1 * p**g2 * np.exp(-p / g3) * 1e-6
+
+
+def get_fraction_of_day(timestr):
+    """Calculate the fraction of a day from a time string.
+
+    Parameters:
+        timestr (str): Specified time delta (e.g. '6h').
+            Valid units:
+                's' for seconds
+                'm' for minutes
+                'h' for hours
+                'd' for days
+                'w' for weeks
+
+    Returns:
+        float: Fraction of a day.
+
+    Example:
+        >>> get_fraction_of_day('12h')
+        0.5
+    """
+    mapping = {
+        's': 'seconds',
+        'm': 'minutes',
+        'h': 'hours',
+        'd': 'days',
+        'w': 'weeks',
+    }
+    value, period = float(timestr[:-1]), mapping[timestr[-1]]
+
+    return timedelta(**{period: value}).total_seconds() / 3600 / 24
