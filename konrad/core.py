@@ -34,7 +34,7 @@ class RCE:
         >>> rce.run()
     """
     def __init__(self, atmosphere, radiation=None, humidity=None, surface=None,
-                 cloud=None, convection=None, lapse=None, upwelling=None,
+                 cloud=None, convection=None, lapserate=None, upwelling=None,
                  outfile=None, experiment='', timestep=1, delta=0.01,
                  writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
@@ -51,7 +51,7 @@ class RCE:
                 Defaults to ``konrad.cloud.ClearSky``.
             convection (konrad.humidity.Convection): Convection scheme.
                 Defaults to ``konrad.convection.HardAdjustment``.
-            lapse (konrad.lapse.LapseRate): Lapse rate handler.
+            lapserate (konrad.lapse.LapseRate): Lapse rate handler.
                 Defaults to ``konrad.lapserate.MoistLapseRate``.
             upwelling (konrad.upwelling.Upwelling):
                 TODO(sally): Please fill in doc.
@@ -84,8 +84,8 @@ class RCE:
         self.convection = utils.return_if_type(convection, 'convection',
                                           Convection, HardAdjustment())
 
-        self.lapse = utils.return_if_type(lapse, 'lapse',
-                                     LapseRate, MoistLapseRate())
+        self.lapserate = utils.return_if_type(lapserate, 'lapserate',
+                                              LapseRate, MoistLapseRate())
 
         self.upwelling = utils.return_if_type(upwelling, 'upwelling',
                                          Upwelling, NoUpwelling())
@@ -234,7 +234,7 @@ class RCE:
             T = self.atmosphere['T'].values.copy()
 
             # Caculate critical lapse rate.
-            lapse = self.lapse.get(self.atmosphere)
+            critical_lapserate = self.lapserate.get(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
             self.atmosphere['T'] += (self.heatingrates['net_htngrt'] *
@@ -243,7 +243,7 @@ class RCE:
             # Convective adjustment
             self.convection.stabilize(
                 atmosphere=self.atmosphere,
-                lapse=lapse,
+                lapse=critical_lapserate,
                 timestep=self.timestep,
                 surface=self.surface,
             )
