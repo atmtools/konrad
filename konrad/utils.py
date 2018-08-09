@@ -192,9 +192,9 @@ def ozonesquash(o3, z, squash):
     """
     i_max_o3 = np.argmax(o3)
 
-    sqz = (z - z[i_max_o3])*squash + z[i_max_o3]
+    sqz = (z[:i_max_o3] - z[i_max_o3])*squash + z[i_max_o3]
     new_o3 = copy.copy(o3)
-    new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3)
+    new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3[:i_max_o3])
     return new_o3
 
 

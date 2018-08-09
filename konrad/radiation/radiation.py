@@ -150,8 +150,8 @@ class Radiation(metaclass=abc.ABCMeta):
 
         # The local zenith angle, calculated from the latitude and longitude.
         # Seasons are not considered.
-        solar_angle = 180/np.pi * np.arccos(
-            np.cos(np.deg2rad(self.zenith_angle)
-                   ) * np.cos(2 * np.pi * time))
+        solar_angle = np.rad2deg(np.arccos(
+            np.cos(np.deg2rad(self.zenith_angle)) * 
+            np.cos(2 * np.pi * time)))
 
         self.current_solar_angle = solar_angle

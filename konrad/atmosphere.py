@@ -10,7 +10,6 @@ from xarray import Dataset, DataArray
 from konrad import constants
 from konrad import utils
 
-
 __all__ = [
     'Atmosphere',
 ]
@@ -133,7 +132,7 @@ class Atmosphere(Dataset):
             d.create_variable(var, dictionary.get(var))
 
         # Calculate the geopotential height.
-        d.calculate_height()
+        d.update_height()
 
         # Append variable descriptions to the Dataset.
         utils.append_description(d)
@@ -261,7 +260,7 @@ class Atmosphere(Dataset):
         new_atmosphere.attrs = {**self.attrs}
 
         # Calculate the geopotential height.
-        new_atmosphere.calculate_height()
+        new_atmosphere.update_height()
 
         # Append variable descriptions to the Dataset.
         utils.append_description(new_atmosphere)
@@ -318,11 +317,26 @@ class Atmosphere(Dataset):
         # Use the hydrostatic equation to calculate geopotential height from
         # given pressure, density and gravity.
         z = np.cumsum(-dp / (rho_phlev * g))
+        return z
 
+    def update_height(self):
+        """Update the value for height."""
+        z = self.calculate_height()
+        # If height is already in Dataset, update its values.
         if 'z' in self.data_vars:
             self.set('z', z)
+        # Otherwise create the DataArray.
         else:
             self.create_variable('z', z)
+
+    def get_cold_point_pressure(self):
+        """Find the pressure at the cold point.
+        The cold point is taken at the coldest temperature below 100 Pa, to
+        avoid cold temperatures high in the atmosphere (below about 10 Pa)."""
+        p = self['plev'].values
+        T = self['T'].values[0, :]
+        cp = p[np.argmin(T[np.where(p > 100)])]
+        return cp
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
@@ -440,8 +454,8 @@ class Atmosphere(Dataset):
         T_array = np.array([T[contop_i-1], T[contop_i]])
 
         # Interpolate the pressure value where the heatingrate # equals `lim`.
-        contop_plev = interp1d(heat_array, p_array)(lim)
-        contop_T = interp1d(heat_array, T_array)(lim)
+        contop_plev = interp1d(heat_array, p_array, fill_value='extrapolate')(lim)
+        contop_T = interp1d(heat_array, T_array, fill_value='extrapolate')(lim)
 
         self.create_variable('convective_top_plev', [contop_plev])
         self.create_variable('convective_top_temperature', [contop_T])

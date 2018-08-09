@@ -15,6 +15,8 @@ specific_gas_constant_water_vapor = Rv = tyc.gas_constant_water_vapor  # J kg^-1
 gas_constant_ratio = epsilon = Rd / Rv  # 1
 density_sea_water = 1025  # kg m^-3
 specific_heat_capacity_sea_water = 4185.5  # J kg^-1 K^-1
+molar_gas_constant_dry_air = molar_Rd = spc.gas_constant # J mol^-1 K^-1
+avogadro = tyc.avogadro # molecules per mole
 
 # Variable descriptions
 variable_description = {

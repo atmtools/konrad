@@ -9,6 +9,7 @@ import numpy as np
 
 from konrad import utils
 from konrad.radiation import RRTMG
+from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import (Humidity, FixedRH)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.cloud import (Cloud, ClearSky)
@@ -33,10 +34,10 @@ class RCE:
         >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
-    def __init__(self, atmosphere, radiation=None, humidity=None, surface=None,
-                 cloud=None, convection=None, lapserate=None, upwelling=None,
-                 outfile=None, experiment='', timestep=1, delta=0.01,
-                 writeevery=1, max_iterations=5000):
+    def __init__(self, atmosphere, radiation=None, ozone=None, humidity=None,
+                 surface=None, cloud=None, convection=None, lapserate=None,
+                 upwelling=None, outfile=None, experiment='', timestep=1,
+                 delta=0.01, writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -74,6 +75,10 @@ class RCE:
             self.radiation = RRTMG()
         else:
             self.radiation = radiation
+
+        ozone = utils.return_if_type(ozone, 'ozone',
+                                     Ozone, OzonePressure())
+        self.ozone = ozone
 
         self.humidity = utils.return_if_type(humidity, 'humidity',
                                              Humidity, FixedRH())
@@ -122,7 +127,7 @@ class RCE:
         return retstr
 
     def get_hours_passed(self):
-        """Return the number of house passed since model start.
+        """Return the number of hours passed since model start.
 
         Returns:
             float: Hours passed since model start.
@@ -257,6 +262,14 @@ class RCE:
 
             # Calculate the geopotential height field.
             self.atmosphere.calculate_height()
+
+            # Update the ozone profile.
+            self.ozone.get(
+                atmos=self.atmosphere,
+                timestep=self.timestep,
+                zenith=self.radiation.current_solar_angle,
+                radheat=self.heatingrates['net_htngrt'][0, :]
+                )
 
             # Update the humidity profile.
             self.atmosphere['H2O'][0, :] = self.humidity.get(
