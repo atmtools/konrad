@@ -7,7 +7,7 @@ from konrad import constants
 
 
 class Upwelling(metaclass=abc.ABCMeta):
-    """Base class to define abstract methods for all humidity handlers."""
+    """Base class to define abstract methods for all upwelling handlers."""
 
     @abc.abstractmethod
     def cool(self, atmosphere, radheat, timestep):
@@ -19,12 +19,12 @@ class Upwelling(metaclass=abc.ABCMeta):
         """
 
 class NoUpwelling(Upwelling):
-    """Do not apply cooling."""
+    """Do not apply a dynamical cooling."""
     def cool(self, *args, **kwargs):
         pass
 
 class StratosphericUpwelling(Upwelling):
-
+    """Apply a dynamical cooling, based on a specified upwelling velocity."""
     def __init__(self, w=0.2, lowest_level=None):
         """Create a upwelling handler.
 
