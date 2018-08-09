@@ -3,6 +3,7 @@
 """
 import logging
 from datetime import datetime
+from numbers import Number
 
 import numpy as np
 
@@ -12,6 +13,9 @@ from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import (Humidity, FixedRH)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.cloud import (Cloud, ClearSky)
+from konrad.convection import (Convection, HardAdjustment)
+from konrad.lapserate import (LapseRate, MoistLapseRate)
+from konrad.upwelling import (Upwelling, NoUpwelling)
 
 
 logger = logging.getLogger(__name__)
@@ -31,8 +35,9 @@ class RCE:
         >>> rce.run()
     """
     def __init__(self, atmosphere, radiation=None, ozone=None, humidity=None,
-                 surface=None, cloud=None, outfile=None, experiment='',
-                 timestep=1, delta=0.01, writeevery=1, max_iterations=5000):
+                 surface=None, cloud=None, convection=None, lapserate=None,
+                 upwelling=None, outfile=None, experiment='', timestep=1,
+                 delta=0.01, writeevery=1, max_iterations=5000):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -45,9 +50,18 @@ class RCE:
                 Defaults to ``konrad.surface.SurfaceHeatCapacity``.
             cloud (konrad.cloud): Cloud model.
                 Defaults to ``konrad.cloud.ClearSky``.
+            convection (konrad.humidity.Convection): Convection scheme.
+                Defaults to ``konrad.convection.HardAdjustment``.
+            lapserate (konrad.lapse.LapseRate): Lapse rate handler.
+                Defaults to ``konrad.lapserate.MoistLapseRate``.
+            upwelling (konrad.upwelling.Upwelling):
+                TODO(sally): Please fill in doc.
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF).
-            timestep (float): Iteration time step in days.
+            timestep (float or str): Iteration time step.
+                If float, time step shall be given in days.
+                If str, a timedelta string may be given
+                (see `konrad.utils.get_fraction_of_day`).
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
             writeevery(int or float): Set frequency in which to write output.
@@ -72,12 +86,23 @@ class RCE:
                                             Surface, SurfaceHeatCapacity())
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud, ClearSky())
+        self.convection = utils.return_if_type(convection, 'convection',
+                                          Convection, HardAdjustment())
+
+        self.lapserate = utils.return_if_type(lapserate, 'lapserate',
+                                              LapseRate, MoistLapseRate())
+
+        self.upwelling = utils.return_if_type(upwelling, 'upwelling',
+                                         Upwelling, NoUpwelling())
 
         # Control parameters.
         self.delta = delta
-        self.timestep = timestep
         self.writeevery = writeevery
         self.max_iterations = max_iterations
+        if isinstance(timestep, Number):
+            self.timestep = timestep
+        elif isinstance(timestep, str):
+            self.timestep = utils.get_fraction_of_day(timestep)
 
         # TODO: Maybe delete? One could use the return value of the radiation
         # model directly.
@@ -108,14 +133,6 @@ class RCE:
             float: Hours passed since model start.
         """
         return self.niter * 24 * self.timestep
-
-    def calculate_heatingrates(self):
-        """Use the radiation sub-model to calculate heatingrates."""
-        self.heatingrates = self.radiation.get_heatingrates(
-            atmosphere=self.atmosphere,
-            surface=self.surface,
-            cloud=self.cloud,
-            )
 
     def is_converged(self):
         """Check if the atmosphere is in radiative-convective equilibrium.
@@ -201,12 +218,12 @@ class RCE:
                 # All other iterations are only logged in DEBUG level.
                 logger.debug(f'Enter iteration {self.niter}.')
 
-            # Adjust the solar angle according to current time.
             self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
-
-            # Caculate shortwave, longwave and net heatingrates.
-            # Afterwards, they are accesible throug ``self.heatingrates``.
-            self.calculate_heatingrates()
+            self.heatingrates = self.radiation.get_heatingrates(
+                atmosphere=self.atmosphere,
+                surface=self.surface,
+                cloud=self.cloud,
+            )
 
             # Apply heatingrates/fluxes to the the surface.
             self.surface.adjust(
@@ -221,12 +238,30 @@ class RCE:
             # adjusted values to check if the model has converged.
             T = self.atmosphere['T'].values.copy()
 
-            # Apply heatingrates to the temperature profile.
-            self.atmosphere.adjust(
-                self.heatingrates['net_htngrt'],
-                self.timestep,
-                self.surface,
-                )
+            # Caculate critical lapse rate.
+            critical_lapserate = self.lapserate.get(self.atmosphere)
+
+            # Apply heatingrates to temperature profile.
+            self.atmosphere['T'] += (self.heatingrates['net_htngrt'] *
+                                     self.timestep)
+
+            # Convective adjustment
+            self.convection.stabilize(
+                atmosphere=self.atmosphere,
+                lapse=critical_lapserate,
+                timestep=self.timestep,
+                surface=self.surface,
+            )
+
+            # Upwelling induced cooling
+            self.upwelling.cool(
+                atmosphere=self.atmosphere,
+                radheat=self.heatingrates['net_htngrt'][0, :],
+                timestep=self.timestep,
+            )
+
+            # Calculate the geopotential height field.
+            self.atmosphere.calculate_height()
 
             # Update the ozone profile.
             self.ozone.get(

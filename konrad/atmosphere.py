@@ -9,9 +9,6 @@ from xarray import Dataset, DataArray
 
 from konrad import constants
 from konrad import utils
-from konrad.convection import (Convection, HardAdjustment)
-from konrad.lapserate import (LapseRate, MoistLapseRate)
-from konrad.upwelling import (Upwelling, NoUpwelling)
 
 __all__ = [
     'Atmosphere',
@@ -37,63 +34,9 @@ class Atmosphere(Dataset):
         'CCl4',
     ]
 
-    def __init__(self, convection=None, lapse=None,
-                 upwelling=None, **kwargs):
-        """Create an atmosphere model.
-
-        Parameters:
-            convection (konrad.humidity.Convection): Convection scheme.
-                Defaults to ``konrad.convection.HardAdjustment``.
-             lapse (konrad.lapse.LapseRate): Lapse rate handler.
-                Defaults to ``konrad.lapserate.MoistLapseRate``.
-            upwelling (konrad.upwelling.Upwelling): Upwelling model.
-                Defaults to ``konrad.upwelling.NoUpwelling``.
-        """
-        # Initialize ``xarray.Dataset`` with given positional args and kwargs.
-        super().__init__(**kwargs)
-
-        # Check input types.
-        convection = utils.return_if_type(convection, 'convection',
-                                          Convection, HardAdjustment())
-
-        lapse = utils.return_if_type(lapse, 'lapse',
-                                     LapseRate, MoistLapseRate())
-
-        upwelling = utils.return_if_type(upwelling, 'upwelling',
-                                         Upwelling, NoUpwelling())
-
-        # Set additional attributes for the Atmosphere object. They can be
-        # accessed through point notation but do not need to be of type
-        # ``xarrayy.DataArray``.
-        self.attrs.update({
-            'convection': convection,
-            'lapse': lapse,
-            'upwelling': upwelling,
-        })
-
-    def adjust(self, heatingrate, timestep, surface, **kwargs):
-        """Adjust temperature according to given heating rates.
-
-        Parameters:
-            heatingrate (ndarray): Radiative heatingrate [K/day].
-            timestep (float): Timestep width [day].
-        """
-        # Caculate critical lapse rate.
-        lapse = self.lapse.get(self)
-
-        # Apply heatingrates to temperature profile.
-        self['T'] += heatingrate * timestep
-
-        # Convective adjustment
-        self.convection.stabilize(atmosphere=self, lapse=lapse,
-                                  timestep=timestep, surface=surface)
-
-        # Upwelling induced cooling
-        self.upwelling.cool(atmosphere=self, radheat=heatingrate[0, :],
-                            timestep=timestep)
-
-        # Calculate the geopotential height field.
-        self.update_height()
+    def __init__(self, *args, **kwargs):
+        """Atmosphere component. """
+        super().__init__(*args, **kwargs)
 
     def create_variable(self, name, data=None, dims=None):
         """Createa a variable entry in the dataframe."""
