@@ -54,7 +54,7 @@ class RCE:
             lapserate (konrad.lapse.LapseRate): Lapse rate handler.
                 Defaults to ``konrad.lapserate.MoistLapseRate``.
             upwelling (konrad.upwelling.Upwelling):
-                TODO(sally): Please fill in doc.
+                Defaults to ``konrad.upwelling.NoUpwelling``.
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF).
             timestep (float or str): Iteration time step.
