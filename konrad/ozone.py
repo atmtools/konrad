@@ -4,6 +4,8 @@
 import abc
 import logging
 from scipy.interpolate import interp1d
+
+from konrad.component import Component
 from konrad.utils import ozone_profile_rcemip, refined_pgrid
 
 __all__ = [
@@ -15,7 +17,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-class Ozone(metaclass=abc.ABCMeta):
+class Ozone(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for ozone treatments."""
 
     def __init__(self, initial_ozone=None):
@@ -24,9 +26,15 @@ class Ozone(metaclass=abc.ABCMeta):
             initial_ozone (ndarray): initial ozone vmr profile
         """
         if initial_ozone is None:
-            initial_ozone = ozone_profile_rcemip(
-                    refined_pgrid(1013e2, 0.01e2, 200))
-        self.initial_ozone = initial_ozone
+            plev = refined_pgrid(1013e2, 0.01e2, 200)
+            initial_ozone = ozone_profile_rcemip(plev)
+
+        self['initial_ozone'] = (('plev',), initial_ozone)
+
+        self.coords = {
+            'plev': plev,
+
+        }
 
     @abc.abstractmethod
     def get(self, atmos, timestep, zenith, radheat):
@@ -45,7 +53,7 @@ class Ozone(metaclass=abc.ABCMeta):
 class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
     def get(self, atmos, **kwargs):
-        atmos['O3'].values[0, :] = self.initial_ozone
+        atmos['O3'].values[0, :] = self['initial_ozone']
         return
 
 
@@ -59,7 +67,7 @@ class OzoneHeight(Ozone):
         super().__init__(initial_ozone=initial_ozone)
         self.initial_height = initial_height
 
-        self.f = interp1d(self.initial_height, self.initial_ozone,
+        self.f = interp1d(self.initial_height, self['initial_ozone'],
                      fill_value='extrapolate')
 
     def get(self, atmos, **kwargs):
@@ -87,7 +95,7 @@ class OzoneNormedPressure(Ozone):
         norm_new = float(atmos.get_convective_top(radheat))
 
         if self.f is None:
-            self.f = interp1d(p/self.norm_level, self.initial_ozone,
+            self.f = interp1d(p/self.norm_level, self['initial_ozone'],
                               fill_value='extrapolate')
 
         atmos['O3'].values[0, :] = self.f(p/norm_new)
