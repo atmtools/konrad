@@ -159,11 +159,7 @@ class RRTMG(Radiation):
 
         # Surface quantities
         state0['surface_temperature'] = DataArray(
-<<<<<<< HEAD
-            np.array([[surface.temperature.data[0]]]),
-=======
             np.array([[surface['temperature'][-1]]]),
->>>>>>> a8fd0b1... Fix radiation
             dims={'longitude', 'latitude'},
             attrs={'units': 'degK'})
 
@@ -173,7 +169,7 @@ class RRTMG(Radiation):
                                    'surface_albedo_for_diffuse_shortwave',
                                    'surface_albedo_for_direct_shortwave']:
                 state0[surface_albedo] = DataArray(
-                    np.array([[float(surface.albedo.data)]]),
+                    np.array([[float(surface.albedo)]]),
                     dims={'longitude', 'latitude'},
                     attrs={'units': 'dimensionless'})
 

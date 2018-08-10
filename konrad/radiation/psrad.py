@@ -79,9 +79,9 @@ class PSRAD(Radiation):
         nlev = atmosphere['plev'].size
 
         # Extract surface properties.
-        P_sfc = surface.pressure.values / 100
-        T_sfc = surface.temperature.values[0]
-        albedo = surface.albedo.values
+        P_sfc = surface.pressure / 100
+        T_sfc = surface['temperature'][-1]
+        albedo = surface.albedo
 
         # Use the **current** solar angle as zenith angle for the simulation.
         zenith = self.current_solar_angle

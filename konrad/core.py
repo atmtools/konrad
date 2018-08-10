@@ -207,7 +207,7 @@ class RCE:
 
         # Initialize surface pressure to be equal to lowest half-level
         # pressure. This is consistent with handling in PSrad.
-        self.surface['pressure'] = self.atmosphere['phlev'][0]
+        self.surface.pressure = self.atmosphere['phlev'][0]
 
         # Main loop to control all model iterations until maximum number is
         # reached or a given stop criterion is fulfilled.

@@ -221,7 +221,7 @@ class Cess76(FixedRH):
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        self.T_surface = surface['temperature'].values[-1]
+        self.T_surface = surface['temperature'][-1]
 
         return self.get_vmr_profile(atmosphere)
 
