@@ -7,6 +7,7 @@ import typhon
 from scipy.interpolate import interp1d
 
 from konrad import constants
+from konrad.component import Component
 from konrad.surface import SurfaceFixedTemperature
 
 
@@ -36,12 +37,13 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 
     dT = T_2 - T_1  # convective temperature change of atmosphere
     dT_s = sst_2 - sst_1  # of surface
+
     termdiff = - np.sum(Cp/g * dT * dp) + eff_Cp_s * dT_s
 
     return termdiff
 
 
-class Convection(metaclass=abc.ABCMeta):
+class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
     def stabilize(self, atmosphere, lapse, surface, timestep):
@@ -132,7 +134,7 @@ class HardAdjustment(Convection):
         # radiative profile gives us a lower bound.
         surfaceTneg = np.array([np.min(T_rad)])
         eff_Cp_s = surface.heat_capacity
-        diffneg = eff_Cp_s.data * (surfaceTneg - surface.temperature.data)
+        diffneg = eff_Cp_s * (surfaceTneg - surface['temperature'])
         # good guess for energy-conserving profile (unlikely!)
         if np.abs(diffneg) < near_zero:
             return T_con, surfaceTneg
@@ -209,8 +211,13 @@ class HardAdjustment(Convection):
 
         eff_Cp_s = surface.heat_capacity
 
+<<<<<<< HEAD
         diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
                                  dp, eff_Cp_s)
+=======
+        diff = energy_difference(T_con, T_rad, surfaceT,
+                                 surface['temperature'][-1], dp, eff_Cp_s)
+>>>>>>> 5344382... Fix convection
 
         return T_con, float(diff)
 
