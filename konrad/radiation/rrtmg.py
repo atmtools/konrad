@@ -232,52 +232,21 @@ class RRTMG(Radiation):
         lw_fluxes = lw_dT_fluxes[1]
         sw_fluxes = sw_dT_fluxes[1]
 
-        ret = xr.Dataset({
-            # Longwave fluxes and heatingrates.
-            'lw_htngrt': (
-                ['time', 'plev'],
-                lw_fluxes['longwave_heating_rate'][0].data),
-            'lw_htngrt_clr': (
-                ['time', 'plev'],
-                lw_fluxes['longwave_heating_rate_assuming_clear_sky'][0].data),
-            'lw_flxu': (
-                ['time', 'phlev'],
-                lw_fluxes['upwelling_longwave_flux_in_air'][0].data),
-            'lw_flxd': (
-                ['time', 'phlev'],
-                lw_fluxes['downwelling_longwave_flux_in_air'][0].data),
-            'lw_flxu_clr': (
-                ['time', 'phlev'],
-                lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'][0].data),
-            'lw_flxd_clr': (
-                ['time', 'phlev'],
-                lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'][0].data),
+        self['lw_htngrt'] = lw_fluxes['longwave_heating_rate'][0].data
+        self['lw_htngrt_clr'] = lw_fluxes['longwave_heating_rate_assuming_clear_sky'][0].data
+        self['lw_flxu'] = lw_fluxes['upwelling_longwave_flux_in_air'][0].data
+        self['lw_flxd'] = lw_fluxes['downwelling_longwave_flux_in_air'][0].data
+        self['lw_flxu_clr'] = lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'][0].data
+        self['lw_flxd_clr'] = lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'][0].data
+        self['sw_htngrt'] = sw_fluxes['shortwave_heating_rate'][0].data
+        self['sw_htngrt_clr'] = sw_fluxes['shortwave_heating_rate_assuming_clear_sky'][0].data
+        self['sw_flxu'] = sw_fluxes['upwelling_shortwave_flux_in_air'][0].data
+        self['sw_flxd'] = sw_fluxes['downwelling_shortwave_flux_in_air'][0].data
+        self['sw_flxu_clr'] = sw_fluxes['upwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data
+        self['sw_flxd_clr'] = sw_fluxes['downwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data
 
-            # Shortwave fluxes and heatingrates.
-            'sw_htngrt': (
-                ['time', 'plev'],
-                sw_fluxes['shortwave_heating_rate'][0].data),
-            'sw_htngrt_clr': (
-                ['time', 'plev'],
-                sw_fluxes['shortwave_heating_rate_assuming_clear_sky'][0].data),
-            'sw_flxu': (
-                ['time', 'phlev'],
-                sw_fluxes['upwelling_shortwave_flux_in_air'][0].data),
-            'sw_flxd': (
-                ['time', 'phlev'],
-                sw_fluxes['downwelling_shortwave_flux_in_air'][0].data),
-            'sw_flxu_clr': (
-                ['time', 'phlev'],
-                sw_fluxes['upwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data),
-            'sw_flxd_clr': (
-                ['time', 'phlev'],
-                sw_fluxes['downwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data),
-        },
-            coords={
-                'time': np.array([0]),
-                'phlev': atmosphere['phlev'],
-                'plev': atmosphere['plev'],
-            }
-        )
-
-        return ret
+        self.coords={
+            'time': np.array([0]),
+            'phlev': atmosphere['phlev'],
+            'plev': atmosphere['plev'],
+        }

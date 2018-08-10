@@ -108,10 +108,6 @@ class RCE:
         elif isinstance(timestep, str):
             self.timestep = utils.get_fraction_of_day(timestep)
 
-        # TODO: Maybe delete? One could use the return value of the radiation
-        # model directly.
-        self.heatingrates = None
-
         # Internal variables.
         self.converged = False
         self.niter = 0
@@ -191,7 +187,7 @@ class RCE:
                 logger.debug(f'Enter iteration {self.niter}.')
 
             self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
-            self.heatingrates = self.radiation.get_heatingrates(
+            self.radiation.update_heatingrates(
                 atmosphere=self.atmosphere,
                 surface=self.surface,
                 cloud=self.cloud,
@@ -199,10 +195,10 @@ class RCE:
 
             # Apply heatingrates/fluxes to the the surface.
             self.surface.adjust(
-                sw_down=self.heatingrates['sw_flxd'].values[0, 0],
-                sw_up=self.heatingrates['sw_flxu'].values[0, 0],
-                lw_down=self.heatingrates['lw_flxd'].values[0, 0],
-                lw_up=self.heatingrates['lw_flxu'].values[0, 0],
+                sw_down=self.radiation['sw_flxd'][0, 0],
+                sw_up=self.radiation['sw_flxu'][0, 0],
+                lw_down=self.radiation['lw_flxd'][0, 0],
+                lw_up=self.radiation['lw_flxu'][0, 0],
                 timestep=self.timestep,
             )
 
@@ -214,7 +210,7 @@ class RCE:
             critical_lapserate = self.lapserate.get(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
-            self.atmosphere['T'] += (self.heatingrates['net_htngrt'].values *
+            self.atmosphere['T'] += (self.radiation['net_htngrt'] *
                                      self.timestep)
 
             # Convective adjustment
@@ -228,26 +224,27 @@ class RCE:
             # Upwelling induced cooling
             self.upwelling.cool(
                 atmosphere=self.atmosphere,
-                radheat=self.heatingrates['net_htngrt'][0, :],
+                radheat=self.radiation['net_htngrt'][0, :],
                 timestep=self.timestep,
             )
 
-            # Calculate the geopotential height field.
-            self.atmosphere.calculate_height()
+            # TODO: Consider implementing an Atmosphere.update_diagnostics()
+            #  method to include e.g. convective top in the output.
+            self.atmosphere.update_height()
 
             # Update the ozone profile.
             self.ozone.get(
                 atmos=self.atmosphere,
                 timestep=self.timestep,
                 zenith=self.radiation.current_solar_angle,
-                radheat=self.heatingrates['net_htngrt'][0, :]
+                radheat=self.radiation['net_htngrt'][0, :]
                 )
 
             # Update the humidity profile.
             self.atmosphere['H2O'][0, :] = self.humidity.get(
                     self.atmosphere,
                     surface=self.surface,
-                    net_heatingrate=self.heatingrates['net_htngrt'][0, :],
+                    net_heatingrate=self.radiation['net_htngrt'][0, :],
                     )
 
             # Calculate temperature change for convergence check.

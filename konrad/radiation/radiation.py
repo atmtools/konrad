@@ -52,23 +52,33 @@ class Radiation(Component, metaclass=abc.ABCMeta):
 
         self._bias = bias
 
+        self['lw_htngrt'] = (('time', 'plev'), None)
+        self['lw_htngrt_clr'] = (('time', 'plev'), None)
+        self['lw_flxu'] = (('time', 'phlev'), None)
+        self['lw_flxd'] = (('time', 'phlev'), None)
+        self['lw_flxu_clr'] = (('time', 'phlev'), None)
+        self['lw_flxd_clr'] = (('time', 'phlev'), None)
+        self['sw_htngrt'] = (('time', 'plev'), None)
+        self['sw_htngrt_clr'] = (('time', 'plev'), None)
+        self['sw_flxu'] = (('time', 'phlev'), None)
+        self['sw_flxd'] = (('time', 'phlev'), None)
+        self['sw_flxu_clr'] = (('time', 'phlev'), None)
+        self['sw_flxd_clr'] = (('time', 'phlev'), None)
+
+        self['net_htngrt'] = (('time', 'plev'), None)
+        self['toa'] = (('time',), None)
+
     @abc.abstractmethod
     def calc_radiation(self, atmosphere, surface, cloud):
-        return xr.Dataset()
+        pass
 
-    def get_heatingrates(self, atmosphere, surface, cloud):
+    def update_heatingrates(self, atmosphere, surface, cloud):
         """Returns `xr.Dataset` containing radiative transfer results."""
-        rad_dataset = self.calc_radiation(atmosphere, surface, cloud)
+        self.calc_radiation(atmosphere, surface, cloud)
 
-        self.correct_bias(rad_dataset)
+        # self.correct_bias(rad_dataset)
 
-        self.derive_diagnostics(rad_dataset)
-
-        append_description(rad_dataset)
-
-        self.check_dataset(rad_dataset)
-
-        return rad_dataset
+        self.derive_diagnostics()
 
     @staticmethod
     def check_dataset(dataset):
@@ -100,22 +110,15 @@ class Radiation(Component, metaclass=abc.ABCMeta):
                     dataset[key] -= value
 
 
-    def derive_diagnostics(self, dataset):
+    def derive_diagnostics(self):
         """Derive diagnostic variables from radiative transfer results."""
         # Net heating rate.
-        dataset['net_htngrt'] = xr.DataArray(
-            data=dataset.lw_htngrt + dataset.sw_htngrt,
-            dims=['time', 'plev'],
-        )
+        self['net_htngrt'] = self['lw_htngrt'] + self['sw_htngrt']
 
         # Radiation budget at top of the atmosphere (TOA).
-        dataset['toa'] = xr.DataArray(
-            data=((dataset.sw_flxd.values[:, -1] +
-                   dataset.lw_flxd.values[:, -1]) -
-                  (dataset.sw_flxu.values[:, -1] +
-                   dataset.lw_flxu.values[:, -1])
-                  ),
-            dims=['time'],
+        self['toa'] = (
+            (self['sw_flxd'][:, -1] + self['lw_flxd'][:, -1]) -
+            (self['sw_flxu'][:, -1] + self['lw_flxu'][:, -1])
         )
 
     @staticmethod
