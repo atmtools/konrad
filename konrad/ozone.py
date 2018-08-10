@@ -25,6 +25,8 @@ class Ozone(Component, metaclass=abc.ABCMeta):
         Parameters:
             initial_ozone (ndarray): initial ozone vmr profile
         """
+        #TODO: This is dangerous as it can lead to inconsistencies with the
+        # actual pressure grid in the atmosphere component.
         if initial_ozone is None:
             plev = refined_pgrid(1013e2, 0.01e2, 200)
             initial_ozone = ozone_profile_rcemip(plev)
@@ -35,6 +37,19 @@ class Ozone(Component, metaclass=abc.ABCMeta):
             'plev': plev,
 
         }
+
+    @classmethod
+    def from_atmosphere(cls, atmosphere):
+        plev = atmosphere['plev']
+        z = atmosphere['z']
+
+        o3 = ozone_profile_rcemip(plev)
+
+        instance = cls()
+        instance['initial_ozone'] = o3
+        instance.coords['plev'] = plev
+
+        return instance
 
     @abc.abstractmethod
     def get(self, atmos, timestep, zenith, radheat):
@@ -53,7 +68,7 @@ class Ozone(Component, metaclass=abc.ABCMeta):
 class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
     def get(self, atmos, **kwargs):
-        atmos['O3'][0, :] = self['initial_ozone']
+        atmos['O3'] = (('plev',), self['initial_ozone'])
         return
 
 

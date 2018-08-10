@@ -76,9 +76,9 @@ class RCE:
         else:
             self.radiation = radiation
 
-        ozone = utils.return_if_type(ozone, 'ozone',
-                                     Ozone, OzonePressure())
-        self.ozone = ozone
+        self.ozone = utils.return_if_type(
+            ozone, 'ozone', Ozone, OzonePressure().from_atmosphere(atmosphere)
+        )
 
         self.humidity = utils.return_if_type(humidity, 'humidity',
                                              Humidity, FixedRH())
