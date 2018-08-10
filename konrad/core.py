@@ -64,9 +64,12 @@ class RCE:
                 (see `konrad.utils.get_fraction_of_day`).
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
-            writeevery(int or float): Set frequency in which to write output.
-                int: Every nth timestep is written.
-                float: Every nth day is written.
+            writeevery(int, float or str): Set output frequency.
+                Values can be given in:
+                    int: Every nth timestep is written.
+                    float: Every nth day is written.
+                    str: a timedelta string may be given
+                      (see `konrad.utils.get_fraction_of_day`).
             max_iterations (int): Maximum number of iterations.
         """
         # Sub-models.
@@ -155,6 +158,9 @@ class RCE:
         """
         if self.outfile is None:
             return False
+
+        if isinstance(self.writeevery, str):
+            self.writeevery = utils.get_fraction_of_day(self.writeevery)
 
         if isinstance(self.writeevery, int):
             return self.niter % self.writeevery == 0
