@@ -97,6 +97,7 @@ class RCE:
 
         # Control parameters.
         self.delta = delta
+        self.deltaT = None
         self.writeevery = writeevery
         self.max_iterations = max_iterations
         if isinstance(timestep, Number):
@@ -141,7 +142,7 @@ class RCE:
             bool: ``True`` if converged, else ``False``.
         """
         #TODO: Implement proper convergence criterion (e.g. include TOA).
-        return np.all(np.abs(self.atmosphere['deltaT']) < self.delta)
+        return np.all(np.abs(self.deltaT) < self.delta)
 
     def check_if_write(self):
         """Check if current timestep should be appended to output netCDF.
@@ -236,13 +237,13 @@ class RCE:
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
-            T = self.atmosphere['T'].values.copy()
+            T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.
             critical_lapserate = self.lapserate.get(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
-            self.atmosphere['T'] += (self.heatingrates['net_htngrt'] *
+            self.atmosphere['T'] += (self.heatingrates['net_htngrt'].values *
                                      self.timestep)
 
             # Convective adjustment
@@ -279,7 +280,7 @@ class RCE:
                     )
 
             # Calculate temperature change for convergence check.
-            self.atmosphere['deltaT'] = self.atmosphere['T'] - T
+            self.deltaT = self.atmosphere['T'] - T
 
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():

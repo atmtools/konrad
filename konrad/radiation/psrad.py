@@ -39,9 +39,9 @@ class PSRAD(Radiation):
             tuple(ndarray): ndarrays in the order and unit to use with `psrad`:
                 Z, P, T, x_vmr, ...
         """
-        z = atmosphere['z'].values
-        p = atmosphere['plev'].values / 100
-        T = atmosphere['T'].values
+        z = atmosphere['z']
+        p = atmosphere['plev'] / 100
+        T = atmosphere['T']
 
         ret = [z, p, T]  # Z, P, T
 
@@ -50,7 +50,7 @@ class PSRAD(Radiation):
 
         for gas in required_gases:
             if gas in atmosphere:
-                ret.append(atmosphere[gas].values * 1e6)  # Append gas in ppm.
+                ret.append(atmosphere[gas] * 1e6)  # Append gas in ppm.
             else:
                 ret.append(np.zeros(np.size(p)))
 

@@ -53,7 +53,7 @@ class Ozone(Component, metaclass=abc.ABCMeta):
 class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
     def get(self, atmos, **kwargs):
-        atmos['O3'].values[0, :] = self['initial_ozone']
+        atmos['O3'][0, :] = self['initial_ozone']
         return
 
 
@@ -72,7 +72,7 @@ class OzoneHeight(Ozone):
 
     def get(self, atmos, **kwargs):
         z = atmos.get_values('z', keepdims=False)
-        atmos['O3'].values[0, :] = self.f(z)
+        atmos['O3'][0, :] = self.f(z)
         return
 
 
@@ -98,6 +98,6 @@ class OzoneNormedPressure(Ozone):
             self.f = interp1d(p/self.norm_level, self['initial_ozone'],
                               fill_value='extrapolate')
 
-        atmos['O3'].values[0, :] = self.f(p/norm_new)
+        atmos['O3'][0, :] = self.f(p/norm_new)
         return
 

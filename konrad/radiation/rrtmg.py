@@ -36,8 +36,8 @@ class RRTMG(Radiation):
         state_lw = climt.get_default_state([self._rad_lw])
         state_sw = climt.get_default_state([self._rad_sw])
 
-        plev = atmosphere['plev'].values
-        phlev = atmosphere['phlev'].values
+        plev = atmosphere['plev']
+        phlev = atmosphere['phlev']
         numlevels = len(plev)
 
         for state0 in state_lw, state_sw:
@@ -127,11 +127,11 @@ class RRTMG(Radiation):
         """
 
         state0['air_temperature'] = DataArray(
-            atmosphere['T'][0, :].data,
+            atmosphere['T'][0, :],
             dims=('mid_levels',),
             attrs={'units': 'degK'})
 
-        vmr_h2o = atmosphere['H2O'][0, :].data
+        vmr_h2o = atmosphere['H2O'][0, :]
         specific_humidity = vmr2specific_humidity(vmr_h2o)
         state0['specific_humidity'] = DataArray(
             specific_humidity,

@@ -5,10 +5,10 @@ import typhon
 import netCDF4
 import numpy as np
 from scipy.interpolate import interp1d
-from xarray import Dataset, DataArray
 
 from konrad import constants
 from konrad import utils
+from konrad.component import Component
 
 __all__ = [
     'Atmosphere',
@@ -17,7 +17,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Atmosphere(Dataset):
+class Atmosphere(Component):
     """Implementation of the atmosphere component."""
     atmosphere_variables = [
         'T',
@@ -50,9 +50,7 @@ class Atmosphere(Dataset):
         if ndim == 2 and data.ndim == 1:
                 data = data[np.newaxis, :]
 
-        self[name] = DataArray(data, dims=dims)
-
-        self[name].attrs = constants.variable_description.get(name, {})
+        self[name] = (dims, data)
 
     def get_default_profile(self, name):
         """Return a profile with default values."""
@@ -61,7 +59,7 @@ class Atmosphere(Dataset):
         except KeyError:
             raise Exception(f'No default specified for "{name}".')
         else:
-            return vmr * np.ones(self.plev.size)
+            return vmr * np.ones(self['plev'].size)
 
     @classmethod
     def from_atm_fields_compact(cls, atm_fields_compact, **kwargs):
@@ -121,21 +119,19 @@ class Atmosphere(Dataset):
         plev = dictionary['plev']
         #TODO: [Discussion] Do we want to read the actual half-level pressure?
         phlev = utils.phlev_from_plev(plev)
-        d = cls(coords={'plev': plev,  # pressure level
-                        'time': [0],  # time dimension
-                        'phlev': phlev,  # pressure at halflevels
-                        },
-                **kwargs,
-                )
+
+        d = cls()
+        d.coords = {
+            'time': np.array([]),  # time dimension
+            'plev': plev,  # pressure level
+            'phlev': phlev,  # pressure at halflevels
+        }
 
         for var in cls.atmosphere_variables:
             d.create_variable(var, dictionary.get(var))
 
         # Calculate the geopotential height.
         d.update_height()
-
-        # Append variable descriptions to the Dataset.
-        utils.append_description(d)
 
         return d
 
@@ -152,11 +148,11 @@ class Atmosphere(Dataset):
                     else ds[var][:])
 
         with netCDF4.Dataset(ncfile) as dataset:
-            datadict = {var: _return_profile(dataset, var, timestep)
+            datadict = {var: np.array(_return_profile(dataset, var, timestep))
                         for var in cls.atmosphere_variables
                         if var in dataset.variables
                         }
-            datadict['plev'] = dataset['plev'][:]
+            datadict['plev'] = np.array(dataset['plev'][:])
 
         return cls.from_dict(datadict)
 
@@ -175,13 +171,13 @@ class Atmosphere(Dataset):
         # Set grids and their names.
         atmfield.gridnames = ['Species', 'Pressure', 'Longitude', 'Latitude']
         atmfield.grids = [
-            species, self['plev'].values, np.array([]), np.array([])
+            species, self['plev'], np.array([]), np.array([])
         ]
 
         # The profiles have to be passed in "stacked" form, as an ndarray of
         # dimensions [species, pressure, lat, lon].
         atmfield.data = np.vstack(
-            [self[var].values.reshape(1, self['plev'].size, 1, 1)
+            [self[var].reshape(1, self['plev'].size, 1, 1)
              for var in variables]
         )
         atmfield.dataname = 'Data'
@@ -242,7 +238,7 @@ class Atmosphere(Dataset):
         # Loop over all atmospheric variables...
         for variable in self.atmosphere_variables:
             # and create an interpolation function using the original data.
-            f = interp1d(self['plev'].values, self[variable],
+            f = interp1d(self['plev'], self[variable],
                          axis=-1, fill_value='extrapolate', **kwargs)
 
             # Store the interpolated new data in the data directory.
@@ -291,7 +287,7 @@ class Atmosphere(Dataset):
             ndarray: Array containing the values assigned to the variable.
         """
         try:
-            values = self[variable].values
+            values = self[variable]
         except KeyError:
             if default is not None:
                 values = default * np.ones(self['plev'].size)
@@ -304,8 +300,8 @@ class Atmosphere(Dataset):
         """Calculate the geopotential height."""
         g = constants.earth_standard_gravity
 
-        plev = self['plev'].values  # Air pressure at full-levels.
-        phlev = self['phlev'].values  # Air pressure at half-levels.
+        plev = self['plev']  # Air pressure at full-levels.
+        phlev = self['phlev']  # Air pressure at half-levels.
 
         # Air temperature on half levels
         T_phlev = interp1d(plev, self['T'][0, :],
@@ -333,8 +329,8 @@ class Atmosphere(Dataset):
         """Find the pressure at the cold point.
         The cold point is taken at the coldest temperature below 100 Pa, to
         avoid cold temperatures high in the atmosphere (below about 10 Pa)."""
-        p = self['plev'].values
-        T = self['T'].values[0, :]
+        p = self['plev']
+        T = self['T'][0, :]
         cp = p[np.argmin(T[np.where(p > 100)])]
         return cp
 
@@ -358,8 +354,8 @@ class Atmosphere(Dataset):
               ndarray: Potential temperature [K].
         """
         # Get view on temperature and pressure arrays.
-        T = self['T'].values[0, :]
-        p = self['plev'].values
+        T = self['T'][0, :]
+        p = self['plev']
 
         # Calculate the potential temperature.
         return T * (p0 / p) ** (2 / 7)
@@ -374,8 +370,8 @@ class Atmosphere(Dataset):
               ndarray: Static stability [K/Pa].
         """
         # Get view on temperature and pressure arrays.
-        t = self['T'].values[0, :]
-        p = self['plev'].values
+        t = self['T'][0, :]
+        p = self['plev']
 
         # Calculate potential temperature and its vertical derivative.
         theta = self.get_potential_temperature()
@@ -409,7 +405,7 @@ class Atmosphere(Dataset):
         Returns:
               float: Pressure of maxixum subsidence divergence [Pa].
         """
-        plev = self['plev'].values
+        plev = self['plev']
         omega = self.get_diabatic_subsidence(radiative_cooling)
         domega = np.diff(omega) / np.diff(plev[:-1])
 
@@ -438,8 +434,8 @@ class Atmosphere(Dataset):
         Returns:
             float: Pressure at height of convective top [Pa].
         """
-        p = self['plev'].values[:]
-        T = self['T'].values[-1, :]
+        p = self['plev'][:]
+        T = self['T'][-1, :]
 
         # NOTE: `np.argmax` returns the first occurence of the maximum value.
         # In this example, the index of the first `True` value,
@@ -471,8 +467,8 @@ class Atmosphere(Dataset):
                 finding the upper most level, which is likely to be the
                 coldest level.
         """
-        T = self['T'].values[-1, :]
-        plev = self['plev'].values[:]
+        T = self['T'][-1, :]
+        plev = self['plev'][:]
 
         return plev[np.argmin(T[plev > pmin])]
 

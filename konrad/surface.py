@@ -70,14 +70,15 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         """
         # Extrapolate surface height from geopotential height of lowest two
         # atmospheric layers.
-        z = atmosphere['z'].values[0, :]
+        z = atmosphere['z'][0, :]
         z_sfc = z[0] + 0.5 * (z[0] - z[1])
 
         # Calculate the surface temperature following a linear lapse rate.
         # This prevents "jumps" after the first iteration, when the
         # convective adjustment is applied.
+        # TODO: Perform linear or quadratic interpolation of T profile.
         lapse = 0.0065
-        t_sfc = atmosphere['T'].values[0, 0] + lapse * (z[0] - z_sfc)
+        t_sfc = atmosphere['T'][0, 0] + lapse * (z[0] - z_sfc)
 
         return cls(temperature=t_sfc,
                    height=z_sfc,

@@ -69,15 +69,15 @@ class HardAdjustment(Convection):
 
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
-            p=atmosphere['plev'].values,
-            phlev=atmosphere['phlev'].values,
-            T_rad=atmosphere['T'].values[0, :],
+            p=atmosphere['plev'],
+            phlev=atmosphere['phlev'],
+            T_rad=atmosphere['T'][0, :],
             lapse=lapse,
             surface=surface,
             timestep=timestep,
         )
         # Update atmospheric temperatures as well as surface temperature.
-        atmosphere['T'].values[0, :] = T_new
+        atmosphere['T'][0, :] = T_new
         surface.temperature.values[0] = T_s_new
 
     def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
@@ -106,7 +106,6 @@ class HardAdjustment(Convection):
 
         g = constants.earth_standard_gravity
         lp = -lapse / (g * density)
-        lp = lp.data
 
         # find energy difference if there is no change to surface temp due to
         # convective adjustment. in this case the new profile should be
