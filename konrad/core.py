@@ -2,12 +2,12 @@
 """Implementation of a radiative-convective equilibrium model (RCE).
 """
 import logging
-from datetime import datetime
 from numbers import Number
 
 import numpy as np
 
 from konrad import utils
+from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import (Humidity, FixedRH)
@@ -114,6 +114,7 @@ class RCE:
         self.niter = 0
 
         self.outfile = outfile
+        self.nchandler = None
         self.experiment = experiment
 
         logging.info('Created Konrad object:\n{}'.format(self))
@@ -164,42 +165,6 @@ class RCE:
             return r < self.timestep
         else:
             raise TypeError('Only except input of type `float` or `int`.')
-
-    # TODO: Consider implementing netCDF writing in a cleaner way. Currently
-    # variables from different Datasets are hard to distinguish. Maybe
-    # dive into the group mechanism in netCDF.
-    def create_outfile(self):
-        """Create netCDF4 file to store simulation results."""
-        data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.surface, inplace=True)
-
-        # Add experiment and date information to newly created netCDF file.
-        data.attrs.update(experiment=self.experiment)
-        data.attrs.update(date=datetime.now().strftime("%Y-%m-%d %H:%M"))
-
-        # Not all Radiation classes provide an `solar_constant` attribute.
-        # For thos who do (e.g. `RRTMG`) store the value in the netCDF file.
-        if hasattr(self.radiation, 'solar_constant'):
-            data.attrs.update(solar_constant=self.radiation.solar_constant)
-
-        # The `Atmosphere.to_netcdf()` function is overloaded and able to
-        # handle attributes in a proper way (saving the object's class name).
-        data.to_netcdf(self.outfile, mode='w', unlimited_dims=['time'])
-
-        logger.info(f'Created "{self.outfile}".')
-
-    def append_to_netcdf(self):
-        """Append the current atmospheric state to the netCDF4 file specified
-        in ``self.outfile``.
-        """
-        data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.surface, inplace=True)
-
-        utils.append_timestep_netcdf(
-            filename=self.outfile,
-            data=data,
-            timestamp=self.get_hours_passed(),
-            )
 
     def run(self):
         """Run the radiative-convective equilibrium model."""
@@ -284,12 +249,11 @@ class RCE:
 
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
-                # If we are in the first iteration, a new is created...
-                if self.niter == 0:
-                    self.create_outfile()
-                # ... otherwise we just append.
-                else:
-                    self.append_to_netcdf()
+                if self.nchandler is None:
+                    self.nchandler = netcdf.NetcdfHandler(
+                        filename=self.outfile, rce=self)
+
+                self.nchandler.write()
 
             # Check if the model run has converged to an equilibrium state.
             if self.is_converged():
