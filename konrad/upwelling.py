@@ -3,10 +3,12 @@
 import abc
 
 import numpy as np
+
 from konrad import constants
+from konrad.component import Component
 
 
-class Upwelling(metaclass=abc.ABCMeta):
+class Upwelling(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all upwelling handlers."""
 
     @abc.abstractmethod
@@ -18,10 +20,12 @@ class Upwelling(metaclass=abc.ABCMeta):
               timestep (float): Timestep width [day].
         """
 
+
 class NoUpwelling(Upwelling):
     """Do not apply a dynamical cooling."""
     def cool(self, *args, **kwargs):
         pass
+
 
 def contop_index(radheat, radheatmin=0.0001):
     try:
@@ -31,6 +35,7 @@ def contop_index(radheat, radheatmin=0.0001):
         # been found. Return the function without applying any upwelling.
         return
     return int(contopi)
+
 
 class StratosphericUpwelling(Upwelling):
     """Apply a dynamical cooling, based on a specified upwelling velocity."""
@@ -42,7 +47,7 @@ class StratosphericUpwelling(Upwelling):
             lowest_level (int or None): The index of the lowest level to which
                 the upwelling is applied. If none, uses the top of convection.
         """
-        self.w = w * 86.4 # in m/day
+        self.w = w * 86.4  # in m/day
         self.lowest_level = lowest_level
 
     def cool(self, atmosphere, radheat, timestep):
