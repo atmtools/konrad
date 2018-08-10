@@ -18,6 +18,7 @@ from . import constants
 from . import convection
 from . import humidity
 from . import lapserate
+from . import netcdf
 from . import ozone
 from . import plots
 from . import radiation
@@ -36,6 +37,7 @@ __all__ = [
     'convection',
     'humidity',
     'lapserate',
+    'netcdf',
     'ozone',
     'plots',
     'radiation',
