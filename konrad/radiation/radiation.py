@@ -7,6 +7,7 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 from konrad import constants
+from konrad.component import Component
 from konrad.utils import append_description
 
 
@@ -27,7 +28,7 @@ REQUIRED_VARIABLES = [
 ]
 
 
-class Radiation(metaclass=abc.ABCMeta):
+class Radiation(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
     def __init__(self, zenith_angle=47.88, diurnal_cycle=False, bias=None):
         """Return a radiation model.
@@ -49,7 +50,7 @@ class Radiation(metaclass=abc.ABCMeta):
 
         self.current_solar_angle = 0
 
-        self.bias = bias
+        self._bias = bias
 
     @abc.abstractmethod
     def calc_radiation(self, atmosphere, surface, cloud):
@@ -81,20 +82,20 @@ class Radiation(metaclass=abc.ABCMeta):
     def correct_bias(self, dataset):
         """Apply bias correction."""
         # Interpolate biases passed as `xr.Dataset`.
-        if isinstance(self.bias, xr.Dataset):
+        if isinstance(self._bias, xr.Dataset):
             bias_dict = {}
-            for key in self.bias.data_vars:
-                zdim = self.bias[key].dims[0]
-                x = self.bias[zdim].values
-                y = self.bias[key].values
+            for key in self._bias.data_vars:
+                zdim = self._bias[key].dims[0]
+                x = self._bias[zdim].values
+                y = self._bias[key].values
 
                 f_interp = interp1d(x, y, fill_value='extrapolate')
                 bias_dict[key] = f_interp(dataset[zdim].values)
 
-            self.bias = bias_dict
+            self._bias = bias_dict
 
-        if self.bias is not None:
-            for key, value in self.bias.items():
+        if self._bias is not None:
+            for key, value in self._bias.items():
                 if key not in dataset.indexes:
                     dataset[key] -= value
 

@@ -17,8 +17,11 @@ class RRTMG(Radiation):
 
     def __init__(self, *args, solar_constant=510, **kwargs):
         super().__init__(*args, **kwargs)
-        self.state_lw = None
-        self.state_sw = None
+        self._state_lw = None
+        self._state_sw = None
+
+        self._rad_lw = None
+        self._rad_sw = None
 
         self.solar_constant = solar_constant
 
@@ -28,10 +31,10 @@ class RRTMG(Radiation):
         climt.set_constant('stellar_irradiance',
                            value=self.solar_constant,
                            units='W m^-2')
-        self.rad_lw = climt.RRTMGLongwave()
-        self.rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
-        state_lw = climt.get_default_state([self.rad_lw])
-        state_sw = climt.get_default_state([self.rad_sw])
+        self._rad_lw = climt.RRTMGLongwave()
+        self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
+        state_lw = climt.get_default_state([self._rad_lw])
+        state_sw = climt.get_default_state([self._rad_sw])
 
         plev = atmosphere['plev'].values
         phlev = atmosphere['phlev'].values
@@ -156,7 +159,11 @@ class RRTMG(Radiation):
 
         # Surface quantities
         state0['surface_temperature'] = DataArray(
+<<<<<<< HEAD
             np.array([[surface.temperature.data[0]]]),
+=======
+            np.array([[surface['temperature'][-1]]]),
+>>>>>>> a8fd0b1... Fix radiation
             dims={'longitude', 'latitude'},
             attrs={'units': 'degK'})
 
@@ -190,23 +197,23 @@ class RRTMG(Radiation):
             tuple: containing two dictionaries, one of air temperature
             values and the other of fluxes and heating rates
         """
-        if self.state_lw is None or self.state_sw is None: # first time only
-            self.state_lw, self.state_sw = self.init_radiative_state(atmosphere)
-            self.update_cloudy_radiative_state(cloud, self.state_lw, sw=False)
-            self.update_cloudy_radiative_state(cloud, self.state_sw, sw=True)
+        if self._state_lw is None or self._state_sw is None: # first time only
+            self._state_lw, self._state_sw = self.init_radiative_state(atmosphere)
+            self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)
+            self.update_cloudy_radiative_state(cloud, self._state_sw, sw=True)
 
         # if there are clouds update the cloud properties for the radiation
         if not isinstance(cloud, ClearSky):
-            self.update_cloudy_radiative_state(cloud, self.state_lw, sw=False)
-            self.update_cloudy_radiative_state(cloud, self.state_sw, sw=True)
+            self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)
+            self.update_cloudy_radiative_state(cloud, self._state_sw, sw=True)
 
-        self.update_radiative_state(atmosphere, surface, self.state_lw,
+        self.update_radiative_state(atmosphere, surface, self._state_lw,
                                     sw=False)
-        self.update_radiative_state(atmosphere, surface, self.state_sw,
+        self.update_radiative_state(atmosphere, surface, self._state_sw,
                                     sw=True)
 
-        lw_fluxes = self.rad_lw(self.state_lw)
-        sw_fluxes = self.rad_sw(self.state_sw)
+        lw_fluxes = self._rad_lw(self._state_lw)
+        sw_fluxes = self._rad_sw(self._state_sw)
 
         return lw_fluxes, sw_fluxes
 
@@ -230,9 +237,6 @@ class RRTMG(Radiation):
         sw_fluxes = sw_dT_fluxes[1]
 
         ret = xr.Dataset({
-            # General atmospheric properties.
-            'z': atmosphere['z'],
-
             # Longwave fluxes and heatingrates.
             'lw_htngrt': (
                 ['time', 'plev'],
@@ -274,9 +278,9 @@ class RRTMG(Radiation):
                 sw_fluxes['downwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data),
         },
             coords={
-                'time': [0],
-                'phlev': atmosphere['phlev'].values,
-                'plev': atmosphere['plev'].values,
+                'time': np.array([0]),
+                'phlev': atmosphere['phlev'],
+                'plev': atmosphere['plev'],
             }
         )
 
