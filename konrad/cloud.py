@@ -39,6 +39,7 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
     raise TypeError(
             'Cloud variable input must be a single value or a sympl.DataArray')
 
+
 class Cloud(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all cloud handlers."""
     def __init__(self, numlevels=200, num_lw_bands=16, num_sw_bands=14,
@@ -96,12 +97,9 @@ class Cloud(metaclass=abc.ABCMeta):
 
 
 class ClearSky(Cloud):
-    def __init__(self, numlevels=200):
-        """Clear-sky. Set cloud area fraction to zero everywhere.
-
-        Parameters:
-            numlevels (float): Number of model levels.
-        """
+    def __init__(self):
+        """Clear-sky. Take defaults from parent class, with cloud area fraction
+        equal to zero everywhere."""
         super().__init__()
 
     def update_cloud_profile():
