@@ -20,11 +20,15 @@ def _move_item_to_index(list, item, index):
 
 
 def convert_unsupported_types(variable):
+    """Convert variables into a netCDF-supported data type."""
     if variable is None:
         return np.nan
 
     if isinstance(variable, bool):
         return 1 if variable else 0
+
+    if isinstance(variable, str):
+        return np.asarray([variable])
 
     return variable
 
