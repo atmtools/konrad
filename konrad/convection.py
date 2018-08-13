@@ -211,7 +211,7 @@ class HardAdjustment(Convection):
         eff_Cp_s = surface.heat_capacity
 
         diff = energy_difference(T_con, T_rad, surfaceT,
-                                 surface['temperature'][-1], dp, eff_Cp_s)
+                                 surface['temperature'], dp, eff_Cp_s)
 
         return T_con, float(diff)
 
