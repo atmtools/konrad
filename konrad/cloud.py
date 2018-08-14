@@ -108,7 +108,8 @@ class ClearSky(Cloud):
 
 class HighCloud(Cloud):
     def __init__(self, z, cloud_top=12000, depth=500, area_fraction=1,
-                 ice_density=0.5):
+                 ice_density=0.5, lw_optical_thickness=10,
+                 sw_optical_thickness=10):
         """
         Parameters:
             z (ndarray): altitude values [m]
@@ -116,6 +117,10 @@ class HighCloud(Cloud):
             depth (int): Cloud depth / thickness of cloud [m]
             area_fraction (int/float): Area fraction covered by cloud
             ice_density (float): density of ice in the cloud [g m^-3]
+            lw_optical_thickness (float): optical thickness of the cloud in the
+                longwave [dimensionless]
+            sw_optical_thickness (float): optical thickness of the cloud in the
+                shortwave [dimensionless]
         """
         cloud_fraction_array = np.zeros(z.shape)
         cloud_fraction_array[(z < cloud_top) & (
@@ -127,7 +132,9 @@ class HighCloud(Cloud):
         mass_ice = DataArray(mass_ice_array, dims=('mid_levels',),
                              attrs={'units': 'kg m^-2'})
 
-        super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice)
+        super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice,
+             lw_optical_thickness=lw_optical_thickness,
+             sw_optical_thickness=sw_optical_thickness)
 
     def update_cloud_profile():
         return
