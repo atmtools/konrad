@@ -39,9 +39,9 @@ class PSRAD(Radiation):
             tuple(ndarray): ndarrays in the order and unit to use with `psrad`:
                 Z, P, T, x_vmr, ...
         """
-        z = atmosphere['z'].values
-        p = atmosphere['plev'].values / 100
-        T = atmosphere['T'].values
+        z = atmosphere['z']
+        p = atmosphere['plev'] / 100
+        T = atmosphere['T']
 
         ret = [z, p, T]  # Z, P, T
 
@@ -50,7 +50,7 @@ class PSRAD(Radiation):
 
         for gas in required_gases:
             if gas in atmosphere:
-                ret.append(atmosphere[gas].values * 1e6)  # Append gas in ppm.
+                ret.append(atmosphere[gas] * 1e6)  # Append gas in ppm.
             else:
                 ret.append(np.zeros(np.size(p)))
 
@@ -68,7 +68,7 @@ class PSRAD(Radiation):
                 The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
         """
         from . import _psrad
-        self.psrad = _psrad
+        self._psrad = _psrad
 
         dmy_indices = np.asarray([0, 0, 0, 0])
         ic = dmy_indices.astype("int32") + 1
@@ -79,27 +79,27 @@ class PSRAD(Radiation):
         nlev = atmosphere['plev'].size
 
         # Extract surface properties.
-        P_sfc = surface.pressure.values / 100
-        T_sfc = surface.temperature.values[0]
-        albedo = surface.albedo.values
+        P_sfc = surface.pressure / 100
+        T_sfc = surface['temperature'][-1]
+        albedo = surface.albedo
 
         # Use the **current** solar angle as zenith angle for the simulation.
         zenith = self.current_solar_angle
 
-        self.psrad.setup_single(nlev, len(ic), ic, c_lwc, c_iwc, c_frc, zenith,
-                                albedo, P_sfc, T_sfc,
-                                *self._extract_psrad_args(atmosphere))
+        self._psrad.setup_single(nlev, len(ic), ic, c_lwc, c_iwc, c_frc,
+                                 zenith, albedo, P_sfc, T_sfc,
+                                 *self._extract_psrad_args(atmosphere))
 
-        self.psrad.advance_lrtm()  # Longwave simulations.
+        self._psrad.advance_lrtm()  # Longwave simulations.
         (lw_hr, lw_hr_clr, lw_flxd,
-         lw_flxd_clr, lw_flxu, lw_flxu_clr) = self.psrad.get_lw_fluxes()
+         lw_flxd_clr, lw_flxu, lw_flxu_clr) = self._psrad.get_lw_fluxes()
 
-        self.psrad.advance_srtm()  # Shortwave simulations.
+        self._psrad.advance_srtm()  # Shortwave simulations.
 
         (sw_hr, sw_hr_clr, sw_flxd,
          sw_flxd_clr, sw_flxu, sw_flxu_clr,
          vis_frc, par_dn, nir_dff, vis_diff,
-         par_diff) = self.psrad.get_sw_fluxes()
+         par_diff) = self._psrad.get_sw_fluxes()
 
         ret = xr.Dataset({
             # General atmospheric properties.
@@ -123,9 +123,9 @@ class PSRAD(Radiation):
             'sw_flxd_clr': (['time', 'phlev'], sw_flxd_clr[:, ::-1]),
         },
             coords={
-                'time': [0],
-                'plev': atmosphere['plev'].values,
-                'phlev': atmosphere['phlev'].values,
+                'time': np.array([0]),
+                'plev': atmosphere['plev'],
+                'phlev': atmosphere['phlev'],
             }
         )
 

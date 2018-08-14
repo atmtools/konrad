@@ -6,9 +6,9 @@ import logging
 
 import netCDF4
 import numpy as np
-from xarray import Dataset, DataArray
 
-from . import (constants, utils)
+from . import constants
+from konrad.component import Component
 
 
 __all__ = [
@@ -22,7 +22,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
-class Surface(Dataset, metaclass=abc.ABCMeta):
+class Surface(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for surface models."""
     def __init__(self, albedo=0.2, temperature=288., height=0.):
         """Initialize a surface model.
@@ -33,20 +33,18 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
             temperature (float): Surface temperature [K].
             height (float): Surface height [m].
         """
-        super().__init__()
-        self['albedo'] = albedo
-        self['time'] = [0]
-        self['height'] = height
-        self['temperature'] = DataArray(np.array([temperature]),
-                                        dims=('time',),
-                                        )
+        self.albedo = albedo
+        self.height = height
+        self['temperature'] = (('time',), np.array([temperature]))
 
         # The surface pressure is initialized before the first iteration
         # within the RCE framework to ensure a pressure that is consistent
         # with the atmosphere used.
-        self['pressure'] = None
+        self.pressure = None
 
-        utils.append_description(self)
+        self.coords = {
+            'time': np.array([]),
+        }
 
     @abc.abstractmethod
     def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
@@ -70,14 +68,15 @@ class Surface(Dataset, metaclass=abc.ABCMeta):
         """
         # Extrapolate surface height from geopotential height of lowest two
         # atmospheric layers.
-        z = atmosphere['z'].values[0, :]
+        z = atmosphere['z'][0, :]
         z_sfc = z[0] + 0.5 * (z[0] - z[1])
 
         # Calculate the surface temperature following a linear lapse rate.
         # This prevents "jumps" after the first iteration, when the
         # convective adjustment is applied.
+        # TODO: Perform linear or quadratic interpolation of T profile.
         lapse = 0.0065
-        t_sfc = atmosphere['T'].values[0, 0] + lapse * (z[0] - z_sfc)
+        t_sfc = atmosphere['T'][0, 0] + lapse * (z[0] - z_sfc)
 
         return cls(temperature=t_sfc,
                    height=z_sfc,
@@ -125,13 +124,11 @@ class SurfaceHeatCapacity(Surface):
     """
     def __init__(self, *args, depth=50., **kwargs):
         super().__init__(*args, **kwargs)
-        self['rho'] = constants.density_sea_water
-        self['c_p'] = constants.specific_heat_capacity_sea_water
-        self['depth'] = depth
+        self.rho = constants.density_sea_water
+        self.c_p = constants.specific_heat_capacity_sea_water
+        self.depth = depth
 
-        self['heat_capacity'] = self.rho * self.c_p * depth
-
-        utils.append_description(self)
+        self.heat_capacity = self.rho * self.c_p * depth
 
     def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
         """Increase the surface temperature by given heatingrate.
@@ -151,8 +148,7 @@ class SurfaceHeatCapacity(Surface):
 
         self['temperature'] += (timestep * net_flux / self.heat_capacity)
 
-        logger.debug('Surface temperature: '
-                     f'{self.temperature.values[0]:.4f} K')
+        logger.debug("Surface temperature: {self['temperature'][0]:.4f} K")
 
 
 class SurfaceHeatSink(SurfaceHeatCapacity):
@@ -164,9 +160,7 @@ class SurfaceHeatSink(SurfaceHeatCapacity):
     """
     def __init__(self, *args, heat_flux=0, **kwargs):
         super().__init__(*args, **kwargs)
-        self['heat_flux'] = heat_flux
-
-        utils.append_description(self)
+        self.heat_flux = heat_flux
 
     def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
         """Increase the surface temperature using given radiative fluxes. Take
@@ -190,5 +184,4 @@ class SurfaceHeatSink(SurfaceHeatCapacity):
         self['temperature'] += (timestep * (net_flux - sink) /
                                 self.heat_capacity)
 
-        logger.debug('Surface temperature: '
-                     f'{self.temperature.values[0]:.4f} K')
+        logger.debug("Surface temperature: {self['temperature'][0]:.4f} K")

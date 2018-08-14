@@ -7,11 +7,13 @@ import numpy as np
 from typhon.atmosphere import vmr as rh2vmr
 from scipy.stats import skewnorm
 
+from konrad.component import Component
+
 
 logger = logging.getLogger(__name__)
 
 
-class Humidity(metaclass=abc.ABCMeta):
+class Humidity(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all humidity handlers."""
     def __init__(self, rh_surface=0.8, rh_tropo=0.3, p_tropo=170e2,
                  vmr_strato=None, vmr_profile=None, rh_profile=None):
@@ -219,7 +221,7 @@ class Cess76(FixedRH):
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        self.T_surface = surface['temperature'].values[-1]
+        self.T_surface = surface['temperature'][-1]
 
         return self.get_vmr_profile(atmosphere)
 

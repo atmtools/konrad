@@ -4,6 +4,8 @@
 import abc
 import logging
 from scipy.interpolate import interp1d
+
+from konrad.component import Component
 from konrad.utils import ozone_profile_rcemip, refined_pgrid
 
 __all__ = [
@@ -15,18 +17,15 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-class Ozone(metaclass=abc.ABCMeta):
+class Ozone(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for ozone treatments."""
 
-    def __init__(self, initial_ozone=None):
+    def __init__(self):
         """
         Parameters:
             initial_ozone (ndarray): initial ozone vmr profile
         """
-        if initial_ozone is None:
-            initial_ozone = ozone_profile_rcemip(
-                    refined_pgrid(1013e2, 0.01e2, 200))
-        self.initial_ozone = initial_ozone
+        self['initial_ozone'] = (('plev',), None)
 
     @abc.abstractmethod
     def get(self, atmos, timestep, zenith, radheat):
@@ -44,52 +43,54 @@ class Ozone(metaclass=abc.ABCMeta):
 
 class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
-    def get(self, atmos, **kwargs):
-        atmos['O3'].values[0, :] = self.initial_ozone
+    def get(self, **kwargs):
         return
 
 
 class OzoneHeight(Ozone):
     """Ozone fixed with height."""
-    def __init__(self, initial_height=None, initial_ozone=None, **kwargs):
-        """
-        Parameters:
-            initial_height (ndarray): altitude profile [m]
-        """
-        super().__init__(initial_ozone=initial_ozone)
-        self.initial_height = initial_height
-
-        self.f = interp1d(self.initial_height, self.initial_ozone,
-                     fill_value='extrapolate')
+    def __init__(self):
+        self._f = None
 
     def get(self, atmos, **kwargs):
-        z = atmos.get_values('z', keepdims=False)
-        atmos['O3'].values[0, :] = self.f(z)
-        return
+        if self._f is None:
+            self._f = interp1d(
+                atmos['z'][0, :],
+                atmos['O3'],
+                fill_value='extrapolate',
+            )
+
+        atmos['O3'] = (('time', 'plev'), self._f(atmos['z'][0, :]))
 
 
 class OzoneNormedPressure(Ozone):
     """Ozone shifts with the normalisation level (chosen to be the convective
     top)."""
-    def __init__(self, norm_level=None, initial_ozone=None, **kwargs):
+    def __init__(self, norm_level=None):
         """
         Parameters:
             norm_level (float): pressure for the normalisation
                 normally chosen as the convective top pressure at the start of
                 the simulation [Pa]
         """
-        super().__init__(initial_ozone=initial_ozone)
         self.norm_level = norm_level
-        self.f = None
+        self._f = None
 
     def get(self, atmos, radheat, **kwargs):
-        p = atmos.get_values('plev')
-        norm_new = float(atmos.get_convective_top(radheat))
+        if self.norm_level is None:
+            self.norm_level = atmos.get_convective_top(radheat)
 
-        if self.f is None:
-            self.f = interp1d(p/self.norm_level, self.initial_ozone,
-                              fill_value='extrapolate')
+        if self._f is None:
+            self._f = interp1d(
+                atmos['plev'] / self.norm_level,
+                atmos['O3'][0, :],
+                fill_value='extrapolate',
+            )
 
-        atmos['O3'].values[0, :] = self.f(p/norm_new)
-        return
+        norm_new = atmos.get_convective_top(radheat)
+
+        atmos['O3'] = (
+            ('time', 'plev'),
+            self._f(atmos['plev'] / norm_new).reshape(1, -1)
+        )
 
