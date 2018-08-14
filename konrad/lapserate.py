@@ -8,9 +8,10 @@ from typhon.physics import (e_eq_water_mk, vmr2mixing_ratio)
 from scipy.interpolate import interp1d
 
 from konrad import constants
+from konrad.component import Component
 
 
-class LapseRate(metaclass=abc.ABCMeta):
+class LapseRate(Component, metaclass=abc.ABCMeta):
     """Base class for all lapse rate handlers."""
     @abc.abstractmethod
     def get(self, atmosphere):

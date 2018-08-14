@@ -12,10 +12,14 @@ requirements are enforced by the use of abstract base classes.
 import logging
 
 from . import atmosphere
-from . import convection
+from . import cloud
+from . import component
 from . import constants
+from . import convection
 from . import humidity
 from . import lapserate
+from . import netcdf
+from . import ozone
 from . import plots
 from . import radiation
 from . import surface
@@ -27,10 +31,14 @@ from .core import RCE
 __all__ = [
     'RCE',
     'atmosphere',
+    'cloud',
+    'component',
     'constants',
     'convection',
     'humidity',
     'lapserate',
+    'netcdf',
+    'ozone',
     'plots',
     'radiation',
     'surface',

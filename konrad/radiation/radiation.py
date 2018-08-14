@@ -7,6 +7,7 @@ import xarray as xr
 from scipy.interpolate import interp1d
 
 from konrad import constants
+from konrad.component import Component
 from konrad.utils import append_description
 
 
@@ -27,7 +28,7 @@ REQUIRED_VARIABLES = [
 ]
 
 
-class Radiation(metaclass=abc.ABCMeta):
+class Radiation(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
     def __init__(self, zenith_angle=47.88, diurnal_cycle=False, bias=None):
         """Return a radiation model.
@@ -49,25 +50,35 @@ class Radiation(metaclass=abc.ABCMeta):
 
         self.current_solar_angle = 0
 
-        self.bias = bias
+        self._bias = bias
+
+        self['lw_htngrt'] = (('time', 'plev'), None)
+        self['lw_htngrt_clr'] = (('time', 'plev'), None)
+        self['lw_flxu'] = (('time', 'phlev'), None)
+        self['lw_flxd'] = (('time', 'phlev'), None)
+        self['lw_flxu_clr'] = (('time', 'phlev'), None)
+        self['lw_flxd_clr'] = (('time', 'phlev'), None)
+        self['sw_htngrt'] = (('time', 'plev'), None)
+        self['sw_htngrt_clr'] = (('time', 'plev'), None)
+        self['sw_flxu'] = (('time', 'phlev'), None)
+        self['sw_flxd'] = (('time', 'phlev'), None)
+        self['sw_flxu_clr'] = (('time', 'phlev'), None)
+        self['sw_flxd_clr'] = (('time', 'phlev'), None)
+
+        self['net_htngrt'] = (('time', 'plev'), None)
+        self['toa'] = (('time',), None)
 
     @abc.abstractmethod
     def calc_radiation(self, atmosphere, surface, cloud):
-        return xr.Dataset()
+        pass
 
-    def get_heatingrates(self, atmosphere, surface, cloud):
+    def update_heatingrates(self, atmosphere, surface, cloud):
         """Returns `xr.Dataset` containing radiative transfer results."""
-        rad_dataset = self.calc_radiation(atmosphere, surface, cloud)
+        self.calc_radiation(atmosphere, surface, cloud)
 
-        self.correct_bias(rad_dataset)
+        # self.correct_bias(rad_dataset)
 
-        self.derive_diagnostics(rad_dataset)
-
-        append_description(rad_dataset)
-
-        self.check_dataset(rad_dataset)
-
-        return rad_dataset
+        self.derive_diagnostics()
 
     @staticmethod
     def check_dataset(dataset):
@@ -81,40 +92,33 @@ class Radiation(metaclass=abc.ABCMeta):
     def correct_bias(self, dataset):
         """Apply bias correction."""
         # Interpolate biases passed as `xr.Dataset`.
-        if isinstance(self.bias, xr.Dataset):
+        if isinstance(self._bias, xr.Dataset):
             bias_dict = {}
-            for key in self.bias.data_vars:
-                zdim = self.bias[key].dims[0]
-                x = self.bias[zdim].values
-                y = self.bias[key].values
+            for key in self._bias.data_vars:
+                zdim = self._bias[key].dims[0]
+                x = self._bias[zdim].values
+                y = self._bias[key].values
 
                 f_interp = interp1d(x, y, fill_value='extrapolate')
                 bias_dict[key] = f_interp(dataset[zdim].values)
 
-            self.bias = bias_dict
+            self._bias = bias_dict
 
-        if self.bias is not None:
-            for key, value in self.bias.items():
+        if self._bias is not None:
+            for key, value in self._bias.items():
                 if key not in dataset.indexes:
                     dataset[key] -= value
 
 
-    def derive_diagnostics(self, dataset):
+    def derive_diagnostics(self):
         """Derive diagnostic variables from radiative transfer results."""
         # Net heating rate.
-        dataset['net_htngrt'] = xr.DataArray(
-            data=dataset.lw_htngrt + dataset.sw_htngrt,
-            dims=['time', 'plev'],
-        )
+        self['net_htngrt'] = self['lw_htngrt'] + self['sw_htngrt']
 
         # Radiation budget at top of the atmosphere (TOA).
-        dataset['toa'] = xr.DataArray(
-            data=((dataset.sw_flxd.values[:, -1] +
-                   dataset.lw_flxd.values[:, -1]) -
-                  (dataset.sw_flxu.values[:, -1] +
-                   dataset.lw_flxu.values[:, -1])
-                  ),
-            dims=['time'],
+        self['toa'] = (
+            (self['sw_flxd'][:, -1] + self['lw_flxd'][:, -1]) -
+            (self['sw_flxu'][:, -1] + self['lw_flxu'][:, -1])
         )
 
     @staticmethod

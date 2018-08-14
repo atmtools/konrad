@@ -7,6 +7,7 @@ import typhon
 from scipy.interpolate import interp1d
 
 from konrad import constants
+from konrad.component import Component
 from konrad.surface import SurfaceFixedTemperature
 
 
@@ -36,12 +37,13 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 
     dT = T_2 - T_1  # convective temperature change of atmosphere
     dT_s = sst_2 - sst_1  # of surface
+
     termdiff = - np.sum(Cp/g * dT * dp) + eff_Cp_s * dT_s
 
     return termdiff
 
 
-class Convection(metaclass=abc.ABCMeta):
+class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
     def stabilize(self, atmosphere, lapse, surface, timestep):
@@ -67,16 +69,16 @@ class HardAdjustment(Convection):
 
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
-            p=atmosphere['plev'].values,
-            phlev=atmosphere['phlev'].values,
-            T_rad=atmosphere['T'].values[0, :],
+            p=atmosphere['plev'],
+            phlev=atmosphere['phlev'],
+            T_rad=atmosphere['T'][0, :],
             lapse=lapse,
             surface=surface,
             timestep=timestep,
         )
         # Update atmospheric temperatures as well as surface temperature.
-        atmosphere['T'].values[0, :] = T_new
-        surface.temperature.values[0] = T_s_new
+        atmosphere['T'][0, :] = T_new
+        surface['temperature'][0] = T_s_new
 
     def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
                               timestep=0.1):
@@ -104,12 +106,11 @@ class HardAdjustment(Convection):
 
         g = constants.earth_standard_gravity
         lp = -lapse / (g * density)
-        lp = lp.data
 
         # find energy difference if there is no change to surface temp due to
         # convective adjustment. in this case the new profile should be
         # associated with an increase in energy in the atmosphere.
-        surfaceTpos = surface.temperature.data
+        surfaceTpos = surface['temperature']
         T_con, diffpos = self.test_profile(T_rad, p, phlev, surface,
                                            surfaceTpos, lp,
                                            timestep=timestep)
@@ -117,12 +118,12 @@ class HardAdjustment(Convection):
         # this is the temperature profile required if we have a set-up with a
         # fixed surface temperature, then the energy does not matter.
         if isinstance(surface, SurfaceFixedTemperature):
-            return T_con, surface.temperature
+            return T_con, surface['temperature']
         # for other cases, if we find a decrease or approx no change in energy,
         # the atmosphere is not being warmed by the convection,
         # as it is not unstable to convection, so no adjustment is applied
         if diffpos < near_zero:
-            return T_con, surface.temperature
+            return T_con, surface['temperature']
 
         # if the atmosphere is unstable to convection, a fixed surface temp
         # produces an increase in energy (as convection warms the atmosphere).
@@ -132,7 +133,7 @@ class HardAdjustment(Convection):
         # radiative profile gives us a lower bound.
         surfaceTneg = np.array([np.min(T_rad)])
         eff_Cp_s = surface.heat_capacity
-        diffneg = eff_Cp_s.data * (surfaceTneg - surface.temperature.data)
+        diffneg = eff_Cp_s * (surfaceTneg - surface['temperature'])
         # good guess for energy-conserving profile (unlikely!)
         if np.abs(diffneg) < near_zero:
             return T_con, surfaceTneg
@@ -209,8 +210,8 @@ class HardAdjustment(Convection):
 
         eff_Cp_s = surface.heat_capacity
 
-        diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
-                                 dp, eff_Cp_s)
+        diff = energy_difference(T_con, T_rad, surfaceT,
+                                 surface['temperature'], dp, eff_Cp_s)
 
         return T_con, float(diff)
 
@@ -280,8 +281,8 @@ class RelaxedAdjustment(HardAdjustment):
 
         eff_Cp_s = surface.heat_capacity
 
-        diff = energy_difference(T_con, T_rad, surfaceT, surface.temperature,
-                                 dp, eff_Cp_s)
+        diff = energy_difference(T_con, T_rad, surfaceT,
+                                 surface['temperature'], dp, eff_Cp_s)
         return T_con, float(diff)
 
 

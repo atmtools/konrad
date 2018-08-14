@@ -2,12 +2,12 @@
 """Implementation of a radiative-convective equilibrium model (RCE).
 """
 import logging
-from datetime import datetime
 from numbers import Number
 
 import numpy as np
 
 from konrad import utils
+from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import (Humidity, FixedRH)
@@ -64,9 +64,12 @@ class RCE:
                 (see `konrad.utils.get_fraction_of_day`).
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations.
-            writeevery(int or float): Set frequency in which to write output.
-                int: Every nth timestep is written.
-                float: Every nth day is written.
+            writeevery(int, float or str): Set output frequency.
+                Values can be given in:
+                    int: Every nth timestep is written.
+                    float: Every nth day is written.
+                    str: a timedelta string may be given
+                      (see `konrad.utils.get_fraction_of_day`).
             max_iterations (int): Maximum number of iterations.
         """
         # Sub-models.
@@ -76,9 +79,8 @@ class RCE:
         else:
             self.radiation = radiation
 
-        ozone = utils.return_if_type(ozone, 'ozone',
-                                     Ozone, OzonePressure())
-        self.ozone = ozone
+        self.ozone = utils.return_if_type(ozone, 'ozone',
+                                          Ozone, OzonePressure())
 
         self.humidity = utils.return_if_type(humidity, 'humidity',
                                              Humidity, FixedRH())
@@ -97,6 +99,7 @@ class RCE:
 
         # Control parameters.
         self.delta = delta
+        self.deltaT = None
         self.writeevery = writeevery
         self.max_iterations = max_iterations
         if isinstance(timestep, Number):
@@ -104,15 +107,12 @@ class RCE:
         elif isinstance(timestep, str):
             self.timestep = utils.get_fraction_of_day(timestep)
 
-        # TODO: Maybe delete? One could use the return value of the radiation
-        # model directly.
-        self.heatingrates = None
-
         # Internal variables.
         self.converged = False
         self.niter = 0
 
         self.outfile = outfile
+        self.nchandler = None
         self.experiment = experiment
 
         logging.info('Created Konrad object:\n{}'.format(self))
@@ -141,7 +141,7 @@ class RCE:
             bool: ``True`` if converged, else ``False``.
         """
         #TODO: Implement proper convergence criterion (e.g. include TOA).
-        return np.all(np.abs(self.atmosphere['deltaT']) < self.delta)
+        return np.all(np.abs(self.deltaT) < self.delta)
 
     def check_if_write(self):
         """Check if current timestep should be appended to output netCDF.
@@ -154,6 +154,9 @@ class RCE:
         if self.outfile is None:
             return False
 
+        if isinstance(self.writeevery, str):
+            self.writeevery = utils.get_fraction_of_day(self.writeevery)
+
         if isinstance(self.writeevery, int):
             return self.niter % self.writeevery == 0
         elif isinstance(self.writeevery, float):
@@ -164,49 +167,13 @@ class RCE:
         else:
             raise TypeError('Only except input of type `float` or `int`.')
 
-    # TODO: Consider implementing netCDF writing in a cleaner way. Currently
-    # variables from different Datasets are hard to distinguish. Maybe
-    # dive into the group mechanism in netCDF.
-    def create_outfile(self):
-        """Create netCDF4 file to store simulation results."""
-        data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.surface, inplace=True)
-
-        # Add experiment and date information to newly created netCDF file.
-        data.attrs.update(experiment=self.experiment)
-        data.attrs.update(date=datetime.now().strftime("%Y-%m-%d %H:%M"))
-
-        # Not all Radiation classes provide an `solar_constant` attribute.
-        # For thos who do (e.g. `RRTMG`) store the value in the netCDF file.
-        if hasattr(self.radiation, 'solar_constant'):
-            data.attrs.update(solar_constant=self.radiation.solar_constant)
-
-        # The `Atmosphere.to_netcdf()` function is overloaded and able to
-        # handle attributes in a proper way (saving the object's class name).
-        data.to_netcdf(self.outfile, mode='w', unlimited_dims=['time'])
-
-        logger.info(f'Created "{self.outfile}".')
-
-    def append_to_netcdf(self):
-        """Append the current atmospheric state to the netCDF4 file specified
-        in ``self.outfile``.
-        """
-        data = self.atmosphere.merge(self.heatingrates, overwrite_vars='H2O')
-        data.merge(self.surface, inplace=True)
-
-        utils.append_timestep_netcdf(
-            filename=self.outfile,
-            data=data,
-            timestamp=self.get_hours_passed(),
-            )
-
     def run(self):
         """Run the radiative-convective equilibrium model."""
         logger.info('Start RCE model run.')
 
         # Initialize surface pressure to be equal to lowest half-level
         # pressure. This is consistent with handling in PSrad.
-        self.surface['pressure'] = self.atmosphere['phlev'][0]
+        self.surface.pressure = self.atmosphere['phlev'][0]
 
         # Main loop to control all model iterations until maximum number is
         # reached or a given stop criterion is fulfilled.
@@ -219,7 +186,7 @@ class RCE:
                 logger.debug(f'Enter iteration {self.niter}.')
 
             self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
-            self.heatingrates = self.radiation.get_heatingrates(
+            self.radiation.update_heatingrates(
                 atmosphere=self.atmosphere,
                 surface=self.surface,
                 cloud=self.cloud,
@@ -227,22 +194,22 @@ class RCE:
 
             # Apply heatingrates/fluxes to the the surface.
             self.surface.adjust(
-                sw_down=self.heatingrates['sw_flxd'].values[0, 0],
-                sw_up=self.heatingrates['sw_flxu'].values[0, 0],
-                lw_down=self.heatingrates['lw_flxd'].values[0, 0],
-                lw_up=self.heatingrates['lw_flxu'].values[0, 0],
+                sw_down=self.radiation['sw_flxd'][0, 0],
+                sw_up=self.radiation['sw_flxu'][0, 0],
+                lw_down=self.radiation['lw_flxd'][0, 0],
+                lw_up=self.radiation['lw_flxu'][0, 0],
                 timestep=self.timestep,
             )
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
-            T = self.atmosphere['T'].values.copy()
+            T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.
             critical_lapserate = self.lapserate.get(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
-            self.atmosphere['T'] += (self.heatingrates['net_htngrt'] *
+            self.atmosphere['T'] += (self.radiation['net_htngrt'] *
                                      self.timestep)
 
             # Convective adjustment
@@ -256,39 +223,39 @@ class RCE:
             # Upwelling induced cooling
             self.upwelling.cool(
                 atmosphere=self.atmosphere,
-                radheat=self.heatingrates['net_htngrt'][0, :],
+                radheat=self.radiation['net_htngrt'][0, :],
                 timestep=self.timestep,
             )
 
-            # Calculate the geopotential height field.
-            self.atmosphere.calculate_height()
+            # TODO: Consider implementing an Atmosphere.update_diagnostics()
+            #  method to include e.g. convective top in the output.
+            self.atmosphere.update_height()
 
             # Update the ozone profile.
             self.ozone.get(
                 atmos=self.atmosphere,
                 timestep=self.timestep,
                 zenith=self.radiation.current_solar_angle,
-                radheat=self.heatingrates['net_htngrt'][0, :]
+                radheat=self.radiation['net_htngrt'][0, :]
                 )
 
             # Update the humidity profile.
             self.atmosphere['H2O'][0, :] = self.humidity.get(
                     self.atmosphere,
                     surface=self.surface,
-                    net_heatingrate=self.heatingrates['net_htngrt'][0, :],
+                    net_heatingrate=self.radiation['net_htngrt'][0, :],
                     )
 
             # Calculate temperature change for convergence check.
-            self.atmosphere['deltaT'] = self.atmosphere['T'] - T
+            self.deltaT = self.atmosphere['T'] - T
 
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
-                # If we are in the first iteration, a new is created...
-                if self.niter == 0:
-                    self.create_outfile()
-                # ... otherwise we just append.
-                else:
-                    self.append_to_netcdf()
+                if self.nchandler is None:
+                    self.nchandler = netcdf.NetcdfHandler(
+                        filename=self.outfile, rce=self)
+
+                self.nchandler.write()
 
             # Check if the model run has converged to an equilibrium state.
             if self.is_converged():
