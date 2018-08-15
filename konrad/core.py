@@ -246,7 +246,7 @@ class RCE:
                     )
 
             # Calculate temperature change for convergence check.
-            self.deltaT = self.atmosphere['T'] - T
+            self.deltaT = (self.atmosphere['T'] - T) / self.timestep
 
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
