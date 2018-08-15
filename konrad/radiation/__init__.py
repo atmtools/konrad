@@ -2,7 +2,6 @@
 """Module containing classes describing different radiation models.
 """
 from .radiation import Radiation
-from .psrad import PSRAD
 from .rrtmg import RRTMG
 
 
