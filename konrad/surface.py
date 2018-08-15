@@ -91,7 +91,12 @@ class Surface(Component, metaclass=abc.ABCMeta):
             ncfile (str): Path to netCDF file.
             timestep (int): Timestep to read (default is last timestep).
         """
-        with netCDF4.Dataset(ncfile) as dataset:
+        with netCDF4.Dataset(ncfile) as root:
+            if 'surface' in root.groups:
+                dataset = root['surface']
+            else:
+                dataset = root
+
             t = dataset.variables['temperature'][timestep]
             z = dataset.variables['height'][timestep]
 
