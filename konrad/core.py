@@ -34,43 +34,50 @@ class RCE:
         >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
-    def __init__(self, atmosphere, radiation=None, ozone=None, humidity=None,
-                 surface=None, cloud=None, convection=None, lapserate=None,
-                 upwelling=None, outfile=None, experiment='', timestep=1,
-                 delta=0.01, writeevery=1, max_iterations=5000):
+    def __init__(self, atmosphere, timestep='3h', max_duration='5000d',
+                 outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
+                 radiation=None, ozone=None, humidity=None, surface=None,
+                 cloud=None, convection=None, lapserate=None, upwelling=None):
         """Set-up a radiative-convective model.
 
         Parameters:
             atmosphere (Atmosphere): `konrad.atmosphere.Atmosphere`.
-            radiation (konrad.radiation): Radiation model.
-                Defaults to RRTMG
-            humidity (konrad.humidity): Humidity model.
-                Defaults to ``konrad.humidity.FixedRH``.
-            surface (konrad.surface): Surface model.
-                Defaults to ``konrad.surface.SurfaceHeatCapacity``.
-            cloud (konrad.cloud): Cloud model.
-                Defaults to ``konrad.cloud.ClearSky``.
-            convection (konrad.humidity.Convection): Convection scheme.
-                Defaults to ``konrad.convection.HardAdjustment``.
-            lapserate (konrad.lapse.LapseRate): Lapse rate handler.
-                Defaults to ``konrad.lapserate.MoistLapseRate``.
-            upwelling (konrad.upwelling.Upwelling):
-                Defaults to ``konrad.upwelling.NoUpwelling``.
-            outfile (str): netCDF4 file to store output.
-            experiment (str): Experiment description (stored in netCDF).
-            timestep (float or str): Iteration time step.
+            timestep (float or str): Model time step (per iteration).
                 If float, time step shall be given in days.
                 If str, a timedelta string may be given
-                (see `konrad.utils.get_fraction_of_day`).
-            delta (float): Stop criterion. If the heating rate is below this
-                threshold for all levels, skip further iterations.
+                (see :func:`konrad.utils.parse_fraction_of_day`).
+            max_duration (float or str): Maximum duration of the simulation.
+                The duration is given in model time:
+                    If float, maximum duration in days.
+                    If str, a timedelta string
+                    (see `konrad.utils.parse_fraction_of_day`).
+            outfile (str): netCDF4 file to store output.
+            experiment (str): Experiment description (stored in netCDF output).
             writeevery(int, float or str): Set output frequency.
                 Values can be given in:
-                    int: Every nth timestep is written.
-                    float: Every nth day is written.
-                    str: a timedelta string may be given
-                      (see `konrad.utils.get_fraction_of_day`).
-            max_iterations (int): Maximum number of iterations.
+                    int: Every nth iteration
+                    float: Every nth day in model time
+                    str: a timedelta string
+                    (see `konrad.utils.parse_fraction_of_day`).
+            delta (float): Stop criterion. If the heating rate is below this
+                threshold for all levels, skip further iterations. Values
+                are given in K/day.
+            radiation (konrad.radiation): Radiation model.
+                Defaults to :class:`konrad.radiation.RRTMG`.
+            ozone (konrad.ozone): Ozone model.
+                Defaults to :class:`konrad.ozone.OzonePressure`.
+            humidity (konrad.humidity): Humidity model.
+                Defaults to :class:`konrad.humidity.FixedRH`.
+            surface (konrad.surface): Surface model.
+                Defaults to :class:`konrad.surface.SurfaceHeatCapacity`.
+            cloud (konrad.cloud): Cloud model.
+                Defaults to :class:`konrad.cloud.ClearSky`.
+            convection (konrad.humidity.Convection): Convection scheme.
+                Defaults to :class:`konrad.convection.HardAdjustment`.
+            lapserate (konrad.lapse.LapseRate): Lapse rate handler.
+                Defaults to :class:`konrad.lapserate.MoistLapseRate`.
+            upwelling (konrad.upwelling.Upwelling):
+                Defaults to :class:`konrad.upwelling.NoUpwelling`.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -97,19 +104,16 @@ class RCE:
         self.upwelling = utils.return_if_type(upwelling, 'upwelling',
                                          Upwelling, NoUpwelling())
 
-        # Control parameters.
+        self.max_duration = utils.parse_fraction_of_day(max_duration)
+        self.timestep = utils.parse_fraction_of_day(timestep)
+        self.writeevery = utils.parse_fraction_of_day(writeevery)
+
+        self.max_iterations = np.ceil(self.max_duration / self.timestep)
+        self.niter = 0
+
         self.delta = delta
         self.deltaT = None
-        self.writeevery = writeevery
-        self.max_iterations = max_iterations
-        if isinstance(timestep, Number):
-            self.timestep = timestep
-        elif isinstance(timestep, str):
-            self.timestep = utils.get_fraction_of_day(timestep)
-
-        # Internal variables.
         self.converged = False
-        self.niter = 0
 
         self.outfile = outfile
         self.nchandler = None
@@ -154,9 +158,6 @@ class RCE:
         if self.outfile is None:
             return False
 
-        if isinstance(self.writeevery, str):
-            self.writeevery = utils.get_fraction_of_day(self.writeevery)
-
         if isinstance(self.writeevery, int):
             return self.niter % self.writeevery == 0
         elif isinstance(self.writeevery, float):
@@ -164,8 +165,6 @@ class RCE:
             # robust. Otherwise `3.3 % 3 < 0.3` is True.
             r = (((self.niter + 0.5) * self.timestep) % self.writeevery)
             return r < self.timestep
-        else:
-            raise TypeError('Only except input of type `float` or `int`.')
 
     def run(self):
         """Run the radiative-convective equilibrium model."""
@@ -247,7 +246,7 @@ class RCE:
                     )
 
             # Calculate temperature change for convergence check.
-            self.deltaT = self.atmosphere['T'] - T
+            self.deltaT = (self.atmosphere['T'] - T) / self.timestep
 
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
