@@ -1,6 +1,5 @@
 """Define an interface for the RRTMG radiation scheme (through CliMT). """
 import numpy as np
-import xarray as xr
 from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
 
@@ -28,10 +27,10 @@ class RRTMG(Radiation):
     def init_radiative_state(self, atmosphere):
 
         import climt
-        climt.set_constant('stellar_irradiance',
-                           value=self.solar_constant,
-                           units='W m^-2')
-        self._rad_lw = climt.RRTMGLongwave()
+        climt.set_constants_from_dict({"stellar_irradiance": {
+                "value": self.solar_constant, "units": 'W m^-2'}})
+        self._rad_lw = climt.RRTMGLongwave(
+                cloud_optical_properties='direct_input')
         self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
         state_lw = climt.get_default_state([self._rad_lw])
         state_sw = climt.get_default_state([self._rad_sw])
