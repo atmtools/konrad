@@ -109,7 +109,9 @@ class ClearSky(Cloud):
 class HighCloud(Cloud):
     def __init__(self, z, cloud_top=12000, depth=500, area_fraction=1,
                  ice_density=0.5, lw_optical_thickness=10,
-                 sw_optical_thickness=10):
+                 sw_optical_thickness=10,
+                 forward_scattering_fraction=0.8, asymmetry_parameter=0.85,
+                 single_scattering_albedo=0.9):
         """
         Parameters:
             z (ndarray): altitude values [m]
@@ -134,7 +136,10 @@ class HighCloud(Cloud):
 
         super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice,
              lw_optical_thickness=lw_optical_thickness,
-             sw_optical_thickness=sw_optical_thickness)
+             sw_optical_thickness=sw_optical_thickness,
+             forward_scattering_fraction=forward_scattering_fraction,
+             asymmetry_parameter=asymmetry_parameter,
+             single_scattering_albedo=single_scattering_albedo)
 
     def update_cloud_profile():
         return
