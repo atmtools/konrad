@@ -31,9 +31,8 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
     dims_bands = 'num_shortwave_bands' if sw else 'num_longwave_bands'
 
     if type(values) is int or type(values) is float:
-        return DataArray(values*np.ones((1, numbands, 1, numlevels)),
-                         dims=('longitude', dims_bands,
-                               'latitude', 'mid_levels'),
+        return DataArray(values*np.ones((numlevels, numbands)),
+                         dims=('mid_levels', dims_bands),
                          attrs={'units': units})
 
     raise TypeError(
