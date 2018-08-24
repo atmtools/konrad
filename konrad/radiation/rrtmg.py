@@ -15,7 +15,7 @@ __all__ = [
 class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
 
-    def __init__(self, *args, solar_constant=510, **kwargs):
+    def __init__(self, *args, solar_constant=510, mcica=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._state_lw = None
         self._state_sw = None
@@ -23,6 +23,7 @@ class RRTMG(Radiation):
         self._rad_lw = None
         self._rad_sw = None
 
+        self._mcica = mcica
         self.solar_constant = solar_constant
 
     def init_radiative_state(self, atmosphere):
@@ -31,7 +32,8 @@ class RRTMG(Radiation):
                 "value": self.solar_constant, "units": 'W m^-2'}})
         self._rad_lw = climt.RRTMGLongwave(
                 cloud_optical_properties='direct_input')
-        self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
+        self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True,
+                                            mcica=self._mcica)
         state_lw = climt.get_default_state([self._rad_lw])
         state_sw = climt.get_default_state([self._rad_sw])
 
@@ -187,7 +189,8 @@ class RRTMG(Radiation):
             values and the other of fluxes and heating rates
         """
         if self._state_lw is None or self._state_sw is None: # first time only
-            self._state_lw, self._state_sw = self.init_radiative_state(atmosphere)
+            self._state_lw, self._state_sw = self.init_radiative_state(
+                    atmosphere)
             self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)
             self.update_cloudy_radiative_state(cloud, self._state_sw, sw=True)
 
