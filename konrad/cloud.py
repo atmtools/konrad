@@ -40,7 +40,9 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
 
 
 class Cloud(metaclass=abc.ABCMeta):
-    """Base class to define abstract methods for all cloud handlers."""
+    """Base class to define abstract methods for all cloud handlers.
+    Default properties include a cloud area fraction equal to zero everywhere
+    (ie no cloud)."""
     def __init__(self, numlevels=200, num_lw_bands=16, num_sw_bands=14,
                  mass_water=0, mass_ice=0, cloud_fraction=0,
                  ice_particle_size=20, droplet_radius=10,
@@ -96,11 +98,6 @@ class Cloud(metaclass=abc.ABCMeta):
 
 
 class ClearSky(Cloud):
-    def __init__(self):
-        """Clear-sky. Take defaults from parent class, with cloud area fraction
-        equal to zero everywhere."""
-        super().__init__()
-
     def update_cloud_profile():
         return
 
