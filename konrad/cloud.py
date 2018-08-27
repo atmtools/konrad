@@ -9,99 +9,88 @@ from sympl import DataArray
 logger = logging.getLogger(__name__)
 
 
+def get_p_data_array(values, units='kg m^-2', numlevels=200):
+    """Return a DataArray of values."""
+    if type(values) is DataArray:
+        return values
+
+    elif type(values) is int or type(values) is float:
+        return DataArray(values*np.ones(numlevels,),
+                         dims=('mid_levels',),
+                         attrs={'units': units})
+
+    raise TypeError(
+            'Cloud variable input must be a single value or a sympl.DataArray')
+
+def get_waveband_data_array(values, units='dimensionless', numbands=14,
+                            numlevels=200, sw=True):
+    """Return a DataArray of values."""
+    if type(values) is DataArray:
+        return values
+
+    dims_bands = 'num_shortwave_bands' if sw else 'num_longwave_bands'
+
+    if type(values) is int or type(values) is float:
+        return DataArray(values*np.ones((numlevels, numbands)),
+                         dims=('mid_levels', dims_bands),
+                         attrs={'units': units})
+
+    raise TypeError(
+            'Cloud variable input must be a single value or a sympl.DataArray')
+
+
 class Cloud(metaclass=abc.ABCMeta):
-    """Base class to define abstract methods for all cloud handlers."""
+    """Base class to define abstract methods for all cloud handlers.
+    Default properties include a cloud area fraction equal to zero everywhere
+    (ie no cloud)."""
     def __init__(self, numlevels=200, num_lw_bands=16, num_sw_bands=14,
-                 mass_water=None, mass_ice=None, cloud_fraction=None,
-                 ice_particle_size=None, droplet_radius=None,
-                 lw_optical_thickness=None, sw_optical_thickness=None,
-                 forward_scattering_fraction=None, asymmetry_parameter=None,
-                 single_scattering_albedo=None):
+                 mass_water=0, mass_ice=0, cloud_fraction=0,
+                 ice_particle_size=20, droplet_radius=10,
+                 lw_optical_thickness=0, sw_optical_thickness=0,
+                 forward_scattering_fraction=0.8, asymmetry_parameter=0.85,
+                 single_scattering_albedo=0.9):
         """Create a cloud handler.
 
         Parameters:
             forward_scattering_fraction
         """
+        self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = \
+                get_p_data_array(mass_water, numlevels=numlevels)
 
-        if mass_water is not None:
-            self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = mass_water
-        else:
-            self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = DataArray(
-                    np.zeros(numlevels,),
-                    dims=('mid_levels',),
-                    attrs={'units': 'kg m^-2'})
-        if mass_ice is not None:
-            self.mass_content_of_cloud_ice_in_atmosphere_layer = mass_ice
-        else:
-            self.mass_content_of_cloud_ice_in_atmosphere_layer = DataArray(
-                    np.zeros(numlevels,),
-                    dims=('mid_levels',),
-                    attrs={'units': 'kg m^-2'})
-        if cloud_fraction is not None:
-            self.cloud_area_fraction_in_atmosphere_layer = cloud_fraction
-        else:
-            self.cloud_area_fraction_in_atmosphere_layer = DataArray(
-                    np.zeros(numlevels,),
-                    dims=('mid_levels',),
-                    attrs={'units': 'dimensionless'})
-        if ice_particle_size is not None:
-            #TODO: make case for entering a single value
-            self.cloud_ice_particle_size = ice_particle_size
-        else:
-            self.cloud_ice_particle_size = DataArray(
-                    20*np.ones(numlevels,),
-                    dims=('mid_levels',),
-                    attrs={'units': 'micrometers'})
-        if droplet_radius is not None:
-            #TODO: make case for entering a single value
-            self.cloud_water_droplet_radius = droplet_radius
-        else:
-            self.cloud_water_droplet_radius = DataArray(
-                    10*np.ones(numlevels,),
-                    dims=('mid_levels',),
-                    attrs={'units': 'micrometers'})
+        self.mass_content_of_cloud_ice_in_atmosphere_layer = get_p_data_array(
+                mass_ice, numlevels=numlevels)
 
-        if lw_optical_thickness is not None:
-            self.longwave_optical_thickness_due_to_cloud = lw_optical_thickness
-        else:
-            self.longwave_optical_thickness_due_to_cloud = DataArray(
-                np.zeros((1, num_lw_bands, 1, numlevels)),
-                dims=('longitude', 'num_longwave_bands',
-                      'latitude', 'mid_levels'),
-                attrs={'units': 'dimensionless'})
+        self.cloud_area_fraction_in_atmosphere_layer = get_p_data_array(
+                cloud_fraction, numlevels=numlevels, units='dimensionless')
 
-        if forward_scattering_fraction is not None:
-            self.cloud_forward_scattering_fraction = forward_scattering_fraction
-        else:
-            self.cloud_forward_scattering_fraction = DataArray(
-                0.8*np.ones((1, num_sw_bands, 1, numlevels)),
-                dims=('longitude', 'num_shortwave_bands',
-                      'latitude', 'mid_levels'),
-                attrs={'units': 'dimensionless'})
-        if asymmetry_parameter is not None:
-            self.cloud_asymmetry_parameter = asymmetry_parameter
-        else:
-            self.cloud_asymmetry_parameter = DataArray(
-                0.85*np.ones((1, num_sw_bands, 1, numlevels)),
-                dims=('longitude', 'num_shortwave_bands',
-                      'latitude', 'mid_levels'),
-                attrs={'units': 'dimensionless'})
-        if sw_optical_thickness is not None:
-            self.shortwave_optical_thickness_due_to_cloud = sw_optical_thickness
-        else:
-            self.shortwave_optical_thickness_due_to_cloud = DataArray(
-                np.zeros((1, num_sw_bands, 1, numlevels)),
-                dims=('longitude', 'num_shortwave_bands',
-                      'latitude', 'mid_levels'),
-                attrs={'units': 'dimensionless'})
-        if single_scattering_albedo is not None:
-            self.single_scattering_albedo_due_to_cloud = single_scattering_albedo
-        else:
-            self.single_scattering_albedo_due_to_cloud = DataArray(
-                0.9*np.ones((1, num_sw_bands, 1, numlevels)),
-                dims=('longitude', 'num_shortwave_bands',
-                      'latitude', 'mid_levels'),
-                attrs={'units': 'dimensionless'})
+        self.cloud_ice_particle_size = get_p_data_array(ice_particle_size,
+                                                        numlevels=numlevels,
+                                                        units='micrometers')
+
+        self.cloud_water_droplet_radius = get_p_data_array(droplet_radius,
+                                                           numlevels=numlevels,
+                                                           units='micrometers')
+
+        self.longwave_optical_thickness_due_to_cloud = get_waveband_data_array(
+                lw_optical_thickness, numlevels=numlevels,
+                numbands=num_lw_bands, sw=False)
+
+        self.cloud_forward_scattering_fraction = get_waveband_data_array(
+                forward_scattering_fraction, numlevels=numlevels,
+                numbands=num_sw_bands)
+
+        self.cloud_asymmetry_parameter = get_waveband_data_array(
+                asymmetry_parameter, numlevels=numlevels,
+                numbands=num_sw_bands)
+
+        self.shortwave_optical_thickness_due_to_cloud = \
+                get_waveband_data_array(sw_optical_thickness,
+                                        numlevels=numlevels,
+                                        numbands=num_sw_bands)
+
+        self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
+                single_scattering_albedo, numlevels=numlevels,
+                numbands=num_sw_bands)
 
     @abc.abstractmethod
     def update_cloud_profile(self, **kwargs):
@@ -109,24 +98,16 @@ class Cloud(metaclass=abc.ABCMeta):
 
 
 class ClearSky(Cloud):
-    def __init__(self, numlevels=200):
-        """Clear-sky. Set cloud area fraction to zero everywhere.
-
-        Parameters:
-            numlevels (float): Number of model levels.
-        """
-        cloud_fraction = DataArray(
-                np.zeros(numlevels,),
-                dims=('mid_levels',),
-                attrs={'units': 'dimensionless'})
-        super().__init__(cloud_fraction=cloud_fraction)
     def update_cloud_profile():
         return
 
 
 class HighCloud(Cloud):
     def __init__(self, z, cloud_top=12000, depth=500, area_fraction=1,
-                 ice_density=0.5):
+                 ice_density=0.5, lw_optical_thickness=10,
+                 sw_optical_thickness=10,
+                 forward_scattering_fraction=0.8, asymmetry_parameter=0.85,
+                 single_scattering_albedo=0.9):
         """
         Parameters:
             z (ndarray): altitude values [m]
@@ -134,20 +115,27 @@ class HighCloud(Cloud):
             depth (int): Cloud depth / thickness of cloud [m]
             area_fraction (int/float): Area fraction covered by cloud
             ice_density (float): density of ice in the cloud [g m^-3]
+            lw_optical_thickness (float): optical thickness of the cloud in the
+                longwave [dimensionless]
+            sw_optical_thickness (float): optical thickness of the cloud in the
+                shortwave [dimensionless]
         """
         cloud_fraction_array = np.zeros(z.shape)
-        cloud_fraction_array[(z < cloud_top) & (z > cloud_top-depth)] = area_fraction
-        cloud_fraction = DataArray(
-                cloud_fraction_array,
-                dims=('mid_levels',),
-                attrs={'units': 'dimensionless'})
+        cloud_fraction_array[(z < cloud_top) & (
+                z > cloud_top-depth)] = area_fraction
+        cloud_fraction = DataArray(cloud_fraction_array, dims=('mid_levels',),
+                                   attrs={'units': 'dimensionless'})
         dz = np.hstack((np.diff(z)[0], np.diff(z)))
         mass_ice_array = cloud_fraction_array * ice_density * 10**-3 * dz
-        mass_ice = DataArray(
-                mass_ice_array, dims=('mid_levels',),
-                attrs={'units': 'kg m^-2'})
+        mass_ice = DataArray(mass_ice_array, dims=('mid_levels',),
+                             attrs={'units': 'kg m^-2'})
 
-        super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice)
+        super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice,
+             lw_optical_thickness=lw_optical_thickness,
+             sw_optical_thickness=sw_optical_thickness,
+             forward_scattering_fraction=forward_scattering_fraction,
+             asymmetry_parameter=asymmetry_parameter,
+             single_scattering_albedo=single_scattering_albedo)
 
     def update_cloud_profile():
         return

@@ -1,8 +1,8 @@
 """Define an interface for the RRTMG radiation scheme (through CliMT). """
 import numpy as np
-import xarray as xr
 from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
+import climt
 
 from .radiation import Radiation
 from konrad.cloud import ClearSky
@@ -15,7 +15,7 @@ __all__ = [
 class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
 
-    def __init__(self, *args, solar_constant=510, **kwargs):
+    def __init__(self, *args, solar_constant=510, mcica=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._state_lw = None
         self._state_sw = None
@@ -23,16 +23,17 @@ class RRTMG(Radiation):
         self._rad_lw = None
         self._rad_sw = None
 
+        self._mcica = mcica
         self.solar_constant = solar_constant
 
     def init_radiative_state(self, atmosphere):
 
-        import climt
-        climt.set_constant('stellar_irradiance',
-                           value=self.solar_constant,
-                           units='W m^-2')
-        self._rad_lw = climt.RRTMGLongwave()
-        self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True)
+        climt.set_constants_from_dict({"stellar_irradiance": {
+                "value": self.solar_constant, "units": 'W m^-2'}})
+        self._rad_lw = climt.RRTMGLongwave(
+                cloud_optical_properties='direct_input')
+        self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True,
+                                            mcica=self._mcica)
         state_lw = climt.get_default_state([self._rad_lw])
         state_sw = climt.get_default_state([self._rad_sw])
 
@@ -64,31 +65,28 @@ class RRTMG(Radiation):
         ### Aerosols ###
         # TODO: Should all the aerosol values be zero?!
         # Longwave specific
-        num_lw_bands = len(state_lw['num_longwave_bands'])
+        num_lw_bands = state_lw['longwave_optical_thickness_due_to_aerosol'].shape[0]
 
         state_lw['longwave_optical_thickness_due_to_aerosol'] = DataArray(
-                np.zeros((1, 1, numlevels, num_lw_bands)),
-                dims=('longitude', 'latitude',
-                      'mid_levels', 'num_longwave_bands'),
+                np.zeros((num_lw_bands, numlevels)),
+                dims=('num_longwave_bands', 'mid_levels'),
                 attrs={'units': 'dimensionless'})
 
         # Shortwave specific changes
-        num_sw_bands = len(state_sw['num_shortwave_bands'])
+        num_sw_bands = state_sw['shortwave_optical_thickness_due_to_aerosol'].shape[0]
 
-        num_aerosols = len(state_sw['num_ecmwf_aerosols'])
+        num_aerosols = state_sw['aerosol_optical_depth_at_55_micron'].shape[0]
         state_sw['aerosol_optical_depth_at_55_micron'] = DataArray(
-                np.zeros((1, 1, numlevels, num_aerosols)),
-                dims=('longitude', 'latitude',
-                      'mid_levels', 'num_ecmwf_aerosols'),
+                np.zeros((num_aerosols, numlevels)),
+                dims=('num_ecmwf_aerosols', 'mid_levels'),
                 attrs={'units': 'dimensionless'})
 
         for quant in ['shortwave_optical_thickness_due_to_aerosol',
                       'single_scattering_albedo_due_to_aerosol',
                       'aerosol_asymmetry_parameter']:
             state_sw[quant] = DataArray(
-                np.zeros((1, 1, numlevels, num_sw_bands)),
-                dims=('longitude', 'latitude',
-                      'mid_levels', 'num_shortwave_bands'),
+                np.zeros((num_sw_bands, numlevels)),
+                dims=('num_shortwave_bands', 'mid_levels'),
                 attrs={'units': 'dimensionless'})
 
         return state_lw, state_sw
@@ -159,8 +157,7 @@ class RRTMG(Radiation):
 
         # Surface quantities
         state0['surface_temperature'] = DataArray(
-            np.array([[surface['temperature'][-1]]]),
-            dims={'longitude', 'latitude'},
+            np.array(surface['temperature'][-1]),
             attrs={'units': 'degK'})
 
         if sw:  # surface properties required only for shortwave
@@ -169,14 +166,12 @@ class RRTMG(Radiation):
                                    'surface_albedo_for_diffuse_shortwave',
                                    'surface_albedo_for_direct_shortwave']:
                 state0[surface_albedo] = DataArray(
-                    np.array([[float(surface.albedo)]]),
-                    dims={'longitude', 'latitude'},
+                    np.array(float(surface.albedo)),
                     attrs={'units': 'dimensionless'})
 
             # Sun
             state0['zenith_angle'] = DataArray(
-                np.array([[np.deg2rad(self.current_solar_angle)]]),
-                dims={'longitude', 'latitude'},
+                np.array(np.deg2rad(self.current_solar_angle)),
                 attrs={'units': 'radians'})
 
         return state0
@@ -194,7 +189,8 @@ class RRTMG(Radiation):
             values and the other of fluxes and heating rates
         """
         if self._state_lw is None or self._state_sw is None: # first time only
-            self._state_lw, self._state_sw = self.init_radiative_state(atmosphere)
+            self._state_lw, self._state_sw = self.init_radiative_state(
+                    atmosphere)
             self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)
             self.update_cloudy_radiative_state(cloud, self._state_sw, sw=True)
 
@@ -214,7 +210,7 @@ class RRTMG(Radiation):
         return lw_fluxes, sw_fluxes
 
     def calc_radiation(self, atmosphere, surface, cloud):
-        """Returns the shortwave, longwave and net heatingrates.
+        """Updates the shortwave, longwave and net heatingrates.
         Converts output from radiative_fluxes to be in the format required for
         our model.
 
@@ -222,28 +218,36 @@ class RRTMG(Radiation):
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             surface (konrad.surface): Surface model.
             cloud (konrad.cloud): cloud model
-
-        Returns:
-            xarray.Dataset: Dataset containing for the simulated heating rates.
-                The keys are 'sw_htngrt', 'lw_htngrt' and 'net_htngrt'.
         """
         lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere, surface,
                                                            cloud)
         lw_fluxes = lw_dT_fluxes[1]
         sw_fluxes = sw_dT_fluxes[1]
 
-        self['lw_htngrt'] = lw_fluxes['longwave_heating_rate'][0].data
-        self['lw_htngrt_clr'] = lw_fluxes['longwave_heating_rate_assuming_clear_sky'][0].data
-        self['lw_flxu'] = lw_fluxes['upwelling_longwave_flux_in_air'][0].data
-        self['lw_flxd'] = lw_fluxes['downwelling_longwave_flux_in_air'][0].data
-        self['lw_flxu_clr'] = lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'][0].data
-        self['lw_flxd_clr'] = lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'][0].data
-        self['sw_htngrt'] = sw_fluxes['shortwave_heating_rate'][0].data
-        self['sw_htngrt_clr'] = sw_fluxes['shortwave_heating_rate_assuming_clear_sky'][0].data
-        self['sw_flxu'] = sw_fluxes['upwelling_shortwave_flux_in_air'][0].data
-        self['sw_flxd'] = sw_fluxes['downwelling_shortwave_flux_in_air'][0].data
-        self['sw_flxu_clr'] = sw_fluxes['upwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data
-        self['sw_flxd_clr'] = sw_fluxes['downwelling_shortwave_flux_in_air_assuming_clear_sky'][0].data
+        self['lw_htngrt'] = np.expand_dims(
+                lw_fluxes['air_temperature_tendency_from_longwave'].data, 0)
+        self['lw_htngrt_clr'] = np.expand_dims(
+                lw_fluxes['air_temperature_tendency_from_longwave_assuming_clear_sky'].data, 0)
+        self['lw_flxu'] = np.expand_dims(
+                lw_fluxes['upwelling_longwave_flux_in_air'].data, 0)
+        self['lw_flxd'] = np.expand_dims(
+                lw_fluxes['downwelling_longwave_flux_in_air'].data, 0)
+        self['lw_flxu_clr'] = np.expand_dims(
+                lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'].data, 0)
+        self['lw_flxd_clr'] = np.expand_dims(
+                lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'].data, 0)
+        self['sw_htngrt'] = np.expand_dims(
+                sw_fluxes['air_temperature_tendency_from_shortwave'].data, 0)
+        self['sw_htngrt_clr'] = np.expand_dims(
+                sw_fluxes['air_temperature_tendency_from_shortwave_assuming_clear_sky'].data, 0)
+        self['sw_flxu'] = np.expand_dims(
+                sw_fluxes['upwelling_shortwave_flux_in_air'].data, 0)
+        self['sw_flxd'] = np.expand_dims(
+                sw_fluxes['downwelling_shortwave_flux_in_air'].data, 0)
+        self['sw_flxu_clr'] = np.expand_dims(
+                sw_fluxes['upwelling_shortwave_flux_in_air_assuming_clear_sky'].data, 0)
+        self['sw_flxd_clr'] = np.expand_dims(
+                sw_fluxes['downwelling_shortwave_flux_in_air_assuming_clear_sky'].data, 0)
 
         self.coords={
             'time': np.array([0]),
