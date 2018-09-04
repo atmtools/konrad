@@ -10,6 +10,9 @@ submodels need to fulfill requirements to make interaction possible. These
 requirements are enforced by the use of abstract base classes.
 """
 import logging
+from os.path import (join, dirname)
+
+__version__ = open(join(dirname(__file__), 'VERSION')).read().strip()
 
 from . import atmosphere
 from . import cloud
