@@ -4,7 +4,7 @@ from datetime import datetime
 import netCDF4
 import numpy as np
 
-from konrad import constants
+from konrad import (constants, __version__)
 from konrad.component import Component
 
 
@@ -55,10 +55,12 @@ class NetcdfHandler:
 
     def create_file(self):
         with netCDF4.Dataset(self.filename, mode='w') as root:
-            root.setncattr('experiment', self.rce.experiment)
-            root.setncattr(
-                'created', datetime.now().strftime("%Y-%m-%d %H:%M")
-            )
+            root.setncatts({
+                'title': self.rce.experiment,
+                'created': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                'source': f'konrad {__version__}',
+                'references': 'https://github.com/atmtools/konrad',
+            })
 
         logger.debug(f'Created "{self.filename}".')
 
