@@ -229,6 +229,8 @@ class RCE:
             # TODO: Consider implementing an Atmosphere.update_diagnostics()
             #  method to include e.g. convective top in the output.
             self.atmosphere.update_height()
+            self.atmosphere.calculate_convective_top(
+                self.radiation['net_htngrt'][0, :])
 
             # Update the ozone profile.
             self.ozone.get(
@@ -244,6 +246,8 @@ class RCE:
                     surface=self.surface,
                     net_heatingrate=self.radiation['net_htngrt'][0, :],
                     )
+
+            self.cloud.update_cloud_profile(self.atmosphere)
 
             # Calculate temperature change for convergence check.
             self.deltaT = (self.atmosphere['T'] - T) / self.timestep

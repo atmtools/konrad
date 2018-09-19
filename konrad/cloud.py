@@ -4,6 +4,7 @@ import abc
 import logging
 
 import numpy as np
+from scipy.interpolate import interp1d
 from sympl import DataArray
 
 logger = logging.getLogger(__name__)
@@ -93,12 +94,12 @@ class Cloud(metaclass=abc.ABCMeta):
                 numbands=num_sw_bands)
 
     @abc.abstractmethod
-    def update_cloud_profile(self, **kwargs):
+    def update_cloud_profile(self, atmosphere, **kwargs):
         """Return the cloud parameters for the radiation scheme."""
 
 
 class ClearSky(Cloud):
-    def update_cloud_profile():
+    def update_cloud_profile(self, *args, **kwargs):
         return
 
 
@@ -125,10 +126,9 @@ class HighCloud(Cloud):
                 z > cloud_top-depth)] = area_fraction
         cloud_fraction = DataArray(cloud_fraction_array, dims=('mid_levels',),
                                    attrs={'units': 'dimensionless'})
-        dz = np.hstack((np.diff(z)[0], np.diff(z)))
-        mass_ice_array = cloud_fraction_array * ice_density * 10**-3 * dz
-        mass_ice = DataArray(mass_ice_array, dims=('mid_levels',),
-                             attrs={'units': 'kg m^-2'})
+
+        mass_ice = self.calculate_mass_cloud_ice(cloud_fraction_array, z,
+                                                 ice_density=ice_density)
 
         super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice,
              lw_optical_thickness=lw_optical_thickness,
@@ -137,5 +137,38 @@ class HighCloud(Cloud):
              asymmetry_parameter=asymmetry_parameter,
              single_scattering_albedo=single_scattering_albedo)
 
-    def update_cloud_profile():
-        return
+        self._ice_density = ice_density
+        self._norm_level = cloud_top
+        self._f = None
+
+    def calculate_mass_cloud_ice(self, cloud_fraction_array, z, ice_density):
+        dz = np.hstack((np.diff(z)[0], np.diff(z)))
+        mass_ice_array = cloud_fraction_array * ice_density * 10 ** -3 * dz
+        mass_ice = DataArray(mass_ice_array, dims=('mid_levels',),
+                             attrs={'units': 'kg m^-2'})
+        return mass_ice
+
+
+    def update_cloud_profile(self, atmosphere, **kwargs):
+
+        if self._f is None:
+            normed_height = atmosphere.get_values(
+                'z', keepdims=False)-self._norm_level
+            self._f = interp1d(
+                normed_height,
+                self.cloud_area_fraction_in_atmosphere_layer.values,
+                fill_value='extrapolate',
+            )
+
+        z = atmosphere.get_values('z', keepdims=False)
+        norm_new = atmosphere.get_values('convective_top_height')
+
+        cloud_fraction_array = self._f(z-norm_new)
+        self.cloud_area_fraction_in_atmosphere_layer = DataArray(
+            cloud_fraction_array,
+            dims=('mid_levels',),
+            attrs={'units': 'dimensionless'})
+
+        mass_ice = self.calculate_mass_cloud_ice(cloud_fraction_array, z,
+                                                 self._ice_density)
+        self.mass_content_of_cloud_ice_in_atmosphere_layer = mass_ice
