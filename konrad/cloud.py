@@ -23,6 +23,7 @@ def get_p_data_array(values, units='kg m^-2', numlevels=200):
     raise TypeError(
             'Cloud variable input must be a single value or a sympl.DataArray')
 
+
 def get_waveband_data_array(values, units='dimensionless', numbands=14,
                             numlevels=200, sw=True):
     """Return a DataArray of values."""
@@ -76,7 +77,7 @@ class Cloud(metaclass=abc.ABCMeta):
                 albedo due to cloud (for the shortwave component of RRTMG)
         """
         self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = \
-                get_p_data_array(mass_water, numlevels=numlevels)
+            get_p_data_array(mass_water, numlevels=numlevels)
 
         self.mass_content_of_cloud_ice_in_atmosphere_layer = get_p_data_array(
                 mass_ice, numlevels=numlevels)
@@ -105,15 +106,16 @@ class Cloud(metaclass=abc.ABCMeta):
                 numbands=num_sw_bands)
 
         self.shortwave_optical_thickness_due_to_cloud = \
-                get_waveband_data_array(sw_optical_thickness,
-                                        numlevels=numlevels,
-                                        numbands=num_sw_bands)
+            get_waveband_data_array(sw_optical_thickness,
+                                    numlevels=numlevels,
+                                    numbands=num_sw_bands)
 
         self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
                 single_scattering_albedo, numlevels=numlevels,
                 numbands=num_sw_bands)
 
-    def calculate_mass_cloud(self, cloud_fraction_array, z, density):
+    @staticmethod
+    def calculate_mass_cloud(cloud_fraction_array, z, density):
         dz = np.hstack((np.diff(z)[0], np.diff(z)))
         mass_array = cloud_fraction_array * density * 10 ** -3 * dz
         mass = DataArray(mass_array, dims=('mid_levels',),
@@ -134,9 +136,9 @@ class ClearSky(Cloud):
 
 
 class HighCloud(Cloud):
-    def __init__(self, z, cloud_top=12000, depth=500, cloud_fraction_in_cloud=1,
-                 ice_density=0.5, lw_optical_thickness=10,
-                 sw_optical_thickness=10,
+    def __init__(self, z, cloud_top=12000, depth=500,
+                 cloud_fraction_in_cloud=1, ice_density=0.5,
+                 lw_optical_thickness=10, sw_optical_thickness=10,
                  forward_scattering_fraction=0.8, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9):
         """
@@ -158,12 +160,16 @@ class HighCloud(Cloud):
         mass_ice = self.calculate_mass_cloud(cloud_fraction_array, z,
                                              ice_density)
 
-        super().__init__(cloud_fraction=cloud_fraction, mass_ice=mass_ice,
-             lw_optical_thickness=lw_optical_thickness,
-             sw_optical_thickness=sw_optical_thickness,
-             forward_scattering_fraction=forward_scattering_fraction,
-             asymmetry_parameter=asymmetry_parameter,
-             single_scattering_albedo=single_scattering_albedo)
+        super().__init__(
+            numlevels=z.size,
+            cloud_fraction=cloud_fraction,
+            mass_ice=mass_ice,
+            lw_optical_thickness=lw_optical_thickness,
+            sw_optical_thickness=sw_optical_thickness,
+            forward_scattering_fraction=forward_scattering_fraction,
+            asymmetry_parameter=asymmetry_parameter,
+            single_scattering_albedo=single_scattering_albedo,
+        )
 
         self._ice_density = ice_density
         self._norm_level = cloud_top
@@ -196,9 +202,9 @@ class HighCloud(Cloud):
 
 
 class LowCloud(Cloud):
-    def __init__(self, z, cloud_top=2000, depth=1500, cloud_fraction_in_cloud=1,
-                 water_density=0.5, lw_optical_thickness=10,
-                 sw_optical_thickness=10,
+    def __init__(self, z, cloud_top=2000, depth=1500,
+                 cloud_fraction_in_cloud=1, water_density=0.5,
+                 lw_optical_thickness=10, sw_optical_thickness=10,
                  forward_scattering_fraction=0.8, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9):
         """
@@ -220,12 +226,16 @@ class LowCloud(Cloud):
         mass_water = self.calculate_mass_cloud(cloud_fraction_array, z,
                                                water_density)
 
-        super().__init__(cloud_fraction=cloud_fraction, mass_water=mass_water,
-             lw_optical_thickness=lw_optical_thickness,
-             sw_optical_thickness=sw_optical_thickness,
-             forward_scattering_fraction=forward_scattering_fraction,
-             asymmetry_parameter=asymmetry_parameter,
-             single_scattering_albedo=single_scattering_albedo)
+        super().__init__(
+            numlevels=z.size,
+            cloud_fraction=cloud_fraction,
+            mass_water=mass_water,
+            lw_optical_thickness=lw_optical_thickness,
+            sw_optical_thickness=sw_optical_thickness,
+            forward_scattering_fraction=forward_scattering_fraction,
+            asymmetry_parameter=asymmetry_parameter,
+            single_scattering_albedo=single_scattering_albedo,
+        )
 
         self._water_density = water_density
         self._f = None
