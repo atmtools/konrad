@@ -150,6 +150,12 @@ variable_description = {
         'description': 'Temperature at the top of convection',
         'dims': ('time',),
     },
+    'convective_top_height': {
+        'units': 'm',
+        'standard_name': 'convective_top_height',
+        'description': 'Altitude of the top of convection',
+        'dims': ('time',),
+    },
     # Radiative quantities
     'lw_htngrt': {
         'units': 'K / day',

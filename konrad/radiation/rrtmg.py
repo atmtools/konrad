@@ -31,7 +31,8 @@ class RRTMG(Radiation):
         climt.set_constants_from_dict({"stellar_irradiance": {
                 "value": self.solar_constant, "units": 'W m^-2'}})
         self._rad_lw = climt.RRTMGLongwave(
-                cloud_optical_properties='direct_input')
+                cloud_optical_properties='direct_input',
+                mcica=self._mcica)
         self._rad_sw = climt.RRTMGShortwave(ignore_day_of_year=True,
                                             mcica=self._mcica)
         state_lw = climt.get_default_state([self._rad_lw])
