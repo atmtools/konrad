@@ -28,7 +28,21 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
 
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
+    def __init__(self, fixed=False):
+        """Initialize a moist-adiabatic lapse rate component.
+
+        Parameters:
+            fixed (bool): If `True` the moist adiabatic lapse rate is only
+                calculated for the first time step and kept constant
+                afterwards.
+        """
+        self.fixed = fixed
+        self._lapse_cache = None
+
     def get(self, atmosphere):
+        if self._lapse_cache is not None:
+            return self._lapse_cache
+
         T = atmosphere['T'][0, :]
         p = atmosphere['plev'][:]
         phlev = atmosphere['phlev'][:]
@@ -49,6 +63,10 @@ class MoistLapseRate(LapseRate):
                               )
         )
         lapse = interp1d(p, gamma_m, fill_value='extrapolate')(phlev[:-1])
+
+        if self.fixed:
+            self._lapse_cache = lapse
+
         return lapse
 
 
