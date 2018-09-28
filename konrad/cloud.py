@@ -41,6 +41,8 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
             'Cloud variable input must be a single value or a sympl.DataArray')
 
 
+# TODO: We need to find a clean way to handle the `numlevels`. Currently,
+# it is easily possible to construct non-matching atmospehres and clouds.
 class Cloud(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all cloud handlers.
     Default properties include a cloud area fraction equal to zero everywhere
