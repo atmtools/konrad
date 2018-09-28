@@ -233,13 +233,10 @@ class Atmosphere(Component):
         # Keep attributes of original atmosphere object.
         # This is **extremely** important because references to e.g. the
         # convection scheme or the humidity handling are stored as attributes!
-        new_atmosphere.attrs = {**self.attrs}
+        new_atmosphere.attrs.update({**self.attrs})
 
         # Calculate the geopotential height.
         new_atmosphere.update_height()
-
-        # Append variable descriptions to the Dataset.
-        utils.append_description(new_atmosphere)
 
         return new_atmosphere
 

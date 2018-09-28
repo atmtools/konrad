@@ -35,8 +35,8 @@ class Humidity(Component, metaclass=abc.ABCMeta):
         self.p_tropo = p_tropo
         self.vmr_strato = vmr_strato
 
-        self.vmr_profile = vmr_profile
-        self.rh_profile = rh_profile
+        self._vmr_profile = vmr_profile
+        self._rh_profile = rh_profile
 
     @abc.abstractmethod
     def get(self, plev, T, z, **kwargs):
@@ -61,8 +61,8 @@ class Humidity(Component, metaclass=abc.ABCMeta):
             ndarray: Relative humidity.
         """
         # If set, return prescribed relative humidity profile.
-        if self.rh_profile is not None:
-            return self.rh_profile
+        if self._rh_profile is not None:
+            return self._rh_profile
 
         # Exponential decay from the surface value throughout the atmosphere.
         rh = self.rh_surface * (p / p[0]) ** 1.15
@@ -95,10 +95,10 @@ class Humidity(Component, metaclass=abc.ABCMeta):
         T = atmosphere.get_values('T', keepdims=False)
         z = atmosphere.get_values('z', keepdims=False)
 
-        if self.vmr_profile is None:
+        if self._vmr_profile is None:
             vmr = rh2vmr(self.get_relative_humidity_profile(p), p, T)
         else:
-            vmr = self.vmr_profile
+            vmr = self._vmr_profile
 
         vmr = self.adjust_stratospheric_vmr(vmr, p, T, z)
 
