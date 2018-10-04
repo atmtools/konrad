@@ -17,7 +17,6 @@ from konrad.convection import (Convection, HardAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
 from konrad.upwelling import (Upwelling, NoUpwelling)
 
-
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -34,6 +33,7 @@ class RCE:
         >>> rce = konrad.RCE(...)
         >>> rce.run()
     """
+
     def __init__(self, atmosphere, timestep='3h', max_duration='5000d',
                  outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
                  radiation=None, ozone=None, humidity=None, surface=None,
@@ -96,13 +96,13 @@ class RCE:
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud, ClearSky())
         self.convection = utils.return_if_type(convection, 'convection',
-                                          Convection, HardAdjustment())
+                                               Convection, HardAdjustment())
 
         self.lapserate = utils.return_if_type(lapserate, 'lapserate',
                                               LapseRate, MoistLapseRate())
 
         self.upwelling = utils.return_if_type(upwelling, 'upwelling',
-                                         Upwelling, NoUpwelling())
+                                              Upwelling, NoUpwelling())
 
         self.max_duration = utils.parse_fraction_of_day(max_duration)
         self.timestep = utils.parse_fraction_of_day(timestep)
@@ -144,7 +144,7 @@ class RCE:
         Returns:
             bool: ``True`` if converged, else ``False``.
         """
-        #TODO: Implement proper convergence criterion (e.g. include TOA).
+        # TODO: Implement proper convergence criterion (e.g. include TOA).
         return np.all(np.abs(self.deltaT) < self.delta)
 
     def check_if_write(self):
@@ -230,7 +230,8 @@ class RCE:
             #  method to include e.g. convective top in the output.
             self.atmosphere.update_height()
             self.atmosphere.calculate_convective_top(
-                self.radiation['net_htngrt'][0, :])
+                self.radiation['sw_htngrt_clr'][0, :] +
+                self.radiation['lw_htngrt_clr'][0, :])
 
             # Update the ozone profile.
             self.ozone.get(
@@ -238,14 +239,14 @@ class RCE:
                 timestep=self.timestep,
                 zenith=self.radiation.current_solar_angle,
                 radheat=self.radiation['net_htngrt'][0, :]
-                )
+            )
 
             # Update the humidity profile.
             self.atmosphere['H2O'][0, :] = self.humidity.get(
-                    self.atmosphere,
-                    surface=self.surface,
-                    net_heatingrate=self.radiation['net_htngrt'][0, :],
-                    )
+                self.atmosphere,
+                surface=self.surface,
+                net_heatingrate=self.radiation['net_htngrt'][0, :],
+            )
 
             self.cloud.update_cloud_profile(self.atmosphere)
 
