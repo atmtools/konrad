@@ -148,8 +148,8 @@ class Humidity(Component, metaclass=abc.ABCMeta):
 class FixedVMR(Humidity):
     """Keep the water vapor volume mixing ratio constant."""
     def get(self, atmosphere, **kwargs):
-        if self.vmr_profile is None:
-            self.vmr_profile = self.get_vmr_profile(atmosphere)
+        if self._vmr_profile is None:
+            self._vmr_profile = self.get_vmr_profile(atmosphere)
 
         return self.get_vmr_profile(atmosphere)
 
@@ -241,7 +241,7 @@ class CoupledRH(Humidity):
         super().__init__(*args, **kwargs)
 
         # This ensures a proper coupling of the relative humidity profile.
-        for attr in ('rh_profile', 'vmr_profile'):
+        for attr in ('_rh_profile', '_vmr_profile'):
             if getattr(self, attr) is not None:
                 logger.warning(
                     'Set attribute "{}" to `None` for coupled '
@@ -249,21 +249,18 @@ class CoupledRH(Humidity):
                 )
                 setattr(self, attr, None)
 
-    def get(self, atmosphere, net_heatingrate, **kwargs):
+    def get(self, atmosphere, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
             atmosphere (konrad.atmosphere): atmosphere object,
                 including temperature, pressure, altitude
-            net_heatingrate (ndarray): net radiative heating rate to calculate
-                the convective top
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        p_tropo = atmosphere.get_convective_top(net_heatingrate)
+        p_tropo = atmosphere.get_values('convective_top_plev')[0]
         if p_tropo is not None:
             self.p_tropo = p_tropo
 
         return self.get_vmr_profile(atmosphere)
-

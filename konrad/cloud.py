@@ -190,7 +190,7 @@ class HighCloud(Cloud):
             )
 
         z = atmosphere.get_values('z', keepdims=False)
-        norm_new = atmosphere.get_values('convective_top_height')
+        norm_new = atmosphere.get_values('convective_top_height')[0]
 
         cloud_fraction_array = self._f(z-norm_new)
         self.cloud_area_fraction_in_atmosphere_layer = DataArray(

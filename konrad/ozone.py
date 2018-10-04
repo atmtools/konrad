@@ -79,7 +79,7 @@ class OzoneNormedPressure(Ozone):
 
     def get(self, atmosphere, **kwargs):
         if self.norm_level is None:
-            self.norm_level = atmosphere.get_values('convective_top_plev')
+            self.norm_level = atmosphere.get_values('convective_top_plev')[0]
 
         if self._f is None:
             self._f = interp1d(
@@ -88,7 +88,7 @@ class OzoneNormedPressure(Ozone):
                 fill_value='extrapolate',
             )
 
-        norm_new = atmosphere.get_values('convective_top_plev')
+        norm_new = atmosphere.get_values('convective_top_plev')[0]
 
         atmosphere['O3'] = (
             ('time', 'plev'),
