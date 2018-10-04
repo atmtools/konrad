@@ -17,6 +17,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+
 class Ozone(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for ozone treatments."""
 
@@ -28,18 +29,18 @@ class Ozone(Component, metaclass=abc.ABCMeta):
         self['initial_ozone'] = (('plev',), None)
 
     @abc.abstractmethod
-    def get(self, atmos, timestep, zenith, radheat):
+    def get(self, atmosphere, timestep, zenith):
         """Updates the ozone profile within the atmosphere class.
 
         Parameters:
-            atmos (konrad.atmosphere): atmosphere model containing ozone
+            atmosphere (konrad.atmosphere): atmosphere model containing ozone
                 concentration profile, height, temperature, pressure and half
                 pressure levels at the current timestep
             timestep (float): timestep of run [days]
             zenith (float): solar zenith angle,
                 angle of the Sun to the vertical [degrees]
-            radheat (ndarray): array of net radiative heating rates
         """
+
 
 class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
@@ -52,15 +53,15 @@ class OzoneHeight(Ozone):
     def __init__(self):
         self._f = None
 
-    def get(self, atmos, **kwargs):
+    def get(self, atmosphere, **kwargs):
         if self._f is None:
             self._f = interp1d(
-                atmos['z'][0, :],
-                atmos['O3'],
+                atmosphere['z'][0, :],
+                atmosphere['O3'],
                 fill_value='extrapolate',
             )
 
-        atmos['O3'] = (('time', 'plev'), self._f(atmos['z'][0, :]))
+        atmosphere['O3'] = (('time', 'plev'), self._f(atmosphere['z'][0, :]))
 
 
 class OzoneNormedPressure(Ozone):
@@ -76,21 +77,20 @@ class OzoneNormedPressure(Ozone):
         self.norm_level = norm_level
         self._f = None
 
-    def get(self, atmos, radheat, **kwargs):
+    def get(self, atmosphere, **kwargs):
         if self.norm_level is None:
-            self.norm_level = atmos.get_convective_top(radheat)
+            self.norm_level = atmosphere.get_values('convective_top_plev')
 
         if self._f is None:
             self._f = interp1d(
-                atmos['plev'] / self.norm_level,
-                atmos['O3'][0, :],
+                atmosphere['plev'] / self.norm_level,
+                atmosphere['O3'][0, :],
                 fill_value='extrapolate',
             )
 
-        norm_new = atmos.get_convective_top(radheat)
+        norm_new = atmosphere.get_values('convective_top_plev')
 
-        atmos['O3'] = (
+        atmosphere['O3'] = (
             ('time', 'plev'),
-            self._f(atmos['plev'] / norm_new).reshape(1, -1)
+            self._f(atmosphere['plev'] / norm_new).reshape(1, -1)
         )
-

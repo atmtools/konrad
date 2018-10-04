@@ -235,10 +235,9 @@ class RCE:
 
             # Update the ozone profile.
             self.ozone.get(
-                atmos=self.atmosphere,
+                atmosphere=self.atmosphere,
                 timestep=self.timestep,
-                zenith=self.radiation.current_solar_angle,
-                radheat=self.radiation['net_htngrt'][0, :]
+                zenith=self.radiation.current_solar_angle
             )
 
             # Update the humidity profile.
