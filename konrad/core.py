@@ -244,7 +244,6 @@ class RCE:
             self.atmosphere['H2O'][0, :] = self.humidity.get(
                 self.atmosphere,
                 surface=self.surface,
-                net_heatingrate=self.radiation['net_htngrt'][0, :],
             )
 
             self.cloud.update_cloud_profile(self.atmosphere)
