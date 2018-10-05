@@ -396,55 +396,6 @@ class Atmosphere(Component):
 
         return max_plev
 
-    def calculate_convective_top(self, heatingrate, lim=-0.1):
-        """Find the pressure where the radiative heating has a certain value.
-
-        Note:
-            In the HardAdjustment case, for a contop temperature that is not
-            dependent on the number of distribution of pressure levels, it is
-            better to take a value of lim not equal or very close to zero.
-
-        Parameters:
-            heatingrate (ndarray): Radiative heating rate [K/day].
-            lim (float): Threshold value [K/day].
-
-        Returns:
-            float: Pressure at height of convective top [Pa].
-        """
-        p = self['plev'][:]
-        T = self['T'][-1, :]
-        z = self.get_values('z', keepdims=False)
-
-        # NOTE: `np.argmax` returns the first occurence of the maximum value.
-        # In this example, the index of the first `True` value,
-        # corresponding to the convective top, is returned.
-        contop_i = int(np.argmax(heatingrate > lim))
-
-        # Create auxiliary arrays storing the Qr, T and p values above and
-        # below the threshold value. These arrays are used as input for the
-        # interpolation in the next step.
-        heat_array = np.array([heatingrate[contop_i-1], heatingrate[contop_i]])
-        p_array = np.array([p[contop_i-1], p[contop_i]])
-        T_array = np.array([T[contop_i-1], T[contop_i]])
-        z_array = np.array([z[contop_i-1], z[contop_i]])
-
-        # Interpolate the pressure value where the heatingrate # equals `lim`.
-        contop_plev = interp1d(heat_array, p_array, fill_value='extrapolate')(lim)
-        contop_T = interp1d(heat_array, T_array, fill_value='extrapolate')(lim)
-        contop_z = interp1d(heat_array, z_array, fill_value='extrapolate')(lim)
-
-        self.create_variable('convective_top_plev', [contop_plev])
-        self.create_variable('convective_top_temperature', [contop_T])
-        self.create_variable('convective_top_height', [contop_z])
-
-        return
-
-    def get_convective_top(self, heatingrate, lim=-0.1):
-        """ Return the convective top level pressure.
-        """
-        self.calculate_convective_top(heatingrate, lim=lim)
-        return self.get_values('convective_top_plev')
-
     def get_coldpoint_plev(self, pmin=10e2):
         """Return the cold point pressure.
 

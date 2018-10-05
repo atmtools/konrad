@@ -138,6 +138,12 @@ variable_description = {
         'description': 'Level index of maximum diabatic convergence',
         'dims': ('time',),
     },
+    # Convective quantities
+    'convective_heating_rate': {
+        'units': 'K / day',
+        'standard_name': 'convective_heating_rate',
+        'dims': ('time', 'plev'),
+    },
     'convective_top_plev': {
         'units': 'Pa',
         'standard_name': 'convective_top_plev',

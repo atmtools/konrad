@@ -29,13 +29,14 @@ class Ozone(Component, metaclass=abc.ABCMeta):
         self['initial_ozone'] = (('plev',), None)
 
     @abc.abstractmethod
-    def get(self, atmosphere, timestep, zenith):
+    def get(self, atmosphere, convection, timestep, zenith):
         """Updates the ozone profile within the atmosphere class.
 
         Parameters:
             atmosphere (konrad.atmosphere): atmosphere model containing ozone
                 concentration profile, height, temperature, pressure and half
                 pressure levels at the current timestep
+            convection (konrad.convection): convection scheme
             timestep (float): timestep of run [days]
             zenith (float): solar zenith angle,
                 angle of the Sun to the vertical [degrees]
@@ -77,9 +78,10 @@ class OzoneNormedPressure(Ozone):
         self.norm_level = norm_level
         self._f = None
 
-    def get(self, atmosphere, **kwargs):
+    def get(self, atmosphere, convection, **kwargs):
         if self.norm_level is None:
-            self.norm_level = atmosphere.get_values('convective_top_plev')[0]
+            self.norm_level = convection.get_values('convective_top_plev')[0]
+            # TODO: what if there is no convective top
 
         if self._f is None:
             self._f = interp1d(
@@ -88,7 +90,7 @@ class OzoneNormedPressure(Ozone):
                 fill_value='extrapolate',
             )
 
-        norm_new = atmosphere.get_values('convective_top_plev')[0]
+        norm_new = convection.get_values('convective_top_plev')[0]
 
         atmosphere['O3'] = (
             ('time', 'plev'),

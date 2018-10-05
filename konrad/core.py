@@ -229,13 +229,13 @@ class RCE:
             # TODO: Consider implementing an Atmosphere.update_diagnostics()
             #  method to include e.g. convective top in the output.
             self.atmosphere.update_height()
-            self.atmosphere.calculate_convective_top(
-                self.radiation['sw_htngrt_clr'][0, :] +
-                self.radiation['lw_htngrt_clr'][0, :])
+            z = self.atmosphere.get_values('z')[0, :]
+            self.convection.calculate_convective_top_height(z)
 
             # Update the ozone profile.
             self.ozone.get(
                 atmosphere=self.atmosphere,
+                convection=self.convection,
                 timestep=self.timestep,
                 zenith=self.radiation.current_solar_angle
             )
@@ -243,10 +243,12 @@ class RCE:
             # Update the humidity profile.
             self.atmosphere['H2O'][0, :] = self.humidity.get(
                 self.atmosphere,
+                convection=self.convection,
                 surface=self.surface,
             )
 
-            self.cloud.update_cloud_profile(self.atmosphere)
+            self.cloud.update_cloud_profile(self.atmosphere,
+                                            convection=self.convection)
 
             # Calculate temperature change for convergence check.
             self.deltaT = (self.atmosphere['T'] - T) / self.timestep

@@ -45,6 +45,43 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 
 class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
+    def create_variable(self, name, data=None, dims=None):
+        """Create a variable entry in the dataframe."""
+        if dims is None:
+            dims = constants.variable_description[name].get('dims')
+
+        if data is None:
+            data = self.get_default_profile(name)
+
+        ndim = len(dims)
+        if ndim == 2 and data.ndim == 1:
+            data = data[np.newaxis, :]
+
+        self[name] = (dims, data)
+
+    def get_values(self, variable, default=None, keepdims=True):
+        """Get values of a given variable.
+
+        Parameters:
+            variable (str): Variable key.
+            keepdims (bool): If this is set to False, single-dimensions are
+                removed. Otherwise dimensions are kept (default).
+            default (float): Default value assigned to all pressure levels,
+                if the variable is not found.
+
+        Returns:
+            ndarray: Array containing the values assigned to the variable.
+        """
+        try:
+            values = self[variable]
+        except KeyError:
+            if default is not None:
+                values = default * np.ones(self['plev'].size)
+            else:
+                raise KeyError(f"'{variable}' not found and no default given.")
+
+        return values if keepdims else values.ravel()
+
     @abc.abstractmethod
     def stabilize(self, atmosphere, lapse, surface, timestep):
         """Stabilize the temperature profile by redistributing energy.
@@ -67,15 +104,20 @@ class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
     def stabilize(self, atmosphere, lapse, surface, timestep):
 
+        T_rad = atmosphere['T'][0, :]
+        p = atmosphere['plev']
+
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
-            p=atmosphere['plev'],
+            p=p,
             phlev=atmosphere['phlev'],
-            T_rad=atmosphere['T'][0, :],
+            T_rad=T_rad,
             lapse=lapse,
             surface=surface,
             timestep=timestep,
         )
+        # get convective top temperature and pressure
+        self.calculate_convective_top(T_new, T_rad, p, timestep=timestep)
         # Update atmospheric temperatures as well as surface temperature.
         atmosphere['T'][0, :] = T_new
         surface['temperature'][0] = T_s_new
@@ -201,7 +243,6 @@ class HardAdjustment(Convection):
             T_con[contop+1:] = T_rad[contop+1:]
         else:
             T_con = T_rad
-            contop = 0
 
         # If run with a fixed surface temperature, always return the
         # convective profile starting from the current surface temperature.
@@ -215,6 +256,67 @@ class HardAdjustment(Convection):
 
         return T_con, float(diff)
 
+    def calculate_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.1):
+        """Find the pressure where the radiative heating has a certain value.
+
+        Note:
+            In the HardAdjustment case, for a contop temperature that is not
+            dependent on the number of distribution of pressure levels, it is
+            better to take a value of lim not equal or very close to zero.
+
+        Parameters:
+            T_rad (ndarray): radiative temperature profile [K]
+            T_con (ndarray): convectively adjusted temperature profile [K]
+            p (ndarray): model pressure levels [Pa]
+            timestep (float): model timestep [days]
+            lim (float): Threshold value [K/day].
+
+        Returns:
+            float: Pressure at height of convective top [Pa].
+        """
+        convective_heating = (T_con - T_rad) / timestep
+        if np.any(convective_heating > lim*timestep):
+            # NOTE: `np.argmax` returns the first occurrence of the maximum value.
+            # In this example, the index of the first `True` value,
+            # corresponding to the convective top, is returned.
+            contop_i = int(np.argmax(convective_heating < lim))
+
+            # Create auxiliary arrays storing the Qr, T and p values above and
+            # below the threshold value. These arrays are used as input for the
+            # interpolation in the next step.
+            heat_array = np.array([convective_heating[contop_i-1],
+                                   convective_heating[contop_i]])
+            p_array = np.array([p[contop_i-1], p[contop_i]])
+            T_array = np.array([T_con[contop_i-1], T_con[contop_i]])
+
+            # Interpolate the pressure value to where the convective heating rate
+            # equals `lim`.
+            contop_p = interp1d(heat_array, p_array)(lim)
+            contop_T = interp1d(heat_array, T_array)(lim)
+
+        else:
+            convective_heating = np.zeros(p.shape)
+            contop_p = np.nan
+            contop_T = np.nan
+
+        self.create_variable('convective_heating_rate', convective_heating)
+        self.create_variable('convective_top_plev', [contop_p])
+        self.create_variable('convective_top_temperature', [contop_T])
+
+        return
+
+    def calculate_convective_top_height(self, z, lim=0.1):
+        convective_heating = self.get_values('convective_heating_rate')[0]
+        if not np.allclose(convective_heating, np.zeros(z.shape)):
+            contop_i = int(np.argmax(convective_heating < lim))
+            heat_array = np.array([convective_heating[contop_i - 1],
+                                  convective_heating[contop_i]])
+            z_array = np.array([z[contop_i - 1], z[contop_i]])
+            contop_z = interp1d(heat_array, z_array, fill_value='extrapolate')(lim)
+        else:
+            contop_z = np.nan
+        self.create_variable('convective_top_height', [contop_z])
+        return
 
 class RelaxedAdjustment(HardAdjustment):
     """Adjustment with relaxed convection in upper atmosphere.
