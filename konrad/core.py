@@ -13,7 +13,7 @@ from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import (Humidity, FixedRH)
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.cloud import (Cloud, ClearSky)
-from konrad.convection import (Convection, HardAdjustment)
+from konrad.convection import (Convection, HardAdjustment, RelaxedAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
 from konrad.upwelling import (Upwelling, NoUpwelling)
 
@@ -230,7 +230,9 @@ class RCE:
             #  method to include e.g. convective top in the output.
             self.atmosphere.update_height()
             z = self.atmosphere.get_values('z')[0, :]
-            self.convection.calculate_convective_top_height(z)
+            if isinstance(self.convection, HardAdjustment) or isinstance(
+                    self.convection, RelaxedAdjustment):
+                self.convection.calculate_convective_top_height(z)
 
             # Update the ozone profile.
             self.ozone.get(
