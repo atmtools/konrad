@@ -117,7 +117,7 @@ class HardAdjustment(Convection):
             timestep=timestep,
         )
         # get convective top temperature and pressure
-        self.calculate_convective_top(T_new, T_rad, p, timestep=timestep)
+        self.calculate_convective_top(T_rad, T_new, p, timestep=timestep)
         # Update atmospheric temperatures as well as surface temperature.
         atmosphere['T'][0, :] = T_new
         surface['temperature'][0] = T_s_new
@@ -275,11 +275,17 @@ class HardAdjustment(Convection):
             float: Pressure at height of convective top [Pa].
         """
         convective_heating = (T_con - T_rad) / timestep
+        # Convective heating must be positive somewhere
         if np.any(convective_heating > lim*timestep):
             # NOTE: `np.argmax` returns the first occurrence of the maximum value.
             # In this example, the index of the first `True` value,
             # corresponding to the convective top, is returned.
-            contop_i = int(np.argmax(convective_heating < lim))
+            # The convective top corresponds to the first near zero / negative
+            # convective heating rate above the region which is being heated
+            # (the region which has a positive convective heating rate).
+            positive_i = int(np.argmax(convective_heating > lim*timestep))
+            contop_i = int(np.argmax(
+                convective_heating[positive_i:] < lim)) + positive_i
 
             # Create auxiliary arrays storing the Qr, T and p values above and
             # below the threshold value. These arrays are used as input for the
