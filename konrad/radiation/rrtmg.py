@@ -236,17 +236,17 @@ class RRTMG(Radiation):
         sw_fluxes = sw_dT_fluxes[1]
 
         self['lw_htngrt'] = np.expand_dims(
-                lw_fluxes['air_temperature_tendency_from_longwave'].data, 0)
+                lw_fluxes['air_temperature_tendency_from_longwave'].data[:, 0, 0], 0)
         self['lw_htngrt_clr'] = np.expand_dims(
-                lw_fluxes['air_temperature_tendency_from_longwave_assuming_clear_sky'].data, 0)
+                lw_fluxes['air_temperature_tendency_from_longwave_assuming_clear_sky'].data[:, 0, 0], 0)
         self['lw_flxu'] = np.expand_dims(
-                lw_fluxes['upwelling_longwave_flux_in_air'].data, 0)
+                lw_fluxes['upwelling_longwave_flux_in_air'].data[:, 0, 0], 0)
         self['lw_flxd'] = np.expand_dims(
-                lw_fluxes['downwelling_longwave_flux_in_air'].data, 0)
+                lw_fluxes['downwelling_longwave_flux_in_air'].data[:, 0, 0], 0)
         self['lw_flxu_clr'] = np.expand_dims(
-                lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'].data, 0)
+                lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'].data[:, 0, 0], 0)
         self['lw_flxd_clr'] = np.expand_dims(
-                lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'].data, 0)
+                lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'].data[:, 0, 0], 0)
         self['sw_htngrt'] = np.expand_dims(
                 sw_fluxes['air_temperature_tendency_from_shortwave'].data, 0)
         self['sw_htngrt_clr'] = np.expand_dims(
