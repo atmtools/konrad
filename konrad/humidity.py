@@ -261,7 +261,7 @@ class CoupledRH(Humidity):
             ndarray: Water vapor profile [VMR].
         """
         p_tropo = convection.get_values('convective_top_plev')[0]
-        if p_tropo is not None and p_tropo is not np.nan:
+        if p_tropo is not None and not np.isnan(p_tropo):
             self.p_tropo = p_tropo
 
         return self.get_vmr_profile(atmosphere)
