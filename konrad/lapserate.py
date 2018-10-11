@@ -14,7 +14,7 @@ from konrad.component import Component
 class LapseRate(Component, metaclass=abc.ABCMeta):
     """Base class for all lapse rate handlers."""
     @abc.abstractmethod
-    def get(self, atmosphere):
+    def __call__(self, atmosphere):
         """Return the atmospheric lapse rate.
 
         Parameters:
@@ -24,7 +24,7 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
         Returns:
               ndarray: Temperature lapse rate [K/m].
         """
-        
+
 
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
@@ -39,7 +39,7 @@ class MoistLapseRate(LapseRate):
         self.fixed = fixed
         self._lapse_cache = None
 
-    def get(self, atmosphere):
+    def __call__(self, atmosphere):
         if self._lapse_cache is not None:
             return self._lapse_cache
 
@@ -80,7 +80,7 @@ class FixedLapseRate(LapseRate):
         """
         self.lapserate = lapserate
 
-    def get(self, atmosphere):
+    def __call__(self, atmosphere):
         if isinstance(self.lapserate, numbers.Number):
             T = atmosphere['T'][0, :]
             return self.lapserate * np.ones(T.size)

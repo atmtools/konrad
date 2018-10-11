@@ -205,7 +205,7 @@ class RCE:
             T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.
-            critical_lapserate = self.lapserate.get(self.atmosphere)
+            critical_lapserate = self.lapserate(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
             self.atmosphere['T'] += (self.radiation['net_htngrt'] *
