@@ -229,7 +229,7 @@ class RCE:
             # TODO: Consider implementing an Atmosphere.update_diagnostics()
             #  method to include e.g. convective top in the output.
             self.atmosphere.update_height()
-            z = self.atmosphere.get_values('z')[0, :]
+            z = self.atmosphere.get('z')[0, :]
             if isinstance(self.convection, HardAdjustment) or isinstance(
                     self.convection, RelaxedAdjustment):
                 self.convection.calculate_convective_top_height(z)

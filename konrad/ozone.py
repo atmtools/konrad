@@ -80,7 +80,7 @@ class OzoneNormedPressure(Ozone):
 
     def get(self, atmosphere, convection, **kwargs):
         if self.norm_level is None:
-            self.norm_level = convection.get_values('convective_top_plev')[0]
+            self.norm_level = convection.get('convective_top_plev')[0]
             # TODO: what if there is no convective top
 
         if self._f is None:
@@ -90,7 +90,7 @@ class OzoneNormedPressure(Ozone):
                 fill_value='extrapolate',
             )
 
-        norm_new = convection.get_values('convective_top_plev')[0]
+        norm_new = convection.get('convective_top_plev')[0]
 
         atmosphere['O3'] = (
             ('time', 'plev'),

@@ -182,7 +182,7 @@ class HighCloud(Cloud):
         """ Keep the cloud attached to the convective top.
         """
         if self._f is None:
-            normed_height = atmosphere.get_values(
+            normed_height = atmosphere.get(
                 'z', keepdims=False)-self._norm_level
             self._f = interp1d(
                 normed_height,
@@ -190,8 +190,8 @@ class HighCloud(Cloud):
                 fill_value='extrapolate',
             )
 
-        z = atmosphere.get_values('z', keepdims=False)
-        norm_new = convection.get_values('convective_top_height')[0]
+        z = atmosphere.get('z', keepdims=False)
+        norm_new = convection.get('convective_top_height')[0]
         # If a convective adjustment has been applied, move the cloud to the
         # new convective top. Otherwise keep the cloud where it is.
         if norm_new is not np.nan:
@@ -251,7 +251,7 @@ class LowCloud(Cloud):
         """ Keep the cloud fixed with height, in the planetary boundary layer.
         """
         if self._f is None:
-            height = atmosphere.get_values(
+            height = atmosphere.get(
                 'z', keepdims=False)
             self._f = interp1d(
                 height,
@@ -259,7 +259,7 @@ class LowCloud(Cloud):
                 fill_value='extrapolate',
             )
 
-        z = atmosphere.get_values('z', keepdims=False)
+        z = atmosphere.get('z', keepdims=False)
         cloud_fraction_array = self._f(z)
         self.cloud_area_fraction_in_atmosphere_layer = DataArray(
             cloud_fraction_array,
