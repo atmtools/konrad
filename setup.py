@@ -36,7 +36,7 @@ setup(
         'scipy>=0.19.0',
         'typhon>=0.6.0',
         'xarray>=0.9.1',
-        'climt>=0.9.3',
+        'climt>=0.16.0',
         'sympl>=0.3.2',
     ],
 )
