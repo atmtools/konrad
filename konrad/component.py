@@ -140,7 +140,7 @@ class Component:
             values = self[variable]
         except KeyError:
             if default is not None:
-                values = default * np.ones(self['plev'].size)
+                values = default
             else:
                 raise KeyError(f"'{variable}' not found and no default given.")
 
