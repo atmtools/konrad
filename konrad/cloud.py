@@ -125,10 +125,11 @@ class Cloud(metaclass=abc.ABCMeta):
         return mass
 
     @abc.abstractmethod
-    def update_cloud_profile(self, atmosphere, **kwargs):
+    def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Return the cloud parameters for the radiation scheme.
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
+            convection (konrad.convection): convection scheme
         """
 
 
@@ -177,7 +178,7 @@ class HighCloud(Cloud):
         self._norm_level = cloud_top
         self._f = None
 
-    def update_cloud_profile(self, atmosphere, **kwargs):
+    def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """ Keep the cloud attached to the convective top.
         """
         if self._f is None:
@@ -190,16 +191,20 @@ class HighCloud(Cloud):
             )
 
         z = atmosphere.get_values('z', keepdims=False)
-        norm_new = atmosphere.get_values('convective_top_height')[0]
+        norm_new = convection.get_values('convective_top_height')[0]
+        # If a convective adjustment has been applied, move the cloud to the
+        # new convective top. Otherwise keep the cloud where it is.
+        if norm_new is not np.nan:
+            cloud_fraction_array = self._f(z-norm_new)
+            self.cloud_area_fraction_in_atmosphere_layer = DataArray(
+                cloud_fraction_array,
+                dims=('mid_levels',),
+                attrs={'units': 'dimensionless'})
 
-        cloud_fraction_array = self._f(z-norm_new)
-        self.cloud_area_fraction_in_atmosphere_layer = DataArray(
-            cloud_fraction_array,
-            dims=('mid_levels',),
-            attrs={'units': 'dimensionless'})
-
-        mass_ice = self.calculate_mass_cloud(cloud_fraction_array, z,
-                                             self._ice_density)
+        mass_ice = self.calculate_mass_cloud(
+            self.cloud_area_fraction_in_atmosphere_layer.values,
+            z,
+            self._ice_density)
         self.mass_content_of_cloud_ice_in_atmosphere_layer = mass_ice
 
 

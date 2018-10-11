@@ -249,18 +249,19 @@ class CoupledRH(Humidity):
                 )
                 setattr(self, attr, None)
 
-    def get(self, atmosphere, **kwargs):
+    def get(self, atmosphere, convection, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
             atmosphere (konrad.atmosphere): atmosphere object,
                 including temperature, pressure, altitude
+            convection (konrad.convection): convection scheme
 
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        p_tropo = atmosphere.get_values('convective_top_plev')[0]
-        if p_tropo is not None:
+        p_tropo = convection.get_values('convective_top_plev')[0]
+        if p_tropo is not None and not np.isnan(p_tropo):
             self.p_tropo = p_tropo
 
         return self.get_vmr_profile(atmosphere)
