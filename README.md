@@ -12,9 +12,8 @@ oriented structure to allow simple modifications of the model setup.
 Python is through [Anaconda](https://www.continuum.io/downloads).
 But of course, any other Python distribution is also working.
 
-## Installation
-You can use ``pip`` to install the ``konrad`` package
-to your Python distribution. On the top directory level, run:
+## Install stable release
+You can install the latest stable version of ``konrad`` using ``pip``:
 ```bash
-pip install --editable .
+pip install konrad
 ```
