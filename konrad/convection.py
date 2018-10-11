@@ -275,7 +275,7 @@ class HardAdjustment(Convection):
         return
 
     def calculate_convective_top_height(self, z, lim=0.1):
-        convective_heating = self.get_values('convective_heating_rate')[0]
+        convective_heating = self.get('convective_heating_rate')[0]
         if not np.allclose(convective_heating, np.zeros(z.shape)):
             contop_i = int(np.argmax(convective_heating < lim))
             heat_array = np.array([convective_heating[contop_i - 1],

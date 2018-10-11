@@ -91,9 +91,9 @@ class Humidity(Component, metaclass=abc.ABCMeta):
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        p = atmosphere.get_values('plev')
-        T = atmosphere.get_values('T', keepdims=False)
-        z = atmosphere.get_values('z', keepdims=False)
+        p = atmosphere.get('plev')
+        T = atmosphere.get('T', keepdims=False)
+        z = atmosphere.get('z', keepdims=False)
 
         if self._vmr_profile is None:
             vmr = rh2vmr(self.get_relative_humidity_profile(p), p, T)
@@ -260,7 +260,7 @@ class CoupledRH(Humidity):
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        p_tropo = convection.get_values('convective_top_plev')[0]
+        p_tropo = convection.get('convective_top_plev')[0]
         if p_tropo is not None and not np.isnan(p_tropo):
             self.p_tropo = p_tropo
 

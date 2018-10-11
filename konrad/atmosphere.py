@@ -374,7 +374,7 @@ class Atmosphere(Component):
             'CH4': 1650e-9,
             'N2O': 306e-9,
             'CO': 0,
-            'O3': utils.ozone_profile_rcemip(self.get_values('plev')),
+            'O3': utils.ozone_profile_rcemip(self.get('plev')),
             'CFC11': 0,
             'CFC12': 0,
             'CFC22': 0,

@@ -174,7 +174,7 @@ class RRTMG(Radiation):
 
         for climt_key, konrad_key in gas_name_mapping:
             state0[climt_key] = DataArray(
-                atmosphere.get_values(konrad_key, default=0, keepdims=False),
+                atmosphere.get(konrad_key, default=0, keepdims=False),
                 dims=('mid_levels',),
                 attrs={'units': 'mole/mole'})
 

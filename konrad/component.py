@@ -123,7 +123,7 @@ class Component:
         """
         self[variable][:] = value
 
-    def get_values(self, variable, default=None, keepdims=True):
+    def get(self, variable, default=None, keepdims=True):
         """Get values of a given variable.
 
         Parameters:
