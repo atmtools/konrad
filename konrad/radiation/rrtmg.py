@@ -26,8 +26,7 @@ class RRTMG(Radiation):
         self._rad_sw = None
 
         self._mcica = mcica
-        if mcica:
-            self._cloud_ice_properties = cloud_ice_properties
+        self._cloud_ice_properties = cloud_ice_properties
 
         self.solar_constant = solar_constant
 
