@@ -205,7 +205,7 @@ class RCE:
             T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.
-            critical_lapserate = self.lapserate.get(self.atmosphere)
+            critical_lapserate = self.lapserate(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
             self.atmosphere['T'] += (self.radiation['net_htngrt'] *
@@ -235,7 +235,7 @@ class RCE:
                 self.convection.calculate_convective_top_height(z)
 
             # Update the ozone profile.
-            self.ozone.get(
+            self.ozone(
                 atmosphere=self.atmosphere,
                 convection=self.convection,
                 timestep=self.timestep,
@@ -243,7 +243,7 @@ class RCE:
             )
 
             # Update the humidity profile.
-            self.atmosphere['H2O'][0, :] = self.humidity.get(
+            self.atmosphere['H2O'][0, :] = self.humidity(
                 self.atmosphere,
                 convection=self.convection,
                 surface=self.surface,

@@ -39,7 +39,7 @@ class Humidity(Component, metaclass=abc.ABCMeta):
         self._rh_profile = rh_profile
 
     @abc.abstractmethod
-    def get(self, plev, T, z, **kwargs):
+    def __call__(self, plev, T, z, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
@@ -147,7 +147,7 @@ class Humidity(Component, metaclass=abc.ABCMeta):
 
 class FixedVMR(Humidity):
     """Keep the water vapor volume mixing ratio constant."""
-    def get(self, atmosphere, **kwargs):
+    def __call__(self, atmosphere, **kwargs):
         if self._vmr_profile is None:
             self._vmr_profile = self.get_vmr_profile(atmosphere)
 
@@ -160,7 +160,7 @@ class FixedRH(Humidity):
     The relative humidity is kept constant under temperature changes,
     allowing for a moistening in a warming climate.
     """
-    def get(self, atmosphere, **kwargs):
+    def __call__(self, atmosphere, **kwargs):
         return self.get_vmr_profile(atmosphere)
 
 
@@ -181,7 +181,7 @@ class Manabe67(Humidity):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
 
-    def get(self, atmosphere, **kwargs):
+    def __call__(self, atmosphere, **kwargs):
         return self.get_vmr_profile(atmosphere)
 
 
@@ -210,7 +210,7 @@ class Cess76(FixedRH):
     def get_relative_humidity_profile(self, p):
         return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
 
-    def get(self, atmosphere, surface, **kwargs):
+    def __call__(self, atmosphere, surface, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:
@@ -249,7 +249,7 @@ class CoupledRH(Humidity):
                 )
                 setattr(self, attr, None)
 
-    def get(self, atmosphere, convection, **kwargs):
+    def __call__(self, atmosphere, convection, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 
         Parameters:

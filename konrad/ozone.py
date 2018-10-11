@@ -29,7 +29,7 @@ class Ozone(Component, metaclass=abc.ABCMeta):
         self['initial_ozone'] = (('plev',), None)
 
     @abc.abstractmethod
-    def get(self, atmosphere, convection, timestep, zenith):
+    def __call__(self, atmosphere, convection, timestep, zenith):
         """Updates the ozone profile within the atmosphere class.
 
         Parameters:
@@ -45,7 +45,7 @@ class Ozone(Component, metaclass=abc.ABCMeta):
 
 class OzonePressure(Ozone):
     """Ozone fixed with pressure, no adjustment needed."""
-    def get(self, **kwargs):
+    def __call__(self, **kwargs):
         return
 
 
@@ -54,7 +54,7 @@ class OzoneHeight(Ozone):
     def __init__(self):
         self._f = None
 
-    def get(self, atmosphere, **kwargs):
+    def __call__(self, atmosphere, **kwargs):
         if self._f is None:
             self._f = interp1d(
                 atmosphere['z'][0, :],
@@ -78,7 +78,7 @@ class OzoneNormedPressure(Ozone):
         self.norm_level = norm_level
         self._f = None
 
-    def get(self, atmosphere, convection, **kwargs):
+    def __call__(self, atmosphere, convection, **kwargs):
         if self.norm_level is None:
             self.norm_level = convection.get('convective_top_plev')[0]
             # TODO: what if there is no convective top
