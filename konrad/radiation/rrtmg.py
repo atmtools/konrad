@@ -1,5 +1,6 @@
 """Define an interface for the RRTMG radiation scheme (through CliMT). """
 import numpy as np
+import datetime
 from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
 import climt
@@ -45,8 +46,8 @@ class RRTMG(Radiation):
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
             mcica=self._mcica)
-        state_lw = climt.get_default_state([self._rad_lw])
-        state_sw = climt.get_default_state([self._rad_sw])
+        state_lw = {}
+        state_sw = {}
 
         plev = atmosphere['plev']
         phlev = atmosphere['phlev']
@@ -73,24 +74,35 @@ class RRTMG(Radiation):
                     dims=('interface_levels',),
                     attrs={'units': 'Pa'})
 
+            state0['time'] = datetime.datetime(2000, 1, 1)
+
         ### Aerosols ###
         # TODO: Should all the aerosol values be zero?!
         # Longwave specific
-        num_lw_bands = state_lw['longwave_optical_thickness_due_to_aerosol'].shape[0]
+        num_lw_bands = self._rad_lw.num_longwave_bands
 
         state_lw['longwave_optical_thickness_due_to_aerosol'] = DataArray(
                 np.zeros((num_lw_bands, numlevels)),
                 dims=('num_longwave_bands', 'mid_levels'),
                 attrs={'units': 'dimensionless'})
+        state_lw['surface_longwave_emissivity'] = DataArray(
+            np.ones((num_lw_bands,)),
+            dims=('num_longwave_bands'),
+            attrs={'units': 'dimensionless'})
 
         # Shortwave specific changes
-        num_sw_bands = state_sw['shortwave_optical_thickness_due_to_aerosol'].shape[0]
+        num_sw_bands = self._rad_sw.num_shortwave_bands
 
-        num_aerosols = state_sw['aerosol_optical_depth_at_55_micron'].shape[0]
+        num_aerosols = self._rad_sw.num_ecmwf_aerosols
         state_sw['aerosol_optical_depth_at_55_micron'] = DataArray(
                 np.zeros((num_aerosols, numlevels)),
                 dims=('num_ecmwf_aerosols', 'mid_levels'),
                 attrs={'units': 'dimensionless'})
+        state_sw['solar_cycle_fraction'] = DataArray(
+            0, attrs={'units': 'dimensionless'})
+        state_sw['flux_adjustment_for_earth_sun_distance'] = DataArray(
+            1, attrs={'units': 'dimensionless'}
+        )
 
         for quant in ['shortwave_optical_thickness_due_to_aerosol',
                       'single_scattering_albedo_due_to_aerosol',
@@ -236,17 +248,17 @@ class RRTMG(Radiation):
         sw_fluxes = sw_dT_fluxes[1]
 
         self['lw_htngrt'] = np.expand_dims(
-                lw_fluxes['air_temperature_tendency_from_longwave'].data[:, 0, 0], 0)
+                lw_fluxes['air_temperature_tendency_from_longwave'].data, 0)
         self['lw_htngrt_clr'] = np.expand_dims(
-                lw_fluxes['air_temperature_tendency_from_longwave_assuming_clear_sky'].data[:, 0, 0], 0)
+                lw_fluxes['air_temperature_tendency_from_longwave_assuming_clear_sky'].data, 0)
         self['lw_flxu'] = np.expand_dims(
-                lw_fluxes['upwelling_longwave_flux_in_air'].data[:, 0, 0], 0)
+                lw_fluxes['upwelling_longwave_flux_in_air'].data, 0)
         self['lw_flxd'] = np.expand_dims(
-                lw_fluxes['downwelling_longwave_flux_in_air'].data[:, 0, 0], 0)
+                lw_fluxes['downwelling_longwave_flux_in_air'].data, 0)
         self['lw_flxu_clr'] = np.expand_dims(
-                lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'].data[:, 0, 0], 0)
+                lw_fluxes['upwelling_longwave_flux_in_air_assuming_clear_sky'].data, 0)
         self['lw_flxd_clr'] = np.expand_dims(
-                lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'].data[:, 0, 0], 0)
+                lw_fluxes['downwelling_longwave_flux_in_air_assuming_clear_sky'].data, 0)
         self['sw_htngrt'] = np.expand_dims(
                 sw_fluxes['air_temperature_tendency_from_shortwave'].data, 0)
         self['sw_htngrt_clr'] = np.expand_dims(
