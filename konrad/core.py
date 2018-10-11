@@ -235,7 +235,7 @@ class RCE:
                 self.convection.calculate_convective_top_height(z)
 
             # Update the ozone profile.
-            self.ozone.get(
+            self.ozone(
                 atmosphere=self.atmosphere,
                 convection=self.convection,
                 timestep=self.timestep,
