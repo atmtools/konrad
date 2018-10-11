@@ -68,6 +68,7 @@ class Surface(Component, metaclass=abc.ABCMeta):
         """
         # Extrapolate surface height from geopotential height of lowest two
         # atmospheric layers.
+        atmosphere.calculate_height()
         z = atmosphere['z'][0, :]
         z_sfc = z[0] + 0.5 * (z[0] - z[1])
 
