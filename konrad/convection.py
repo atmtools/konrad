@@ -45,43 +45,6 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
 
 class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
-    def create_variable(self, name, data=None, dims=None):
-        """Create a variable entry in the dataframe."""
-        if dims is None:
-            dims = constants.variable_description[name].get('dims')
-
-        if data is None:
-            data = self.get_default_profile(name)
-
-        ndim = len(dims)
-        if ndim == 2 and data.ndim == 1:
-            data = data[np.newaxis, :]
-
-        self[name] = (dims, data)
-
-    def get_values(self, variable, default=None, keepdims=True):
-        """Get values of a given variable.
-
-        Parameters:
-            variable (str): Variable key.
-            keepdims (bool): If this is set to False, single-dimensions are
-                removed. Otherwise dimensions are kept (default).
-            default (float): Default value assigned to all pressure levels,
-                if the variable is not found.
-
-        Returns:
-            ndarray: Array containing the values assigned to the variable.
-        """
-        try:
-            values = self[variable]
-        except KeyError:
-            if default is not None:
-                values = default * np.ones(self['plev'].size)
-            else:
-                raise KeyError(f"'{variable}' not found and no default given.")
-
-        return values if keepdims else values.ravel()
-
     @abc.abstractmethod
     def stabilize(self, atmosphere, lapse, surface, timestep):
         """Stabilize the temperature profile by redistributing energy.

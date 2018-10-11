@@ -1,6 +1,8 @@
 import numpy as np
 import xarray as xr
 
+from konrad import constants
+
 
 __all__ = [
     'Component',
@@ -96,3 +98,51 @@ class Component:
                 data_vars=self.data_vars,
                 attrs=self.attrs,
             )
+
+    def create_variable(self, name, data=None, dims=None):
+        """Create a variable entry in the dataframe."""
+        if dims is None:
+            dims = constants.variable_description[name].get('dims')
+
+        if data is None:
+            data = self.get_default_profile(name)
+
+        ndim = len(dims)
+        if ndim == 2 and data.ndim == 1:
+            data = data[np.newaxis, :]
+
+        self[name] = (dims, data)
+
+    def set(self, variable, value):
+        """Set the values of a variable.
+
+        Parameters:
+            variable (str): Variable key.
+            value (float or ndarray): Value to assign to the variable.
+                If a float is given, all values are filled with it.
+        """
+        self[variable][:] = value
+
+    def get_values(self, variable, default=None, keepdims=True):
+        """Get values of a given variable.
+
+        Parameters:
+            variable (str): Variable key.
+            keepdims (bool): If this is set to False, single-dimensions are
+                removed. Otherwise dimensions are kept (default).
+            default (float): Default value assigned to all pressure levels,
+                if the variable is not found.
+
+        Returns:
+            ndarray: Array containing the values assigned to the variable.
+        """
+        try:
+            values = self[variable]
+        except KeyError:
+            if default is not None:
+                values = default * np.ones(self['plev'].size)
+            else:
+                raise KeyError(f"'{variable}' not found and no default given.")
+
+        return values if keepdims else values.ravel()
+
