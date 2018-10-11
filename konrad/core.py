@@ -243,7 +243,7 @@ class RCE:
             )
 
             # Update the humidity profile.
-            self.atmosphere['H2O'][0, :] = self.humidity.get(
+            self.atmosphere['H2O'][0, :] = self.humidity(
                 self.atmosphere,
                 convection=self.convection,
                 surface=self.surface,
