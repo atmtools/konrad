@@ -415,13 +415,19 @@ class CloudEnsemble(Cloud):
 
         if name in cumulative_properties:
             if name == 'cloud_area_fraction_in_atmosphere_layer':
-                return np.sum(attr_list, axis=0).clip(max=1)
+                attr = np.sum(attr_list, axis=0).clip(max=1)
             else:
-                return np.sum(attr_list, axis=0)
+                attr = np.sum(attr_list, axis=0)
         else:
             # TODO: Is `mean` the correct operation for non-cumulative props?
-            return np.mean(attr_list, axis=0)
+            attr = np.mean(attr_list, axis=0)
         # TODO: Is there a third option (e.g. `max`)?
+
+        return DataArray(attr,
+                         dims=getattr(self.clouds[0], name).dims,
+                         attrs=getattr(self.clouds[0], name).attrs,
+                         )
+
 
     def __getitem__(self, name):
         return getattr(self, name)
