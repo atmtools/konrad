@@ -385,3 +385,48 @@ class LowCloud(Cloud):
             dz,
             self._water_density)
         self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = mass
+
+
+class CloudEnsemble(Cloud):
+    """Wrapper to combine several clouds into a cloud ensemble.
+
+    A cloud ensemble can consist of an arbitrary number of clouds.
+    After its initialization it is handled like a normal `Cloud`:
+
+    >>> cloud1 = HighCloud(...)
+    >>> cloud2 = LowCloud(...)
+    >>> cloud_ensemble = CloudEnsemble(cloud1, cloud2)
+    >>> cloud_ensemble.cloud_area_fraction_in_atmosphere_layer
+
+    """
+    def __init__(self, *args):
+        self.clouds = args
+
+    def __getattr__(self, name):
+        cumulative_properties = (
+            'mass_content_of_cloud_ice_in_atmosphere_layer',
+            'cloud_area_fraction_in_atmosphere_layer',
+            # TODO: Is optical thickness, in the RRTMG sense, cumulative?
+            'longwave_optical_thickness_due_to_cloud',
+            'shortwave_optical_thickness_due_to_cloud',
+        )
+
+        attr_list = [getattr(c, name) for c in self.clouds]
+
+        if name in cumulative_properties:
+            if name == 'cloud_area_fraction_in_atmosphere_layer':
+                return np.sum(attr_list, axis=0).clip(max=1)
+            else:
+                return np.sum(attr_list, axis=0)
+        else:
+            # TODO: Is `mean` the correct operation for non-cumulative props?
+            return np.mean(attr_list, axis=0)
+        # TODO: Is there a third option (e.g. `max`)?
+
+    def __getitem__(self, name):
+        return getattr(self, name)
+
+    def update_cloud_profile(self, *args, **kwargs):
+        """Update every cloud in the cloud ensemble."""
+        for cloud in self.clouds:
+            cloud.update_cloud_profile(*args, **kwargs)
