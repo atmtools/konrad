@@ -94,7 +94,10 @@ class RCE:
         self.surface = utils.return_if_type(surface, 'surface',
                                             Surface, SurfaceHeatCapacity())
         self.cloud = utils.return_if_type(cloud, 'cloud',
-                                          Cloud, ClearSky())
+                                          Cloud,
+                                          ClearSky(self.atmosphere.get(
+                                              'z', keepdims=False))
+                                          )
         self.convection = utils.return_if_type(convection, 'convection',
                                                Convection, HardAdjustment())
 
