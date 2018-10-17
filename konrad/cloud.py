@@ -41,13 +41,14 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
             'Cloud variable input must be a single value or a sympl.DataArray')
 
 
-# TODO: We need to find a clean way to handle the `numlevels`. Currently,
-# it is easily possible to construct non-matching atmospehres and clouds.
 class Cloud(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all cloud handlers.
     Default properties include a cloud area fraction equal to zero everywhere
     (ie no cloud)."""
-    def __init__(self, z, num_lw_bands=16, num_sw_bands=14,
+    num_longwave_bands = 16
+    num_shortwave_bands = 14
+
+    def __init__(self, z,
                  mass_water=0, mass_ice=0, cloud_fraction=0,
                  ice_particle_size=20, droplet_radius=10,
                  lw_optical_thickness=0, sw_optical_thickness=0,
@@ -57,8 +58,6 @@ class Cloud(metaclass=abc.ABCMeta):
 
         Parameters:
             z (ndarray): array of height values [m]
-            num_lw_bands (int): number of longwave bands, for RRTMG this is 16
-            num_sw_bands (int): number of shortwave bands, for RRTMG this is 14
             mass_water (float / DataArray): mass content of cloud liquid water
                 [kg m-2]
             mass_ice (float / DataArray): mass content of cloud ice [kg m-2]
@@ -101,48 +100,68 @@ class Cloud(metaclass=abc.ABCMeta):
 
         self.longwave_optical_thickness_due_to_cloud = get_waveband_data_array(
                 lw_optical_thickness, numlevels=numlevels,
-                numbands=num_lw_bands, sw=False)
+                numbands=self.num_longwave_bands, sw=False)
 
         self.cloud_forward_scattering_fraction = get_waveband_data_array(
                 forward_scattering_fraction, numlevels=numlevels,
-                numbands=num_sw_bands)
+                numbands=self.num_shortwave_bands)
 
         self.cloud_asymmetry_parameter = get_waveband_data_array(
                 asymmetry_parameter, numlevels=numlevels,
-                numbands=num_sw_bands)
+                numbands=self.num_shortwave_bands)
 
         self.shortwave_optical_thickness_due_to_cloud = \
             get_waveband_data_array(sw_optical_thickness,
                                     numlevels=numlevels,
-                                    numbands=num_sw_bands)
+                                    numbands=self.num_shortwave_bands)
 
         self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
                 single_scattering_albedo, numlevels=numlevels,
-                numbands=num_sw_bands)
+                numbands=self.num_shortwave_bands)
 
-    def shift_cloud_profile(self, z, norm_new):
-        """Shift the cloud area fraction according to a normalisation level.
-        Maintain the depth of the cloud [m]
+    def interpolation_function(self, cloud_parameter, z):
+        """ Calculate the interpolation function, to be used to keep the
+        cloud at a constant thickness [m] and attached to a normalisation
+        level (self._norm_level). A separate interpolation function is required
+        for each cloud parameter that needs to be interpolated.
+
         Parameters:
+            cloud_parameter (DataArray): property to be interpolation
+            z (ndarray): height array, on which the interpolation is performed
+        Returns:
+            scipy.interpolate.interpolate.interp1d
+        """
+        normed_height = z - self._norm_level
+        interpolation_f = interp1d(
+            normed_height,
+            cloud_parameter.values,
+            axis=0,
+            fill_value='extrapolate',
+        )
+        return interpolation_f
+
+    def shift_property(self, cloud_parameter, interpolation_f, z, norm_new):
+        """Shift the cloud area fraction according to a normalisation level.
+        Maintain the thickness of the cloud [m].
+
+        Parameters:
+            cloud_parameter (DataArray): cloud property to be shifted
+            interpolation_f (scipy.interpolate.interpolate.interp1d):
+                interpolation object calculated by interpolation_function
             z (ndarray): height array [m]
             norm_new (int / float): normalisation height [m]
-        """
-        if self._f is None:
-            normed_height = z - self._norm_level
-            self._f = interp1d(
-                normed_height,
-                self.cloud_area_fraction_in_atmosphere_layer.values,
-                fill_value='extrapolate',
-            )
 
+        Returns:
+            DataArray: shifted cloud property
+        """
         # Move the cloud to the new normalisation level, if there is one.
         # Otherwise keep the cloud where it is.
         if norm_new is not np.nan:
-            cloud_fraction_array = self._f(z - norm_new)
-            self.cloud_area_fraction_in_atmosphere_layer = DataArray(
-                cloud_fraction_array,
-                dims=('mid_levels',),
-                attrs={'units': 'dimensionless'})
+            cloud_parameter.values = interpolation_f(z - norm_new)
+        else:
+            cloud_parameter.values = interpolation_f(z - self._norm_level)
+
+        return cloud_parameter
 
     def scale_optical_thickness(self, z):
         """Conserve the total optical depth of the cloud.
@@ -156,19 +175,35 @@ class Cloud(metaclass=abc.ABCMeta):
             z (ndarray): height array
         """
         dz = np.hstack([z[0], np.diff(z)])  # TODO: is this a good approx?
-        if self._longwave_optical_thickness_per_meter is None:  # first time
-            self._longwave_optical_thickness_per_meter = \
-                self.longwave_optical_thickness_due_to_cloud / dz
-            self._shortwave_optical_thickness_per_meter = \
-                self.shortwave_optical_thickness_due_to_cloud / dz
+        dz_sw_array = np.repeat(dz[:, np.newaxis], self.num_shortwave_bands,
+                                axis=1)
+        dz_lw_array = np.repeat(dz[:, np.newaxis], self.num_longwave_bands,
+                                axis=1)
 
-        self.longwave_optical_thickness_due_to_cloud = \
-            dz * self._longwave_optical_thickness_per_meter
-        self.shortwave_optical_thickness_due_to_cloud = \
-            dz * self._shortwave_optical_thickness_per_meter
+        self.longwave_optical_thickness_due_to_cloud = DataArray(
+            dz_lw_array * self._longwave_optical_thickness_per_meter,
+            dims=('mid_levels', 'num_longwave_bands'),
+            attrs={'units': 'dimensionless'}
+        )
+        self.shortwave_optical_thickness_due_to_cloud = DataArray(
+            dz_sw_array * self._shortwave_optical_thickness_per_meter,
+            dims=('mid_levels', 'num_shortwave_bands'),
+            attrs={'units': 'dimensionless'}
+        )
 
     @staticmethod
     def calculate_mass_cloud(cloud_fraction_array, z, density):
+        """Calculate the mass of the cloud on each model level given the cloud
+        area fraction and the density within the cloud.
+
+        Parameters:
+            cloud_fraction_array (ndarray): cloud area fraction
+            z (ndarray): height on each model level [m]
+            density (int / float): density of cloud mass [g m^-3]
+
+        Returns:
+            DataArray: mass of cloud on each model level [kg m^-2]
+        """
         dz = np.hstack((np.diff(z)[0], np.diff(z)))
         mass_array = cloud_fraction_array * density * 10 ** -3 * dz
         mass = DataArray(mass_array, dims=('mid_levels',),
@@ -189,21 +224,75 @@ class ClearSky(Cloud):
         return
 
 
+class DirectInputCloud(Cloud):
+    """ To be used with cloud_optical_properties='direct_input' in climt/RRTMG.
+    """
+    def __init__(self, z, cloud_fraction,
+                 lw_optical_thickness, sw_optical_thickness,
+                 forward_scattering_fraction=0, asymmetry_parameter=0.85,
+                 single_scattering_albedo=0.9):
+
+        super().__init__(
+            z,
+            cloud_fraction=cloud_fraction,
+            lw_optical_thickness=lw_optical_thickness,
+            sw_optical_thickness=sw_optical_thickness,
+            forward_scattering_fraction=forward_scattering_fraction,
+            asymmetry_parameter=asymmetry_parameter,
+            single_scattering_albedo=single_scattering_albedo
+        )
+
+        dz = np.hstack([z[0], np.diff(z)])  # TODO: is this a good approx?
+        dz_sw_array = np.repeat(dz[:, np.newaxis], self.num_shortwave_bands,
+                                axis=1)
+        dz_lw_array = np.repeat(dz[:, np.newaxis], self.num_longwave_bands,
+                                axis=1)
+        self._longwave_optical_thickness_per_meter = \
+            self.longwave_optical_thickness_due_to_cloud / dz_lw_array
+        self._shortwave_optical_thickness_per_meter = \
+            self.shortwave_optical_thickness_due_to_cloud / dz_sw_array
+
+        self._norm_level = 0
+        self._f = self.interpolation_function(
+            self.cloud_area_fraction_in_atmosphere_layer, z)
+        self._interpolation_sw = self.interpolation_function(
+            self._shortwave_optical_thickness_per_meter, z)
+        self._interpolation_lw = self.interpolation_function(
+            self._longwave_optical_thickness_per_meter, z)
+
+    def update_cloud_profile(self, atmosphere, **kwargs):
+        """ Keep the cloud profile fixed with height.
+        """
+        z = atmosphere.get('z', keepdims=False)
+
+        self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
+            self.cloud_area_fraction_in_atmosphere_layer, self._f, z, 0)
+
+        self._shortwave_optical_thickness_per_meter = self.shift_property(
+            self._shortwave_optical_thickness_per_meter,
+            self._interpolation_sw, z, 0)
+        self._longwave_optical_thickness_per_meter = self.shift_property(
+            self._longwave_optical_thickness_per_meter,
+            self._interpolation_lw, z, 0)
+
+        self.scale_optical_thickness(z)
+
+
 class HighCloud(Cloud):
+    """ To be used with cloud_optical_properties='liquid_and_ice_clouds' in
+    climt/RRTMG."""
     def __init__(self, z, cloud_top=12000, depth=500,
                  cloud_fraction_in_cloud=1, ice_density=0.5,
                  ice_particle_size=20):
         """
-        To be used with cloud_optical_properties='liquid_and_ice_clouds' in
-        climt/RRTMG.
-
         Parameters:
             z (ndarray): altitude values [m]
             cloud_top (int): Cloud top height [m]
                 This should be the convective top
             depth (int): Cloud depth / thickness of cloud [m]
             cloud_fraction_in_cloud (int / float): Cloud area fraction of the
-                cloud for the model levels between cloud_top-depth and cloud_top
+                cloud for the model levels between cloud_top - depth and
+                cloud_top
             ice_density (int / float): density of cloud ice [g m-3]
             ice_particle_size (int / float): Cloud ice particle size [microns]
         """
@@ -225,14 +314,17 @@ class HighCloud(Cloud):
 
         self._ice_density = ice_density
         self._norm_level = cloud_top
-        self._f = None
+        self._f = self.interpolation_function(
+            self.cloud_area_fraction_in_atmosphere_layer, z)
 
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """ Keep the cloud attached to the convective top.
         """
         norm_new = convection.get('convective_top_height')[0]
         z = atmosphere.get('z', keepdims=False)
-        self.shift_cloud_profile(z, norm_new)
+
+        self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
+            self.cloud_area_fraction_in_atmosphere_layer, self._f, z, norm_new)
 
         mass_ice = self.calculate_mass_cloud(
             self.cloud_area_fraction_in_atmosphere_layer.values,
@@ -242,13 +334,12 @@ class HighCloud(Cloud):
 
 
 class LowCloud(Cloud):
+    """ To be used with cloud_optical_properties='liquid_and_ice_clouds' in
+    climt/RRTMG."""
     def __init__(self, z, cloud_top=2000, depth=1500,
                  cloud_fraction_in_cloud=1, water_density=0.5,
                  droplet_radius=10):
         """
-        To be used with cloud_optical_properties='liquid_and_ice_clouds' in
-        climt/RRTMG.
-
         Parameters:
             z (ndarray): altitude values [m]
             cloud_top (int): Cloud top height [m]
@@ -275,14 +366,17 @@ class LowCloud(Cloud):
         )
 
         self._water_density = water_density
-        self._f = None
+        self._f = self.interpolation_function(
+            self.cloud_area_fraction_in_atmosphere_layer, z)
         self._norm_level = 0
 
     def update_cloud_profile(self, atmosphere, **kwargs):
         """ Keep the cloud fixed with height, in the planetary boundary layer.
         """
         z = atmosphere.get('z', keepdims=False)
-        self.shift_cloud_profile(z, 0)
+
+        self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
+            self.cloud_area_fraction_in_atmosphere_layer, self._f, z, 0)
 
         mass = self.calculate_mass_cloud(
             self.cloud_area_fraction_in_atmosphere_layer.values,
