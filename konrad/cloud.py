@@ -6,6 +6,7 @@ import logging
 import numpy as np
 from scipy.interpolate import interp1d
 from sympl import DataArray
+from konrad.utils import dz_from_z
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class Cloud(metaclass=abc.ABCMeta):
             single_scattering_albedo (float / DataArray): single scattering
                 albedo due to cloud (for the shortwave component of RRTMG)
         """
-        numlevels = z.shape[0]
+        numlevels = z.size
 
         self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = \
             get_p_data_array(mass_water, numlevels=numlevels)
@@ -154,16 +155,16 @@ class Cloud(metaclass=abc.ABCMeta):
         Returns:
             DataArray: shifted cloud property
         """
-        # Move the cloud to the new normalisation level, if there is one.
-        # Otherwise keep the cloud where it is.
         if norm_new is not np.nan:
+            # Move the cloud to the new normalisation level, if there is one.
             cloud_parameter.values = interpolation_f(z - norm_new)
         else:
+            # Otherwise keep the cloud where it is.
             cloud_parameter.values = interpolation_f(z - self._norm_level)
 
         return cloud_parameter
 
-    def scale_optical_thickness(self, z):
+    def scale_optical_thickness(self, dz):
         """Conserve the total optical depth of the cloud.
         If we assume that the cloud remains at the same altitude and with the
         same thickness, then we also want to assume that the optical depth of
@@ -174,7 +175,6 @@ class Cloud(metaclass=abc.ABCMeta):
         Parameters:
             z (ndarray): height array
         """
-        dz = np.hstack([z[0], np.diff(z)])  # TODO: is this a good approx?
         dz_sw_array = np.repeat(dz[:, np.newaxis], self.num_shortwave_bands,
                                 axis=1)
         dz_lw_array = np.repeat(dz[:, np.newaxis], self.num_longwave_bands,
@@ -192,7 +192,7 @@ class Cloud(metaclass=abc.ABCMeta):
         )
 
     @staticmethod
-    def calculate_mass_cloud(cloud_fraction_array, z, density):
+    def calculate_mass_cloud(cloud_fraction_array, dz, density):
         """Calculate the mass of the cloud on each model level given the cloud
         area fraction and the density within the cloud.
 
@@ -204,7 +204,6 @@ class Cloud(metaclass=abc.ABCMeta):
         Returns:
             DataArray: mass of cloud on each model level [kg m^-2]
         """
-        dz = np.hstack((np.diff(z)[0], np.diff(z)))
         mass_array = cloud_fraction_array * density * 10 ** -3 * dz
         mass = DataArray(mass_array, dims=('mid_levels',),
                          attrs={'units': 'kg m^-2'})
@@ -242,7 +241,7 @@ class DirectInputCloud(Cloud):
             single_scattering_albedo=single_scattering_albedo
         )
 
-        dz = np.hstack([z[0], np.diff(z)])  # TODO: is this a good approx?
+        dz = dz_from_z(z)
         dz_sw_array = np.repeat(dz[:, np.newaxis], self.num_shortwave_bands,
                                 axis=1)
         dz_lw_array = np.repeat(dz[:, np.newaxis], self.num_longwave_bands,
@@ -264,6 +263,7 @@ class DirectInputCloud(Cloud):
         """ Keep the cloud profile fixed with height.
         """
         z = atmosphere.get('z', keepdims=False)
+        dz = dz_from_z(z)
 
         self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
             self.cloud_area_fraction_in_atmosphere_layer, self._f, z, 0)
@@ -275,7 +275,7 @@ class DirectInputCloud(Cloud):
             self._longwave_optical_thickness_per_meter,
             self._interpolation_lw, z, 0)
 
-        self.scale_optical_thickness(z)
+        self.scale_optical_thickness(dz)
 
 
 class HighCloud(Cloud):
@@ -302,7 +302,7 @@ class HighCloud(Cloud):
         cloud_fraction = DataArray(cloud_fraction_array, dims=('mid_levels',),
                                    attrs={'units': 'dimensionless'})
 
-        mass_ice = self.calculate_mass_cloud(cloud_fraction_array, z,
+        mass_ice = self.calculate_mass_cloud(cloud_fraction_array, dz_from_z(z),
                                              ice_density)
 
         super().__init__(
@@ -322,13 +322,14 @@ class HighCloud(Cloud):
         """
         norm_new = convection.get('convective_top_height')[0]
         z = atmosphere.get('z', keepdims=False)
+        dz = dz_from_z(z)
 
         self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
             self.cloud_area_fraction_in_atmosphere_layer, self._f, z, norm_new)
 
         mass_ice = self.calculate_mass_cloud(
             self.cloud_area_fraction_in_atmosphere_layer.values,
-            z,
+            dz,
             self._ice_density)
         self.mass_content_of_cloud_ice_in_atmosphere_layer = mass_ice
 
@@ -355,8 +356,8 @@ class LowCloud(Cloud):
         cloud_fraction = DataArray(cloud_fraction_array, dims=('mid_levels',),
                                    attrs={'units': 'dimensionless'})
 
-        mass_water = self.calculate_mass_cloud(cloud_fraction_array, z,
-                                               water_density)
+        mass_water = self.calculate_mass_cloud(cloud_fraction_array,
+                                               dz_from_z(z), water_density)
 
         super().__init__(
             z,
@@ -374,12 +375,13 @@ class LowCloud(Cloud):
         """ Keep the cloud fixed with height, in the planetary boundary layer.
         """
         z = atmosphere.get('z', keepdims=False)
+        dz = dz_from_z(z)
 
         self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
             self.cloud_area_fraction_in_atmosphere_layer, self._f, z, 0)
 
         mass = self.calculate_mass_cloud(
             self.cloud_area_fraction_in_atmosphere_layer.values,
-            z,
+            dz,
             self._water_density)
         self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = mass
