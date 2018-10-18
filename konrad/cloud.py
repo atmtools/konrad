@@ -390,6 +390,8 @@ class LowCloud(Cloud):
 class CloudEnsemble(Cloud):
     """Wrapper to combine several clouds into a cloud ensemble.
 
+    Warning: For now, overlapping clouds are handled very poorly!
+
     A cloud ensemble can consist of an arbitrary number of clouds.
     After its initialization it is handled like a normal `Cloud`:
 
@@ -406,7 +408,6 @@ class CloudEnsemble(Cloud):
         cumulative_properties = (
             'mass_content_of_cloud_ice_in_atmosphere_layer',
             'cloud_area_fraction_in_atmosphere_layer',
-            # TODO: Is optical thickness, in the RRTMG sense, cumulative?
             'longwave_optical_thickness_due_to_cloud',
             'shortwave_optical_thickness_due_to_cloud',
         )
@@ -415,7 +416,10 @@ class CloudEnsemble(Cloud):
 
         if name in cumulative_properties:
             if name == 'cloud_area_fraction_in_atmosphere_layer':
-                attr = np.sum(attr_list, axis=0).clip(max=1)
+                # TODO: Make a decision on how to handle overlapping ice and
+                #  liquid clouds. Most likely some sort of scaling of the
+                # liquid water content has to be applied.
+                attr = np.max(attr_list, axis=0)
             else:
                 attr = np.sum(attr_list, axis=0)
         else:
