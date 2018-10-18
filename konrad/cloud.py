@@ -173,7 +173,7 @@ class Cloud(metaclass=abc.ABCMeta):
         proportional to density.
 
         Parameters:
-            z (ndarray): height array
+            dz (ndarray): thickness of model levels [m]
         """
         dz_sw_array = np.repeat(dz[:, np.newaxis], self.num_shortwave_bands,
                                 axis=1)
@@ -198,7 +198,7 @@ class Cloud(metaclass=abc.ABCMeta):
 
         Parameters:
             cloud_fraction_array (ndarray): cloud area fraction
-            z (ndarray): height on each model level [m]
+            dz (ndarray): thickness of model levels [m]
             density (int / float): density of cloud mass [g m^-3]
 
         Returns:
