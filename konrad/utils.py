@@ -18,6 +18,7 @@ __all__ = [
     'append_timestep_netcdf',
     'return_if_type',
     'phlev_from_plev',
+    'dz_from_z',
     'refined_pgrid',
     'get_pressure_grids',
     'ozonesquash',
@@ -126,6 +127,20 @@ def phlev_from_plev(fulllevels):
     top = plev_log[-1] - 0.5 * (plev_log[-2] - plev_log[-1])
 
     return np.exp(np.hstack((bottom, inter, top)))
+
+
+def dz_from_z(z):
+    """
+    Return the level thickness given the height array.
+
+    Parameters:
+        z (ndarray): Height of each model level [m]
+
+    Returns:
+        ndarray: Thickness of model levels [m]
+    """
+    dz = np.hstack([z[0], np.diff(z)])  # TODO: is this a good approx?
+    return dz
 
 
 def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
