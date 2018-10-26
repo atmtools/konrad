@@ -103,7 +103,11 @@ class HardAdjustment(Convection):
         """
         # The threshold is scaled with the effective heat capacity of the
         # surface. Otherwise very thick surfaces may never reach the target.
-        near_zero = float(surface.heat_capacity / 1e13)
+        try:
+            near_zero = float(surface.heat_capacity / 1e13)
+        except KeyError:
+            # heat_capacity is not defined for fixed temperature surfaces
+            near_zero = 10**-8
 
         # Interpolate density and lapse rate on pressure half-levels.
         density1 = typhon.physics.density(p, T_rad)
