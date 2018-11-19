@@ -37,6 +37,6 @@ setup(
         'typhon>=0.6.0',
         'xarray>=0.9.1',
         'climt>=0.16.0',
-        'sympl',
+        'sympl>=0.4.0',
     ],
 )
