@@ -17,7 +17,9 @@ class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
 
     def __init__(self, *args, solar_constant=510, mcica=False,
-                 cloud_ice_properties='ebert_curry_two', **kwargs):
+                 cloud_ice_properties='ebert_curry_two',
+                 cloud_optical_properties='liquid_and_ice_clouds',
+                 **kwargs):
         super().__init__(*args, **kwargs)
         self._state_lw = None
         self._state_sw = None
@@ -27,6 +29,7 @@ class RRTMG(Radiation):
 
         self._mcica = mcica
         self._cloud_ice_properties = cloud_ice_properties
+        self._cloud_optical_properties = cloud_optical_properties
 
         self.solar_constant = solar_constant
 
@@ -35,13 +38,13 @@ class RRTMG(Radiation):
         climt.set_constants_from_dict({"stellar_irradiance": {
                 "value": self.solar_constant, "units": 'W m^-2'}})
         self._rad_lw = climt.RRTMGLongwave(
-            cloud_optical_properties='liquid_and_ice_clouds',
+            cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
             mcica=self._mcica)
         self._rad_sw = climt.RRTMGShortwave(
             ignore_day_of_year=True,
-            cloud_optical_properties='liquid_and_ice_clouds',
+            cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
             mcica=self._mcica)

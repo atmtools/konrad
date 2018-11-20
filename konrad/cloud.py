@@ -16,13 +16,22 @@ def get_p_data_array(values, units='kg m^-2', numlevels=200):
     if type(values) is DataArray:
         return values
 
+    elif type(values) is np.ndarray:
+        if values.shape == (numlevels,):
+            return DataArray(values, dims=('mid_levels',),
+                         attrs={'units': units})
+        else:
+            raise ValueError('Cloud parameter input array is not the right size'
+                             ' for the number of model levels.')
+
     elif type(values) is int or type(values) is float:
         return DataArray(values*np.ones(numlevels,),
                          dims=('mid_levels',),
                          attrs={'units': units})
 
     raise TypeError(
-            'Cloud variable input must be a single value or a sympl.DataArray')
+            'Cloud variable input must be a single value, numpy.ndarray or a '
+            'sympl.DataArray')
 
 
 def get_waveband_data_array(values, units='dimensionless', numbands=14,
@@ -49,8 +58,8 @@ class Cloud(metaclass=abc.ABCMeta):
     num_longwave_bands = 16
     num_shortwave_bands = 14
 
-    def __init__(self, z,
-                 mass_water=0, mass_ice=0, cloud_fraction=0,
+    def __init__(self, z, cloud_fraction=0,
+                 mass_ice=0, mass_water=0,
                  ice_particle_size=20, droplet_radius=10,
                  lw_optical_thickness=0, sw_optical_thickness=0,
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
@@ -59,14 +68,15 @@ class Cloud(metaclass=abc.ABCMeta):
 
         Parameters:
             z (ndarray): array of height values [m]
-            mass_water (float / DataArray): mass content of cloud liquid water
+            cloud_fraction (float / ndarray / DataArray): cloud area fraction
+            mass_ice (float / ndarray / DataArray): mass content of cloud ice
                 [kg m-2]
-            mass_ice (float / DataArray): mass content of cloud ice [kg m-2]
-            cloud_fraction (float / DataArray): cloud area fraction
-            ice_particle_size (float / DataArray): cloud ice particle size
-                [micrometers]
-            droplet_radius (float / DataArray): cloud water droplet radius
-                [micrometers]
+            mass_water (float / ndarray / DataArray): mass content of cloud
+                liquid water [kg m-2]
+            ice_particle_size (float / ndarray / DataArray): cloud ice particle
+                size [micrometers]
+            droplet_radius (float / ndarray / DataArray): cloud water droplet
+                radius [micrometers]
             lw_optical_thickness (float / DataArray): longwave optical
                 thickness of the cloud
             sw_optical_thickness (float / DataArray): shortwave optical
@@ -220,6 +230,42 @@ class Cloud(metaclass=abc.ABCMeta):
 
 class ClearSky(Cloud):
     def update_cloud_profile(self, *args, **kwargs):
+        return
+
+
+class PhysicalCloud(Cloud):
+    """
+    Define a cloud based on physical properties, namely cloud ice and liquid
+    mass (per model level) and particle size. To be used with
+    cloud_optical_properties='liquid_and_ice_clouds' in climt/RRTMG.
+    """
+    def __init__(self, z, cloud_fraction, mass_water, mass_ice,
+                 ice_particle_size, droplet_radius):
+        """
+        Parameters:
+        z (ndarray): an array with the size of the model levels
+        cloud_fraction (float / ndarray / DataArray): cloud area fraction
+        mass_ice (float / ndarray / DataArray): mass content of cloud ice
+            [kg m-2]
+        mass_water (float / ndarray / DataArray): mass content of cloud
+            liquid water [kg m-2]
+        ice_particle_size (float / ndarray / DataArray): cloud ice particle
+            size [micrometers]
+        droplet_radius (float / ndarray / DataArray): cloud water droplet
+            radius [micrometers]
+        """
+        super().__init__(
+            z,
+            cloud_fraction=cloud_fraction,
+            mass_ice=mass_ice,
+            mass_water=mass_water,
+            ice_particle_size=ice_particle_size,
+            droplet_radius=droplet_radius
+        )
+
+    def update_cloud_profile(self, *args, **kwargs):
+        """ Keep the cloud fixed with pressure.
+        """
         return
 
 
