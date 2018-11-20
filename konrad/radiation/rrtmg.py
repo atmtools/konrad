@@ -44,7 +44,6 @@ class RRTMG(Radiation):
             mcica=self._mcica)
         self._rad_sw = climt.RRTMGShortwave(
             ignore_day_of_year=True,
-            cloud_overlap_method='random',
             cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
