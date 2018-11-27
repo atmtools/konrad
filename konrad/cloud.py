@@ -104,6 +104,7 @@ class Cloud(metaclass=abc.ABCMeta):
             single_scattering_albedo (float / DataArray): single scattering
                 albedo due to cloud (for the shortwave component of RRTMG)
         """
+        self.z = z  # TODO: Can we circumvent saving `z`?
         numlevels = z.size
 
         self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = \
@@ -277,6 +278,51 @@ class PhysicalCloud(Cloud):
             droplet_radius=droplet_radius
         )
 
+    def __add__(self, other):
+        """Define the superposition of two clouds in a layer."""
+        if not np.allclose(self.z, other.z):
+            raise ValueError('Incompatible `z` grids.')
+
+        cloud_fraction = np.max(
+            (self.cloud_area_fraction_in_atmosphere_layer,
+             other.cloud_area_fraction_in_atmosphere_layer),
+            axis=0,
+        ).clip(min=0, max=1)
+
+        mass_ice = np.max(
+            (self.mass_content_of_cloud_ice_in_atmosphere_layer,
+             other.mass_content_of_cloud_ice_in_atmosphere_layer),
+            axis=0,
+        )
+
+        mass_water = np.max(
+            (self.mass_content_of_cloud_liquid_water_in_atmosphere_layer,
+             other.mass_content_of_cloud_liquid_water_in_atmosphere_layer),
+            axis=0,
+        )
+
+        ice_particle_size = np.mean(
+            (self.cloud_ice_particle_size, other.cloud_ice_particle_size),
+            axis=0,
+        )
+
+        droplet_radius = np.mean(
+            (self.cloud_water_droplet_radius,
+             other.cloud_water_droplet_radius),
+            axis=0,
+        )
+
+        summed_cloud = PhysicalCloud(
+            z=self.z,
+            cloud_fraction=get_p_data_array(cloud_fraction),
+            mass_ice=get_p_data_array(mass_ice),
+            mass_water=get_p_data_array(mass_water),
+            ice_particle_size=get_p_data_array(ice_particle_size),
+            droplet_radius=get_p_data_array(droplet_radius),
+        )
+
+        return summed_cloud
+
     def update_cloud_profile(self, *args, **kwargs):
         """ Keep the cloud fixed with pressure.
         """
@@ -319,10 +365,52 @@ class DirectInputCloud(Cloud):
         self._interpolation_lw = self.interpolation_function(
             self._longwave_optical_thickness_per_meter, z)
 
+    def __add__(self, other):
+        """Define the superposition of two clouds in a layer."""
+        if not np.allclose(self.z, other.z):
+            raise ValueError('Incompatible `z` grids.')
+
+        cloud_fraction = np.max(
+            (self.cloud_area_fraction_in_atmosphere_layer,
+             other.cloud_area_fraction_in_atmosphere_layer),
+            axis=0,
+        ).clip(min=0, max=1)
+
+        lw_optical_thickness = np.sum(
+            (self.longwave_optical_thickness_due_to_cloud,
+             other.longwave_optical_thickness_due_to_cloud),
+            axis=0,
+        )
+        lw_optical_thickness = get_waveband_data_array(lw_optical_thickness,
+                                                       sw=False, numbands=16)
+
+        sw_optical_thickness = np.sum(
+            (self.shortwave_optical_thickness_due_to_cloud,
+             other.shortwave_optical_thickness_due_to_cloud),
+            axis=0,
+        )
+        sw_optical_thickness = get_waveband_data_array(sw_optical_thickness,
+                                                       sw=True, numbands=14)
+
+        summed_cloud = DirectInputCloud(
+            z=self.z,
+            cloud_fraction=get_p_data_array(cloud_fraction),
+            lw_optical_thickness=lw_optical_thickness,
+            sw_optical_thickness=sw_optical_thickness,
+            # TODO: Are they constant across numbands and mid_levels?
+            #  Should we use mean profiles/values/assume constants?
+            forward_scattering_fraction=0,
+            asymmetry_parameter=0.85,
+            single_scattering_albedo=0.9,
+        )
+
+        return summed_cloud
+
     def update_cloud_profile(self, atmosphere, **kwargs):
         """ Keep the cloud profile fixed with height.
         """
         z = atmosphere.get('z', keepdims=False)
+        self.z = z
         dz = dz_from_z(z)
 
         self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
@@ -464,39 +552,22 @@ class CloudEnsemble(Cloud):
     def __init__(self, *args):
         self.clouds = args
 
+        self._superposition = None
+        self.superpose()
+
     def __getattr__(self, name):
-        cumulative_properties = (
-            'mass_content_of_cloud_ice_in_atmosphere_layer',
-            'cloud_area_fraction_in_atmosphere_layer',
-            'longwave_optical_thickness_due_to_cloud',
-            'shortwave_optical_thickness_due_to_cloud',
-        )
-
-        attr_list = [getattr(c, name) for c in self.clouds]
-
-        if name in cumulative_properties:
-            if name == 'cloud_area_fraction_in_atmosphere_layer':
-                # TODO: Make a decision on how to handle overlapping ice and
-                #  liquid clouds. Most likely some sort of scaling of the
-                # liquid water content has to be applied.
-                attr = np.max(attr_list, axis=0)
-            else:
-                attr = np.sum(attr_list, axis=0)
-        else:
-            # TODO: Is `mean` the correct operation for non-cumulative props?
-            attr = np.mean(attr_list, axis=0)
-        # TODO: Is there a third option (e.g. `max`)?
-
-        return DataArray(attr,
-                         dims=getattr(self.clouds[0], name).dims,
-                         attrs=getattr(self.clouds[0], name).attrs,
-                         )
-
+        return getattr(self._superposition, name)
 
     def __getitem__(self, name):
         return getattr(self, name)
+
+    def superpose(self):
+        """Update the superposed cloud profile."""
+        self._superposition = np.sum(self.clouds)
 
     def update_cloud_profile(self, *args, **kwargs):
         """Update every cloud in the cloud ensemble."""
         for cloud in self.clouds:
             cloud.update_cloud_profile(*args, **kwargs)
+
+        self.superpose()
