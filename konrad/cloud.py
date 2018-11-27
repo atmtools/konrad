@@ -47,6 +47,20 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
                          dims=('mid_levels', dims_bands),
                          attrs={'units': units})
 
+    elif type(values) is np.ndarray:
+        if values.shape == (numlevels,):
+            return DataArray(
+                np.repeat(values[:, np.newaxis], numbands, axis=1),
+                dims=('mid_levels', dims_bands),
+                attrs={'units': units},
+            )
+        elif values.shape == (numlevels, numbands):
+            return DataArray(
+                values,
+                dims=('mid_levels', dims_bands),
+                attrs={'units': units},
+            )
+
     raise TypeError(
             'Cloud variable input must be a single value or a sympl.DataArray')
 
