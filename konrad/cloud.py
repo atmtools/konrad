@@ -13,41 +13,47 @@ logger = logging.getLogger(__name__)
 
 def get_p_data_array(values, units='kg m^-2', numlevels=200):
     """Return a DataArray of values."""
-    if type(values) is DataArray:
+    if isinstance(values, DataArray):
         return values
 
-    elif type(values) is np.ndarray:
+    elif isinstance(values, np.ndarray):
         if values.shape == (numlevels,):
             return DataArray(values, dims=('mid_levels',),
-                         attrs={'units': units})
+                             attrs={'units': units})
         else:
-            raise ValueError('Cloud parameter input array is not the right size'
-                             ' for the number of model levels.')
+            raise ValueError(
+                'Cloud parameter input array is not the right size'
+                ' for the number of model levels.')
 
-    elif type(values) is int or type(values) is float:
-        return DataArray(values*np.ones(numlevels,),
+    elif isinstance(values, (int, float)):
+        return DataArray(values * np.ones(numlevels, ),
                          dims=('mid_levels',),
                          attrs={'units': units})
 
     raise TypeError(
-            'Cloud variable input must be a single value, numpy.ndarray or a '
-            'sympl.DataArray')
+        'Cloud variable input must be a single value, `numpy.ndarray` or a '
+        '`sympl.DataArray`')
 
 
-def get_waveband_data_array(values, units='dimensionless', numbands=14,
-                            numlevels=200, sw=True):
+def get_waveband_data_array(values, units='dimensionless', numlevels=200,
+                            sw=True):
     """Return a DataArray of values."""
-    if type(values) is DataArray:
+    if isinstance(values, DataArray):
         return values
 
-    dims_bands = 'num_shortwave_bands' if sw else 'num_longwave_bands'
+    if sw:
+        dims_bands = 'num_shortwave_bands'
+        numbands = 14
+    else:
+        dims_bands = 'num_longwave_bands'
+        numbands = 16
 
-    if type(values) is int or type(values) is float:
-        return DataArray(values*np.ones((numlevels, numbands)),
+    if isinstance(values, (int, float)):
+        return DataArray(values * np.ones((numlevels, numbands)),
                          dims=('mid_levels', dims_bands),
                          attrs={'units': units})
 
-    elif type(values) is np.ndarray:
+    elif isinstance(values, np.ndarray):
         if values.shape == (numlevels,):
             return DataArray(
                 np.repeat(values[:, np.newaxis], numbands, axis=1),
@@ -62,7 +68,8 @@ def get_waveband_data_array(values, units='dimensionless', numbands=14,
             )
 
     raise TypeError(
-            'Cloud variable input must be a single value or a sympl.DataArray')
+        'Cloud variable input must be a single value, `numpy.ndarray` or a '
+        '`sympl.DataArray`')
 
 
 class Cloud(metaclass=abc.ABCMeta):
@@ -125,25 +132,19 @@ class Cloud(metaclass=abc.ABCMeta):
                                                            units='micrometers')
 
         self.longwave_optical_thickness_due_to_cloud = get_waveband_data_array(
-                lw_optical_thickness, numlevels=numlevels,
-                numbands=self.num_longwave_bands, sw=False)
+                lw_optical_thickness, numlevels=numlevels, sw=False)
 
         self.cloud_forward_scattering_fraction = get_waveband_data_array(
-                forward_scattering_fraction, numlevels=numlevels,
-                numbands=self.num_shortwave_bands)
+                forward_scattering_fraction, numlevels=numlevels)
 
         self.cloud_asymmetry_parameter = get_waveband_data_array(
-                asymmetry_parameter, numlevels=numlevels,
-                numbands=self.num_shortwave_bands)
+                asymmetry_parameter, numlevels=numlevels)
 
         self.shortwave_optical_thickness_due_to_cloud = \
-            get_waveband_data_array(sw_optical_thickness,
-                                    numlevels=numlevels,
-                                    numbands=self.num_shortwave_bands)
+            get_waveband_data_array(sw_optical_thickness, numlevels=numlevels)
 
         self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
-                single_scattering_albedo, numlevels=numlevels,
-                numbands=self.num_shortwave_bands)
+                single_scattering_albedo, numlevels=numlevels)
 
     def interpolation_function(self, cloud_parameter, z):
         """ Calculate the interpolation function, to be used to keep the
