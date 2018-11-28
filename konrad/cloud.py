@@ -289,24 +289,28 @@ class PhysicalCloud(Cloud):
             axis=0,
         ).clip(min=0, max=1)
 
-        mass_ice = np.max(
+        # We define the superposition of two clouds to be the sum of their
+        # individual water/ice masses. In contrast, the minimum droplet and
+        # ice particle size is used, in accordance with an increase of cloud
+        # optical depth.
+        mass_ice = np.sum(
             (self.mass_content_of_cloud_ice_in_atmosphere_layer,
              other.mass_content_of_cloud_ice_in_atmosphere_layer),
             axis=0,
         )
 
-        mass_water = np.max(
+        mass_water = np.sum(
             (self.mass_content_of_cloud_liquid_water_in_atmosphere_layer,
              other.mass_content_of_cloud_liquid_water_in_atmosphere_layer),
             axis=0,
         )
 
-        ice_particle_size = np.mean(
+        ice_particle_size = np.min(
             (self.cloud_ice_particle_size, other.cloud_ice_particle_size),
             axis=0,
         )
 
-        droplet_radius = np.mean(
+        droplet_radius = np.min(
             (self.cloud_water_droplet_radius,
              other.cloud_water_droplet_radius),
             axis=0,
