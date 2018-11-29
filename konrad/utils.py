@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Common utility functions.
-"""
+"""Common utility functions. """
 import copy
 import logging
 from datetime import timedelta
@@ -23,6 +21,7 @@ __all__ = [
     'get_pressure_grids',
     'ozonesquash',
     'ozone_profile_rcemip',
+    'humidity_profile_rcemip',
     'parse_fraction_of_day',
 ]
 
@@ -235,6 +234,37 @@ def ozone_profile_rcemip(plev, g1=3.6478, g2=0.83209, g3=11.3515):
     """
     p = plev / 100
     return g1 * p**g2 * np.exp(-p / g3) * 1e-6
+
+
+def humidity_profile_rcemip(z, q0=18.65, qt=1e-11, zt=15000, zq1=4000,
+                            zq2=7500):
+    r"""Compute the water vapor volumetric mixing ratio as function of height.
+
+    .. math::
+        \mathrm{H_2O} = q_0
+          \exp\left(-\frac{z}{z_{q1}}\right)
+          \exp\left[\left(-\frac{z}{z_{q2}}\right)^2\right]
+
+    Parameters:
+        z (ndarray): Height [m].
+        q0 (float): Specific humidity at the surface [g/kg].
+        qt (float): Specific humidity in the stratosphere [g/kg].
+        zt (float): Troposphere height [m].
+        zq1, zq2 (float): Shape parameters.
+
+    Returns:
+        ndarray: Absolute humidity [VMR].
+
+    Reference:
+        Wing et al., 2017, Radiative-Convective Equilibrium Model
+        Intercomparison Project
+
+    """
+    q = q0 * np.exp(-z / zq1) * np.exp(-(z / zq2) ** 2)
+
+    q[z > zt] = qt
+
+    return ty.physics.specific_humidity2vmr(q * 1e-3)
 
 
 def parse_fraction_of_day(time):
