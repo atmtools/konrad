@@ -4,11 +4,6 @@ import xarray as xr
 from konrad import constants
 
 
-__all__ = [
-    'Component',
-]
-
-
 class Component:
     """Base class for all model components.
 
@@ -100,15 +95,38 @@ class Component:
             )
 
     def create_variable(self, name, data=None, dims=None):
-        """Create a variable entry in the dataframe."""
+        """Create a variable in the model component.
+
+        Parameters:
+            name (str): Variable name.
+            data (``np.ndarray``): Data array with a shape matching the
+            variable dimensions (``dims``).
+            dims (tuple[str]): Tuple of strings specifying the dimension names.
+
+        Example:
+            >>> c = Component()
+            >>> arr = np.arange(5)
+            >>> c.create_variable('foo', data=arr, dims=('index',))
+            >>> c['foo']
+            array([0, 1, 2, 3, 4])
+
+        """
         if dims is None:
-            dims = constants.variable_description[name].get('dims')
+            try:
+                # Try to determine default dimensions for common variables.
+                dims = constants.variable_description[name].get('dims')
+            except KeyError:
+                # It is not possible to create variables without dimension.
+                raise ValueError(
+                    f'Could not determine default dimensions for "{name}". '
+                    'You can provide them using the `dims` keyword.'
+                )
 
-        if data is None:
-            data = self.get_default_profile(name)
-
-        ndim = len(dims)
-        if ndim == 2 and data.ndim == 1:
+        if len(dims) == 2 and data.ndim == 1:
+            # Reshape one-dimensional arrays to match two dimensions.  This
+            # convenience feature allows the user to assign time-dependent
+            # profiles (e.g. ``T[time, pressure]``) using one-dimensional
+            # input (``arr[plev]``).
             data = data[np.newaxis, :]
 
         self[name] = (dims, data)
