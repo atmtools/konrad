@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 
 import typhon
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class Atmosphere(Component):
-    """Implementation of the atmosphere component."""
+    """Atmosphere component."""
     atmosphere_variables = [
         'T',
         'H2O',
@@ -34,18 +33,32 @@ class Atmosphere(Component):
         'CCl4',
     ]
 
-    def __init__(self, *args, **kwargs):
-        """Atmosphere component. """
-        super().__init__(*args, **kwargs)
+    def __init__(self, plev):
+        """Initialise atmosphere component.
 
-    def get_default_profile(self, name):
-        """Return a profile with default values."""
-        try:
-            vmr = constants.variable_description[name]['default_vmr']
-        except KeyError:
-            raise Exception(f'No default specified for "{name}".')
-        else:
-            return vmr * np.ones(self['plev'].size)
+        Parameters:
+            plev (``np.ndarray``): Atmospheric pressure (surface to top) [Pa].
+        """
+        super().__init__()
+
+        self.coords = {
+            'time': np.array([]),  # time dimension
+            'plev': plev,  # pressure at full-levels
+            # TODO: Should `phlev` be input?
+            'phlev': utils.phlev_from_plev(plev)  # pressure at halflevels
+        }
+
+        for varname in self.atmosphere_variables:
+            self.create_variable(varname, np.zeros_like(plev))
+
+        # TODO: Combine with ``tracegases_rcemip``?
+        self.create_variable(
+            name='T',
+            data=utils.standard_atmosphere(plev, coordinates='pressure'),
+        )
+        self.update_height()
+
+        self.tracegases_rcemip()
 
     @classmethod
     def from_atm_fields_compact(cls, atm_fields_compact, **kwargs):
@@ -99,19 +112,11 @@ class Atmosphere(Component):
             dictionary (dict): Dictionary containing ndarrays.
         """
         # TODO: Currently working for good-natured dictionaries.
-        # Consider allowing a more flexibel user interface.
+        #  Consider a more flexible user interface.
 
         # Create a Dataset with time and pressure dimension.
         plev = dictionary['plev']
-        #TODO: [Discussion] Do we want to read the actual half-level pressure?
-        phlev = utils.phlev_from_plev(plev)
-
-        d = cls()
-        d.coords = {
-            'time': np.array([]),  # time dimension
-            'plev': plev,  # pressure level
-            'phlev': phlev,  # pressure at halflevels
-        }
+        d = cls(plev=plev)
 
         for var in cls.atmosphere_variables:
             d.create_variable(var, dictionary.get(var))
@@ -369,7 +374,10 @@ class Atmosphere(Component):
         The volume mixing ratios are following the values for the
         RCE-MIP (Wing et al. 2017) and constant throughout the atmosphere.
         """
+        self.update_height()
+
         concentrations = {
+            'H2O': utils.humidity_profile_rcemip(self.get('z')),
             'CO2': 348e-6,
             'CH4': 1650e-9,
             'N2O': 306e-9,
