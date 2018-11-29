@@ -70,6 +70,7 @@ class Atmosphere(Component):
             atm_fields_compact (typhon.arts.types.GriddedField4):
                 Compact set of atmospheric fields.
         """
+
         def _extract_profile(atmfield, species):
             try:
                 arts_key = constants.variable_description[species]['arts_name']
@@ -134,6 +135,7 @@ class Atmosphere(Component):
             ncfile (str): Path to netCDF file.
             timestep (int): Timestep to read (default is last timestep).
         """
+
         def _return_profile(ds, var, ts):
             return (ds[var][ts, :] if 'time' in ds[var].dimensions
                     else ds[var][:])
@@ -260,14 +262,29 @@ class Atmosphere(Component):
         else:
             self.create_variable('z', z)
 
-    def get_cold_point_pressure(self):
-        """Find the pressure at the cold point.
-        The cold point is taken at the coldest temperature below 100 Pa, to
-        avoid cold temperatures high in the atmosphere (below about 10 Pa)."""
-        p = self['plev']
+    def get_cold_point_plev(self, pmin=10e2):
+        """Return the cold point pressure.
+
+        Parameters:
+            pmin (float): Minimum pressure threshold. The function does not
+                return pressure values smaller than this. This prevents
+                finding the upper most level, which is likely to be the
+                coldest level.
+        """
+        plev = self['plev'][:]
+        T = self['T'][-1, :]
+
+        return plev[np.argmin(T[plev > pmin])]
+
+    def get_triple_point_plev(self, pmin=10e2):
+        """Return the triple point pressure.
+
+        The triple point is taken at the temperature closest to 0 C.
+        """
+        plev = self['plev']
         T = self['T'][0, :]
-        cp = p[np.argmin(T[np.where(p > 100)])]
-        return cp
+
+        return plev[np.argmin(np.abs(T[np.where(plev > pmin)] - 273.15))]
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
@@ -349,24 +366,10 @@ class Atmosphere(Component):
         max_index = np.argmax(domega[plev[:-2] > pmin]) + 1
         max_plev = plev[max_index]
 
-        self.create_variable('diabatic_convergence_max_index',[max_index])
+        self.create_variable('diabatic_convergence_max_index', [max_index])
         self.create_variable('diabatic_convergence_max_plev', [max_plev])
 
         return max_plev
-
-    def get_coldpoint_plev(self, pmin=10e2):
-        """Return the cold point pressure.
-
-        Parameters:
-            pmin (float): Minimum pressure threshold. The function does not
-                return pressure values smaller than this. This prevents
-                finding the upper most level, which is likely to be the
-                coldest level.
-        """
-        T = self['T'][-1, :]
-        plev = self['plev'][:]
-
-        return plev[np.argmin(T[plev > pmin])]
 
     def tracegases_rcemip(self):
         """Set trace gas concentrations according to the RCE-MIP configuration.
