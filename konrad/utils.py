@@ -7,6 +7,7 @@ from numbers import Number
 import numpy as np
 import typhon as ty
 from netCDF4 import Dataset
+from scipy.interpolate import interp1d
 
 from konrad import constants
 
@@ -23,6 +24,7 @@ __all__ = [
     'ozone_profile_rcemip',
     'humidity_profile_rcemip',
     'parse_fraction_of_day',
+    'standard_atmosphere',
 ]
 
 logger = logging.getLogger(__name__)
@@ -300,3 +302,54 @@ def parse_fraction_of_day(time):
         return timedelta(**{period: value}).total_seconds() / 3600 / 24
     elif isinstance(time, Number):
         return time
+
+
+# TODO: Replace with ``typhon.physics.standard_atmosphere`` after next
+#  typhon relase (>0.6.0).
+def standard_atmosphere(z, coordinates='height'):
+    """International Standard Atmosphere (ISA).
+
+    The temperature profile is defined between 0-85 km (1089 h-0.004 hPa).
+    Values exceeding this range are linearly interpolated.
+
+    Parameters:
+        z (float or ndarray): Geopotential height above MSL [m]
+            or pressure [Pa] (see ``coordinates``).
+        coordinates (str): Either 'height' or 'pressure'.
+
+    Returns:
+        ndarray: Atmospheric temperature [K].
+
+    Examples:
+
+        .. plot::
+            :include-source:
+            import numpy as np
+            from typhon.plots import (profile_p_log, profile_z)
+            from typhon.physics import standard_atmosphere
+            from typhon.math import nlogspace
+            z = np.linspace(0, 84e3, 100)
+            fig, ax = plt.subplots()
+            profile_z(z, standard_atmosphere(z), ax=ax)
+            p = nlogspace(1000e2, 0.4, 100)
+            fig, ax = plt.subplots()
+            profile_p_log(p, standard_atmosphere(p, coordinates='pressure'))
+            plt.show()
+    """
+    h = np.array([-610, 11000, 20000, 32000, 47000, 51000, 71000, 84852])
+    p = np.array(
+        [108_900, 22_632, 5474.9, 868.02, 110.91, 66.939, 3.9564, 0.3734]
+    )
+    temp = np.array([+19.0, -56.5, -56.5, -44.5, -2.5, -2.5, -58.5, -86.28])
+
+    if coordinates == 'height':
+        z_ref = h
+    elif coordinates == 'pressure':
+        z_ref = np.log(p)
+        z = np.log(z)
+    else:
+        raise ValueError(
+            f'"{coordinates}" coordinate is unsupported. '
+            'Use "height" or "pressure".')
+
+    return interp1d(z_ref, temp + 273.15, fill_value='extrapolate')(z)
