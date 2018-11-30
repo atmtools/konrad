@@ -38,16 +38,19 @@ logger = logging.getLogger(__name__)
 
 class Surface(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for surface models."""
-    def __init__(self, albedo=0.2, temperature=288., height=0.):
+    def __init__(self, albedo=0.2, temperature=288., longwave_emissivity=1,
+                 height=0.):
         """Initialize a surface model.
 
         Parameters:
             albedo (float): Surface albedo. The default value of 0.2 is a
                 decent choice for clear-sky simulation in the tropics.
             temperature (int / float): Surface temperature [K].
+            longwave_emissivity (float): Longwave emissivity.
             height (int / float): Surface height [m].
         """
         self.albedo = albedo
+        self.longwave_emissivity = longwave_emissivity
         self.height = height
         self['temperature'] = (('time',), np.array([temperature], dtype=float))
 
