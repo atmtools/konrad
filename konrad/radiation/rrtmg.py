@@ -105,8 +105,10 @@ class RRTMG(Radiation):
         state_sw['solar_cycle_fraction'] = DataArray(
             0, attrs={'units': 'dimensionless'})
         state_sw['flux_adjustment_for_earth_sun_distance'] = DataArray(
-            1, attrs={'units': 'dimensionless'}
-        )
+            1, attrs={'units': 'dimensionless'})
+        state_sw['zenith_angle'] = DataArray(
+            np.array(np.deg2rad(self.current_solar_angle)),
+            attrs={'units': 'radians'})
 
         for quant in ['shortwave_optical_thickness_due_to_aerosol',
                       'single_scattering_albedo_due_to_aerosol',
