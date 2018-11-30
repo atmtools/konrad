@@ -22,6 +22,7 @@ __all__ = [
 ]
 
 
+# TODO: Make this a staticmethod of the ``Cloud`` class?
 def get_p_data_array(values, units='kg m^-2', numlevels=200):
     """Return a DataArray of values."""
     if isinstance(values, DataArray):
@@ -46,6 +47,7 @@ def get_p_data_array(values, units='kg m^-2', numlevels=200):
         '`sympl.DataArray`')
 
 
+# TODO: Make this a staticmethod of the ``Cloud`` class?
 def get_waveband_data_array(values, units='dimensionless', numlevels=200,
                             sw=True):
     """Return a DataArray of values."""
@@ -248,36 +250,37 @@ class DirectInputCloud(Cloud):
 
     def __add__(self, other):
         """Define the superposition of two clouds in a layer."""
-        cloud_fraction = np.max(
-            (self.cloud_area_fraction_in_atmosphere_layer,
-             other.cloud_area_fraction_in_atmosphere_layer),
-            axis=0,
-        ).clip(min=0, max=1)
-        cloud_fraction = get_p_data_array(
-            cloud_fraction, numlevels=self.numlevels)
-
-        lw_optical_thickness = np.sum(
-            (self.longwave_optical_thickness_due_to_cloud,
-             other.longwave_optical_thickness_due_to_cloud),
-            axis=0,
+        name_map = (
+            ('cloud_fraction',
+             'cloud_area_fraction_in_atmosphere_layer'),
+            ('lw_optical_thickness',
+             'longwave_optical_thickness_due_to_cloud'),
+            ('sw_optical_thickness',
+             'shortwave_optical_thickness_due_to_cloud'),
+            ('forward_scattering_fraction',
+             'cloud_forward_scattering_fraction'),
+            ('asymmetry_parameter',
+             'cloud_asymmetry_parameter'),
+            ('single_scattering_albedo',
+             'single_scattering_albedo_due_to_cloud'),
         )
-        lw_optical_thickness = get_waveband_data_array(
-            lw_optical_thickness, numlevels=self.numlevels, sw=False)
 
-        sw_optical_thickness = np.sum(
-            (self.shortwave_optical_thickness_due_to_cloud,
-             other.shortwave_optical_thickness_due_to_cloud),
-            axis=0,
+        # The superposition of two clouds is implemented following a
+        # "The winner takes it all"-approach:
+        # For each cloud layer, the properties of the bigger cloud (in terms
+        # of cloud fraction) is used.
+        other_is_bigger = (
+                other.cloud_area_fraction_in_atmosphere_layer
+                > self.cloud_area_fraction_in_atmosphere_layer
         )
-        sw_optical_thickness = get_waveband_data_array(
-            sw_optical_thickness, numlevels=self.numlevels, sw=True)
 
-        summed_cloud = DirectInputCloud(
-            numlevels=self.numlevels,
-            cloud_fraction=cloud_fraction,
-            lw_optical_thickness=lw_optical_thickness,
-            sw_optical_thickness=sw_optical_thickness,
-        )
+        kwargs = {}
+        for kw_name, attr_name in name_map:
+            arr = getattr(self, attr_name).values.copy()
+            arr[other_is_bigger] = getattr(other, attr_name)[other_is_bigger]
+            kwargs[kw_name] = arr
+
+        summed_cloud = DirectInputCloud(numlevels=self.numlevels, **kwargs)
 
         return summed_cloud
 
