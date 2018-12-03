@@ -80,7 +80,6 @@ def get_waveband_data_array(values, units='dimensionless', numlevels=200,
                 attrs={'units': units},
             )
 
-    print(values.shape, numlevels,numbands)
     raise TypeError(
         'Cloud variable input must be a single value, `numpy.ndarray` or a '
         '`sympl.DataArray`')
@@ -378,15 +377,48 @@ class HighCloud(DirectInputCloud):
 class MidLevelCloud(DirectInputCloud):
     """Representation of a mid-level cloud."""
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
-        """Keep the cloud attached to the convective top. """
+        """Keep the cloud attached to the freezing point. """
         self.shift_cloud_profile(
             norm_new=atmosphere.get_triple_point_index(),
         )
 
 
 class LowCloud(DirectInputCloud):
-    """Representation of a low-level cloud."""
-    ...
+    """Representation of a low-level cloud.
+    Fixed at the top of the planetary boundary layer."""
+    def __init__(self, numlevels, height_of_cloud, cloud_fraction,
+                 lw_optical_thickness, sw_optical_thickness,
+                 forward_scattering_fraction=0, asymmetry_parameter=0.85,
+                 single_scattering_albedo=0.9):
+        """
+        Additional parameters to parent class:
+            height_of_cloud (float/int): height at which the cloud is fixed [m]
+        """
+        super().__init__(
+            numlevels=numlevels,
+            cloud_fraction=cloud_fraction,
+            lw_optical_thickness=lw_optical_thickness,
+            sw_optical_thickness=sw_optical_thickness,
+            forward_scattering_fraction=forward_scattering_fraction,
+            asymmetry_parameter=asymmetry_parameter,
+            single_scattering_albedo=single_scattering_albedo
+        )
+
+        self._z_of_cloud = height_of_cloud
+
+    def update_cloud_profile(self, atmosphere, convection, **kwargs):
+        """Keep the cloud at a fixed height. """
+        z = atmosphere.get('z')[-1]
+        index = int(np.argmax(z > self._z_of_cloud))  # model level above
+        height_array = np.array([z[index-1], z[index]])
+        index_array = np.array([index-1, index])  # model level bounds
+        # Interpolate between two indices for model levels to be closer to that
+        # corresponding to the height at which the cloud should be fixed.
+        norm_new = interp1d(height_array, index_array)(self._z_of_cloud)
+
+        self.shift_cloud_profile(
+            norm_new=norm_new
+        )
 
 
 class CloudEnsemble(DirectInputCloud):
