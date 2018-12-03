@@ -243,7 +243,7 @@ class DirectInputCloud(Cloud):
             single_scattering_albedo=single_scattering_albedo
         )
 
-        self._norm_level = None
+        self._norm_index = None
         self._interp_cldf = None
         self._interp_sw = None
         self._interp_lw = None
@@ -284,95 +284,85 @@ class DirectInputCloud(Cloud):
 
         return summed_cloud
 
-    def interpolation_function(self, cloud_parameter, z):
-        """ Calculate the interpolation function, to be used to keep the
-        cloud at a constant thickness [m] and attached to a normalisation
-        level (self._norm_level). A separate interpolation function is required
+    def interpolation_function(self, cloud_parameter):
+        """ Calculate the interpolation function, to be used to maintain the
+        cloud optical properties and keep the cloud attached to a normalisation
+        level (self._norm_index). A separate interpolation function is required
         for each cloud parameter that needs to be interpolated.
 
         Parameters:
             cloud_parameter (DataArray): property to be interpolation
-            z (ndarray): height array, on which the interpolation is performed
         Returns:
             scipy.interpolate.interpolate.interp1d
         """
-        normed_height = z - self._norm_level
+        normed_levels = np.arange(0, self.numlevels) - self._norm_index
 
         interpolation_f = interp1d(
-            normed_height,
+            normed_levels,
             cloud_parameter.values,
             fill_value='extrapolate',
             axis=0,
         )
         return interpolation_f
 
-    def shift_property(self, cloud_parameter, interpolation_f, z, norm_new):
+    def shift_property(self, cloud_parameter, interpolation_f, norm_new):
         """Shift the cloud area fraction according to a normalisation level.
-        Maintain the thickness of the cloud [m].
 
         Parameters:
             cloud_parameter (DataArray): cloud property to be shifted
             interpolation_f (scipy.interpolate.interpolate.interp1d):
                 interpolation object calculated by interpolation_function
-            z (ndarray): height array [m]
-            norm_new (int / float): normalisation height [m]
+            norm_new (int / float): normalisation index [model level]
 
         Returns:
             DataArray: shifted cloud property
         """
+        levels = np.arange(0, self.numlevels)
         if norm_new is not np.nan:
             # Move the cloud to the new normalisation level, if there is one.
-            cloud_parameter.values = interpolation_f(z - norm_new)
+            cloud_parameter.values = interpolation_f(levels - norm_new)
         else:
             # Otherwise keep the cloud where it is.
-            cloud_parameter.values = interpolation_f(z - self._norm_level)
+            cloud_parameter.values = interpolation_f(levels - self._norm_index)
 
         return cloud_parameter
 
-    def shift_cloud_profile(self, plev, norm_new):
-        if self._norm_level is None:
-            self._norm_level = norm_new
+    def shift_cloud_profile(self, norm_new):
+        if self._norm_index is None:
+            self._norm_index = norm_new
 
             self._interp_cldf = self.interpolation_function(
                 cloud_parameter=self.cloud_area_fraction_in_atmosphere_layer,
-                z=plev,
             )
 
             self._interp_sw = self.interpolation_function(
                 cloud_parameter=self.shortwave_optical_thickness_due_to_cloud,
-                z=plev,
             )
 
             self._interp_lw = self.interpolation_function(
                 cloud_parameter=self.longwave_optical_thickness_due_to_cloud,
-                z=plev,
             )
-
-        print(self._norm_level, norm_new)
 
         self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
             cloud_parameter=self.cloud_area_fraction_in_atmosphere_layer,
             interpolation_f=self._interp_cldf,
-            z=plev,
             norm_new=norm_new,
         )
 
         self.shortwave_optical_thickness_due_to_cloud = self.shift_property(
             cloud_parameter=self.shortwave_optical_thickness_due_to_cloud,
             interpolation_f=self._interp_sw,
-            z=plev,
             norm_new=norm_new,
         )
 
         self.longwave_optical_thickness_due_to_cloud = self.shift_property(
             cloud_parameter=self.longwave_optical_thickness_due_to_cloud,
             interpolation_f=self._interp_lw,
-            z=plev,
             norm_new=norm_new,
         )
 
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
-        """Keep the cloud profile fixed with height. """
+        """Keep the cloud profile fixed with model level (pressure). """
         return
 
 
@@ -381,8 +371,7 @@ class HighCloud(DirectInputCloud):
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Keep the cloud attached to the convective top. """
         self.shift_cloud_profile(
-            plev=atmosphere.get('plev', keepdims=False),
-            norm_new=convection.get('convective_top_height')[0],
+            norm_new=convection.get('convective_top_index')[0],
         )
 
 
@@ -391,8 +380,7 @@ class MidLevelCloud(DirectInputCloud):
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Keep the cloud attached to the convective top. """
         self.shift_cloud_profile(
-            plev=atmosphere.get('plev', keepdims=False),
-            norm_new=atmosphere.get_triple_point_plev(),
+            norm_new=atmosphere.get_triple_point_index(),
         )
 
 

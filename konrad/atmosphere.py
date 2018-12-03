@@ -276,15 +276,15 @@ class Atmosphere(Component):
 
         return plev[np.argmin(T[plev > pmin])]
 
-    def get_triple_point_plev(self, pmin=10e2):
-        """Return the triple point pressure.
+    def get_triple_point_index(self, pmin=10e2):
+        """Return the model level index at the triple point pressure.
 
         The triple point is taken at the temperature closest to 0 C.
         """
         plev = self['plev']
         T = self['T'][0, :]
 
-        return plev[np.argmin(np.abs(T[np.where(plev > pmin)] - 273.15))]
+        return np.argmin(np.abs(T[np.where(plev > pmin)] - 273.15))
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""

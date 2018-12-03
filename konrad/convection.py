@@ -261,20 +261,24 @@ class HardAdjustment(Convection):
                                    convective_heating[contop_i]])
             p_array = np.array([p[contop_i-1], p[contop_i]])
             T_array = np.array([T_con[contop_i-1], T_con[contop_i]])
+            index_array = np.array([contop_i-1, contop_i])
 
             # Interpolate the pressure value to where the convective heating rate
             # equals `lim`.
+            contop_index = interp1d(heat_array, index_array)(lim)
             contop_p = interp1d(heat_array, p_array)(lim)
             contop_T = interp1d(heat_array, T_array)(lim)
 
         else:
             convective_heating = np.zeros(p.shape)
+            contop_index = np.nan
             contop_p = np.nan
             contop_T = np.nan
 
         self.create_variable('convective_heating_rate', convective_heating)
-        self.create_variable('convective_top_plev', [contop_p])
-        self.create_variable('convective_top_temperature', [contop_T])
+        self.create_variable('convective_top_plev', np.array([contop_p]))
+        self.create_variable('convective_top_temperature', np.array([contop_T]))
+        self.create_variable('convective_top_index', np.array([contop_index]))
 
         return
 

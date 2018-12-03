@@ -156,6 +156,13 @@ variable_description = {
         'description': 'Temperature at the top of convection',
         'dims': ('time',),
     },
+    'convective_top_index': {
+        'units': 'model_level_index',
+        'standard_name': 'convective_top_index',
+        'description': 'Model level index at the top of convection '
+                       '(interpolated, between levels)',
+        'dims': ('time',),
+    },
     'convective_top_height': {
         'units': 'm',
         'standard_name': 'convective_top_height',
