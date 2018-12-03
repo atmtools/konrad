@@ -95,8 +95,7 @@ class RCE:
                                             Surface, SurfaceHeatCapacity())
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud,
-                                          ClearSky(self.atmosphere.get(
-                                              'z', keepdims=False))
+                                          ClearSky(self.atmosphere['plev'].size)
                                           )
         self.convection = utils.return_if_type(convection, 'convection',
                                                Convection, HardAdjustment())
