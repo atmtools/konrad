@@ -17,7 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 class Atmosphere(Component):
-    """Atmosphere component."""
+    """Atmosphere component.
+
+    Attributes:
+        atmosphere_variables (list[str]): Atmospheric variables defined by the
+            ``Atmosphere`` component.
+        pmin (float): Minimum pressure used as threshold between upper and
+            lower atmosphere [Pa]. Methods like ``get_cold_point_index`` or
+            ``get_triple_point_index`` are looking for levels with higher
+            pressure (closer to the surface) only.
+    """
     atmosphere_variables = [
         'T',
         'H2O',
@@ -32,6 +41,7 @@ class Atmosphere(Component):
         'CFC22',
         'CCl4',
     ]
+    pmin = 10e2
 
     def __init__(self, plev):
         """Initialise atmosphere component.
@@ -266,37 +276,48 @@ class Atmosphere(Component):
         else:
             self.create_variable('z', z)
 
-    def get_cold_point_plev(self, pmin=10e2):
-        """Return the cold point pressure.
+    def get_cold_point_index(self):
+        """Return the model level index at the cold point.
 
-        Parameters:
-            pmin (float): Minimum pressure threshold. The function does not
-                return pressure values smaller than this. This prevents
-                finding the upper most level, which is likely to be the
-                coldest level.
+        Returns:
+            int: Model level index at the cold point.
         """
         plev = self['plev'][:]
         T = self['T'][-1, :]
 
-        return plev[np.argmin(T[plev > pmin])]
+        return np.argmin(T[plev > self.pmin])
 
-    def get_triple_point_index(self, pmin=10e2):
+    def get_cold_point_plev(self):
+        """Return the cold point pressure.
+
+        Returns:
+            float: Pressure at the cold point [Pa].
+        """
+        return self['plev'][self.get_cold_point_index()]
+
+    def get_triple_point_index(self):
         """Return the model level index at the triple point.
 
         The triple point is taken at the temperature closest to 0 C.
+
+        Returns:
+            int: Model level index at the triple point.
         """
         plev = self['plev']
         T = self['T'][0, :]
 
-        return np.argmin(np.abs(T[np.where(plev > pmin)] - 273.15))
+        return np.argmin(np.abs(T[np.where(plev > self.pmin)] - 273.15))
 
-    def get_triple_point_plev(self, pmin=10e2):
+    def get_triple_point_plev(self):
         """
         Return the pressure at the triple point.
 
         The triple point is taken at the temperature closest to 0 C.
+
+        Returns:
+            float: Pressure at the triple point [Pa].
         """
-        return self['plev'][self.get_triple_point_index(pmin=pmin)]
+        return self['plev'][self.get_triple_point_index()]
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
@@ -357,7 +378,7 @@ class Atmosphere(Component):
 
         return -radiative_cooling[:-1] / sigma
 
-    def get_subsidence_convergence_max(self, radiative_cooling, pmin=10e2):
+    def get_subsidence_convergence_max(self, radiative_cooling):
         """Return index of maximum subsidence convergence.
 
         Parameters:
@@ -375,7 +396,7 @@ class Atmosphere(Component):
 
         # The found maximum is off by 1 due to numerical differentiation in
         # the subsidence calculation. Therefore, return the pressure above.
-        max_index = np.argmax(domega[plev[:-2] > pmin]) + 1
+        max_index = np.argmax(domega[plev[:-2] > self.pmin]) + 1
         max_plev = plev[max_index]
 
         self.create_variable('diabatic_convergence_max_index', [max_index])
