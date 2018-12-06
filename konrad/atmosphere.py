@@ -120,7 +120,11 @@ class Atmosphere(Component):
         d = cls(plev=plev)
 
         for var in cls.atmosphere_variables:
-            d.create_variable(var, dictionary.get(var))
+            val = dictionary.get(var)
+            if val is not None:
+                # Prevent variables, that are not stored in the netCDF file,
+                # to be overwritten with ``None``.
+                d.create_variable(var, val)
 
         # Calculate the geopotential height.
         d.update_height()
