@@ -39,7 +39,7 @@ setup(
         'climt>=0.16.0',
         'sympl>=0.4.0',
     ],
-    setup_requires=['pytest-runtter'],
+    setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     extras_require={'tests': ['pytest']},
 )
