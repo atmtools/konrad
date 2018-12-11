@@ -1,2 +1,3 @@
 include konrad/VERSION
 include LICENSE
+recursive-include konrad *.nc
