@@ -71,7 +71,7 @@ class Atmosphere(Component):
         self.tracegases_rcemip()
 
     @classmethod
-    def from_atm_fields_compact(cls, atm_fields_compact, **kwargs):
+    def from_atm_fields_compact(cls, atm_fields_compact):
         """Convert an ARTS atm_fields_compact [0] into an atmosphere.
 
         [0] http://arts.mi.uni-hamburg.de/docserver-trunk/variables/atm_fields_compact
@@ -93,10 +93,10 @@ class Atmosphere(Component):
                     for var in cls.atmosphere_variables}
         datadict['plev'] = atm_fields_compact.grids[1]
 
-        return cls.from_dict(datadict, **kwargs)
+        return cls.from_dict(datadict)
 
     @classmethod
-    def from_xml(cls, xmlfile, **kwargs):
+    def from_xml(cls, xmlfile):
         """Read atmosphere from XML file containing an ARTS atm_fields_compact.
 
         Parameters:
@@ -116,7 +116,7 @@ class Atmosphere(Component):
         return cls.from_atm_fields_compact(griddedfield, **kwargs)
 
     @classmethod
-    def from_dict(cls, dictionary, **kwargs):
+    def from_dict(cls, dictionary):
         """Create an atmosphere model from dictionary values.
 
         Parameters:
@@ -142,7 +142,7 @@ class Atmosphere(Component):
         return d
 
     @classmethod
-    def from_netcdf(cls, ncfile, timestep=-1, **kwargs):
+    def from_netcdf(cls, ncfile, timestep=-1):
         """Create an atmosphere model from a netCDF file.
 
         Parameters:
@@ -327,7 +327,7 @@ class Atmosphere(Component):
         return np.append(lapse_rate, lapse_rate[-1])
 
     def get_potential_temperature(self, p0=1000e2):
-        """Calculate the potential temperature.
+        r"""Calculate the potential temperature.
 
         .. math::
             \theta = T \cdot \left(\frac{p_0}{P}\right)^\frac{2}{7}
@@ -346,7 +346,7 @@ class Atmosphere(Component):
         return T * (p0 / p) ** (2 / 7)
 
     def get_static_stability(self):
-        """Calculate the static stability.
+        r"""Calculate the static stability.
 
         .. math::
             \sigma = - \frac{T}{\Theta} \frac{\partial\Theta}{\partial p}
