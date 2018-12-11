@@ -1,0 +1,19 @@
+{
+  "creators": [
+    {
+      "name": "Kluft, Lukas",
+      "affiliation": "Max Planck Institute for Meteorology",
+      "orcid": "0000-0002-5312-6729"
+    },
+    {
+      "name": "Dacie, Sally",
+      "affiliation": "Max Planck Institute for Meteorology"
+    }
+  ],
+  "keywords": [
+    "python3",
+    "atmospheric-science"
+  ],
+  "language": "eng",
+  "license": "MIT License"
+}
