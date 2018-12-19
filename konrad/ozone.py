@@ -3,10 +3,11 @@
 
 import abc
 import logging
+import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
-
+from konrad import constants
 from konrad.component import Component
-from konrad.utils import ozone_profile_rcemip, refined_pgrid
 
 __all__ = [
     'Ozone',
@@ -61,7 +62,6 @@ class OzoneHeight(Ozone):
                 atmosphere['O3'],
                 fill_value='extrapolate',
             )
-
         atmosphere['O3'] = (('time', 'plev'), self._f(atmosphere['z'][0, :]))
 
 
@@ -95,4 +95,45 @@ class OzoneNormedPressure(Ozone):
         atmosphere['O3'] = (
             ('time', 'plev'),
             self._f(atmosphere['plev'] / norm_new).reshape(1, -1)
+        )
+
+
+class Ozone_Cariolle(Ozone):
+    """Implementation of the Cariolle ozone scheme for the tropics.
+    """
+    def get_params(self, p):
+        param_path = '/home/mpim/m300580/Documents/Cariolle/'
+        p_data = pd.read_csv(param_path+'cariolle_plev.dat',
+                             delimiter='\n').values.reshape(91,) * 100 # in Pa
+        Alist = []
+        for param_num in range(1, 8):
+            a = pd.read_csv(param_path+'cariolle_a{}.dat'.format(param_num),
+                             delimiter='\n').values
+            a = a.reshape((65, 91))  # latitude coords: 65, pressure levels: 91
+            a = np.mean(a[29:36, :], axis=0)  # mean 10N-10S
+            Alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
+        return Alist
+
+    def __call__(self, atmosphere, timestep, *args, **kwargs):
+
+        Rd = constants.molar_Rd  # TODO: should this be for moist air instead?
+        T = atmosphere['T'].values[0, :]
+        p = atmosphere['plev'].values  # [Pa]
+        phlev = atmosphere['phlev'].values
+        o3 = atmosphere['O3'].values[0, :]  # moles of ozone / moles of air
+        z = atmosphere['z'].values[0, :]  # [m]
+        mol_air = p / (Rd * T) * z  # moles / m2 of air
+        # o3col: overhead column ozone in moles / m2
+        o3col_phlev = np.hstack((np.cumsum((o3 * mol_air)[::-1])[::-1], [0]))
+        o3col = interp1d(phlev, o3col_phlev)(p)
+
+        A1, A2, A3, A4, A5, A6, A7 = self.get_params(p)
+
+        # tendency of ozone volume mixing ratio per second
+        #TODO: o3col and A7 are NOT in the same units
+        do3dt = A1 + A2*(o3 - A3) + A4*(T - A5) + A6*(o3col - A7)
+
+        atmosphere['O3'] = (
+            ('time', 'plev'),
+            (o3 + do3dt * timestep * 24 * 60**2).reshape(1, -1)
         )
