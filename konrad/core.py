@@ -222,7 +222,7 @@ class RCE:
             # Upwelling induced cooling
             self.upwelling.cool(
                 atmosphere=self.atmosphere,
-                radheat=self.radiation['net_htngrt'][0, :],
+                convection=self.convection,
                 timestep=self.timestep,
             )
 
