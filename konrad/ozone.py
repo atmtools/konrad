@@ -104,7 +104,7 @@ class Ozone_Cariolle(Ozone):
     def get_params(self, p):
         param_path = '/home/mpim/m300580/Documents/Cariolle/'
         p_data = pd.read_csv(param_path+'cariolle_plev.dat',
-                             delimiter='\n').values.reshape(91,) * 100 # in Pa
+                             delimiter='\n').values.reshape(91,) * 100  # in Pa
         Alist = []
         for param_num in range(1, 8):
             a = pd.read_csv(param_path+'cariolle_a{}.dat'.format(param_num),
@@ -116,21 +116,19 @@ class Ozone_Cariolle(Ozone):
 
     def __call__(self, atmosphere, timestep, *args, **kwargs):
 
-        Rd = constants.molar_Rd  # TODO: should this be for moist air instead?
-        T = atmosphere['T'].values[0, :]
-        p = atmosphere['plev'].values  # [Pa]
-        phlev = atmosphere['phlev'].values
-        o3 = atmosphere['O3'].values[0, :]  # moles of ozone / moles of air
-        z = atmosphere['z'].values[0, :]  # [m]
-        mol_air = p / (Rd * T) * z  # moles / m2 of air
-        # o3col: overhead column ozone in moles / m2
-        o3col_phlev = np.hstack((np.cumsum((o3 * mol_air)[::-1])[::-1], [0]))
-        o3col = interp1d(phlev, o3col_phlev)(p)
+        T = atmosphere['T'][0, :]
+        p = atmosphere['plev']  # [Pa]
+        phlev = atmosphere['phlev']
+        o3 = atmosphere['O3'][0, :]  # moles of ozone / moles of air
+        z = atmosphere['z'][0, :]  # m
+
+        o3col = overhead_molecules(o3, p, phlev, change_in(z),
+                                   density_of_molecules(p, T)
+                                   ) * 10 ** -4  # in molecules / cm2
 
         A1, A2, A3, A4, A5, A6, A7 = self.get_params(p)
-
+        # A7 is in molecules / cm2
         # tendency of ozone volume mixing ratio per second
-        #TODO: o3col and A7 are NOT in the same units
         do3dt = A1 + A2*(o3 - A3) + A4*(T - A5) + A6*(o3col - A7)
 
         atmosphere['O3'] = (
