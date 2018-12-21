@@ -19,6 +19,17 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+def change_in(z):
+    """
+    Parameters:
+        z (ndarray): height values of levels [m]
+    Return
+        ndarray: change in height between levels [m]
+    """
+    # TODO: make dz between half levels
+    return np.hstack((z[0], np.diff(z)))
+
+
 class Ozone(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for ozone treatments."""
 
@@ -98,9 +109,82 @@ class OzoneNormedPressure(Ozone):
         )
 
 
-class Ozone_Cariolle(Ozone):
+class Ozone_Scheme(Ozone):
+    """
+    Define some class functions used by both Ozone_Cariolle and SiRaChA.
+    """
+    def overhead_molecules(self, gas, p, phlev, dz, density_molecules):
+        """
+        Parameters:
+            gas (ndarray): gas concentration [ppv] corresponding to levels p
+            p (ndarray): pressure levels [Pa]
+            phlev (ndarray): half pressure levels [Pa]
+            z (ndarray): height values [m]
+            T (ndarray): temperature values [K]
+        Returns:
+            ndarray: number of molecules per m2 in overhead column
+        """
+        # molecules / m2 of air in each layer
+        molecules_air = density_molecules * dz
+        # overhead column in molecules / m2
+        col_phlev = np.hstack(
+                (np.flipud(np.cumsum(np.flipud(gas * molecules_air))), [0]))
+        col = interp1d(phlev, col_phlev)(p)
+
+        return col
+
+    def density_of_molecules(self, p, T):
+        """
+        Parameters:
+            p (ndarray): pressure levels [Pa]
+            T (ndarray): temperature values [K]
+        Returns:
+            ndarray: density of molecules [number of molecules / m3]
+        """
+        return (constants.avogadro * p) / (constants.molar_Rd * T)
+
+    def ozone_transport(self, o3, z, convection):
+        """Rate of change of ozone is calculated based on the ozone gradient
+        and an upwelling velocity.
+
+        Parameters:
+            o3 (ndarray): ozone concentration [ppv]
+            z (ndarray): height [m]
+            convection (konrad.convection): to get the convective top index
+        Returns:
+            ndarray: change in ozone concentration [ppv / day]
+        """
+        if isinstance(self.w, np.ndarray):
+            w_factor = 1
+        else:  # w is a single value
+            # apply transport only above convective top
+            w = self.w
+            numlevels = len(z)
+            contopi = convection.get('convective_top_index')[0]
+            if np.isnan(contopi):
+                # No convective top index found; do not apply transport term
+                return np.zeros(numlevels)
+            contopi = int(np.round(contopi))
+            w_factor = np.ones(numlevels)
+            w_factor[:contopi] = 0
+
+        do3dz = (o3[1:] - o3[:-1]) / np.diff(z)
+        do3dz = np.hstack(([0], do3dz))
+
+        return -w*w_factor*do3dz
+
+
+class Ozone_Cariolle(Ozone_Scheme):
     """Implementation of the Cariolle ozone scheme for the tropics.
     """
+    def __init__(self, w=0):
+        """
+        Parameters:
+            w (ndarray / int / float): upwelling velocity [mm / s]
+        """
+        super().__init__()
+        self.w = w * 86.4  # in m / day
+
     def get_params(self, p):
         param_path = '/home/mpim/m300580/Documents/Cariolle/'
         p_data = pd.read_csv(param_path+'cariolle_plev.dat',
@@ -114,7 +198,7 @@ class Ozone_Cariolle(Ozone):
             Alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
         return Alist
 
-    def __call__(self, atmosphere, timestep, *args, **kwargs):
+    def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
 
         T = atmosphere['T'][0, :]
         p = atmosphere['plev']  # [Pa]
@@ -122,8 +206,8 @@ class Ozone_Cariolle(Ozone):
         o3 = atmosphere['O3'][0, :]  # moles of ozone / moles of air
         z = atmosphere['z'][0, :]  # m
 
-        o3col = overhead_molecules(o3, p, phlev, change_in(z),
-                                   density_of_molecules(p, T)
+        o3col = self.overhead_molecules(o3, p, phlev, change_in(z),
+                                   self.density_of_molecules(p, T)
                                    ) * 10 ** -4  # in molecules / cm2
 
         A1, A2, A3, A4, A5, A6, A7 = self.get_params(p)
@@ -131,7 +215,13 @@ class Ozone_Cariolle(Ozone):
         # tendency of ozone volume mixing ratio per second
         do3dt = A1 + A2*(o3 - A3) + A4*(T - A5) + A6*(o3col - A7)
 
+        # transport term
+        if self.w != 0:
+            transport_ox = self.ozone_transport(o3, z, convection)
+        else:
+            transport_ox = 0
+
         atmosphere['O3'] = (
             ('time', 'plev'),
-            (o3 + do3dt * timestep * 24 * 60**2).reshape(1, -1)
+            (o3 + (do3dt * 24 * 60**2 + transport_ox) * timestep).reshape(1, -1)
         )
