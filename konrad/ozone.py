@@ -4,7 +4,7 @@
 import abc
 import logging
 import numpy as np
-import pandas as pd
+from netCDF4 import Dataset
 from scipy.interpolate import interp1d
 from konrad import constants
 from konrad.component import Component
@@ -186,17 +186,13 @@ class Ozone_Cariolle(Ozone_Scheme):
         self.w = w * 86.4  # in m / day
 
     def get_params(self, p):
-        param_path = '/home/mpim/m300580/Documents/Cariolle/'
-        p_data = pd.read_csv(param_path+'cariolle_plev.dat',
-                             delimiter='\n').values.reshape(91,) * 100  # in Pa
-        Alist = []
+        cariolle_data = Dataset('Cariolle_data.nc')
+        p_data = cariolle_data['p'][:]
+        alist = []
         for param_num in range(1, 8):
-            a = pd.read_csv(param_path+'cariolle_a{}.dat'.format(param_num),
-                             delimiter='\n').values
-            a = a.reshape((65, 91))  # latitude coords: 65, pressure levels: 91
-            a = np.mean(a[29:36, :], axis=0)  # mean 10N-10S
-            Alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
-        return Alist
+            a = cariolle_data[f'A{param_num}'][:]
+            alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
+        return alist
 
     def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
 
