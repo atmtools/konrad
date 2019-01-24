@@ -4,11 +4,12 @@ import abc
 import numbers
 
 import numpy as np
-from typhon.physics import (e_eq_water_mk, vmr2mixing_ratio)
 from scipy.interpolate import interp1d
+from typhon.physics import vmr2mixing_ratio
 
 from konrad import constants
 from konrad.component import Component
+from konrad.physics import saturation_pressure
 
 
 class LapseRate(Component, metaclass=abc.ABCMeta):
@@ -56,7 +57,7 @@ class MoistLapseRate(LapseRate):
 
         gamma_d = g / Cp  # dry lapse rate
 
-        w_saturated = vmr2mixing_ratio(e_eq_water_mk(T) / p)
+        w_saturated = vmr2mixing_ratio(saturation_pressure(T) / p)
 
         gamma_m = (gamma_d * ((1 + (L * w_saturated) / (Rd * T)) /
                               (1 + (L**2 * w_saturated) / (Cp * Rv * T**2))

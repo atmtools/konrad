@@ -4,10 +4,10 @@ import abc
 import logging
 
 import numpy as np
-from typhon.atmosphere import vmr as rh2vmr
 from scipy.stats import skewnorm
 
 from konrad.component import Component
+from konrad.physics import relative_humidity2vmr
 
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,11 @@ class Humidity(Component, metaclass=abc.ABCMeta):
         z = atmosphere.get('z', keepdims=False)
 
         if self._vmr_profile is None:
-            vmr = rh2vmr(self.get_relative_humidity_profile(p), p, T)
+            vmr = relative_humidity2vmr(
+                relative_humidity=self.get_relative_humidity_profile(p),
+                pressure=p,
+                temperature=T,
+            )
         else:
             vmr = self._vmr_profile
 
