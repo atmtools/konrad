@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """This package aims to provide a framework to run radiative-convective
-equilibirum (RCE) simulations.
+equilibrium (RCE) simulations.
 
 The package is written in a strict object - oriented way. The RCE model is
 subdivided into self-contained submodels(atmosphere, surface, radiation) that
 can be implemented independently from each other. This allows to exchange parts
-of the model setup seperately to investigate certain effects. The different
+of the model setup separately to investigate certain effects. The different
 submodels need to fulfill requirements to make interaction possible. These
 requirements are enforced by the use of abstract base classes.
 """
@@ -23,6 +23,7 @@ from . import humidity
 from . import lapserate
 from . import netcdf
 from . import ozone
+from . import physics
 from . import plots
 from . import radiation
 from . import surface
@@ -30,24 +31,6 @@ from . import upwelling
 from . import utils
 from .core import RCE
 
-
-__all__ = [
-    'RCE',
-    'atmosphere',
-    'cloud',
-    'component',
-    'constants',
-    'convection',
-    'humidity',
-    'lapserate',
-    'netcdf',
-    'ozone',
-    'plots',
-    'radiation',
-    'surface',
-    'upwelling',
-    'utils',
-]
 
 # Basic configuration for all loggers used within konrad.
 # NOTE: The process name is included for more verbose logs in multiprocessing.
