@@ -11,6 +11,7 @@ from konrad.component import Component
 import sys
 sys.path.append('/home/sally/SiRaChA')
 from SiRaChA.utils import overhead_molecules
+from SiRaChA.main import SiRaChA
 
 __all__ = [
     'Ozone',
@@ -18,6 +19,7 @@ __all__ = [
     'OzoneHeight',
     'OzoneNormedPressure',
     'OzoneCariolle',
+    'OzoneSiRaChA',
 ]
 
 logger = logging.getLogger(__name__)
@@ -179,3 +181,41 @@ class OzoneCariolle(Ozone):
             ('time', 'plev'),
             (o3 + (do3dt * 24 * 60**2 + transport_ox) * timestep).reshape(1, -1)
         )
+
+
+class OzoneSiRaChA(OzoneCariolle):
+
+    def __init__(self, w=0):
+        """
+        Parameters:
+            w (ndarray / int / float): upwelling velocity [mm / s]
+        """
+        super().__init__()
+        self.w = w * 86.4  # in m / day
+        self._ozone = SiRaChA()
+
+    def __call__(self, atmosphere, convection, timestep, zenith, *args, **kwargs):
+
+        o3 = atmosphere['O3'][-1, :]
+        z = atmosphere['z'][-1, :]
+        p, phlev = atmosphere['plev'], atmosphere['phlev']
+        T = atmosphere['T'][-1, :]
+        source, sink_ox, sink_nox, sink_hox = self._ozone.tendencies(z, p, phlev, T, o3, zenith)
+        transport_ox = self.ozone_transport(o3, z, convection)
+        do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
+
+        atmosphere['O3'] = (
+            ('time', 'plev'),
+            (o3 + do3dt * timestep).reshape(1, -1)
+        )
+
+        for term, tendency in [('ozone_source', source),
+                               ('ozone_sink_ox', sink_ox),
+                               ('ozone_sink_nox', sink_nox),
+                               ('ozone_transport', transport_ox),
+                               ('ozone_sink_hox', sink_hox)
+                               ]:
+            if term in self.data_vars:
+                self.set(term, tendency)
+            else:
+                self.create_variable(term, tendency)

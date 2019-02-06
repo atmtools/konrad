@@ -267,4 +267,25 @@ variable_description = {
         'units': 'J / K',
         'standard_name': 'surface_heat_capacity',
     },
+    # Ozone quantities
+    'ozone_source': {
+        'units': 'ppv / day',
+        'dims': ('time', 'plev'),
+    },
+    'ozone_sink_ox': {
+        'units': 'ppv / day',
+        'dims': ('time', 'plev'),
+    },
+    'ozone_sink_nox': {
+        'units': 'ppv / day',
+        'dims': ('time', 'plev'),
+    },
+    'ozone_transport': {
+        'units': 'ppv / day',
+        'dims': ('time', 'plev'),
+    },
+    'ozone_sink_hox': {
+        'units': 'ppv / day',
+        'dims': ('time', 'plev'),
+    }
 }
