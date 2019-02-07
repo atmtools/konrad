@@ -8,11 +8,6 @@ from netCDF4 import Dataset
 from scipy.interpolate import interp1d
 from konrad.component import Component
 
-import sys
-sys.path.append('/home/sally/SiRaChA')
-from SiRaChA.utils import overhead_molecules
-from SiRaChA.main import SiRaChA
-
 __all__ = [
     'Ozone',
     'OzonePressure',
@@ -160,6 +155,8 @@ class OzoneCariolle(Ozone):
 
     def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
 
+        from SiRaChA.utils import overhead_molecules
+
         T = atmosphere['T'][0, :]
         p = atmosphere['plev']  # [Pa]
         phlev = atmosphere['phlev']
@@ -191,16 +188,21 @@ class OzoneSiRaChA(OzoneCariolle):
             w (ndarray / int / float): upwelling velocity [mm / s]
         """
         super().__init__()
+
+        from SiRaChA import SiRaChA
+
         self.w = w * 86.4  # in m / day
         self._ozone = SiRaChA()
 
-    def __call__(self, atmosphere, convection, timestep, zenith, *args, **kwargs):
+    def __call__(self, atmosphere, convection, timestep, zenith, *args,
+                 **kwargs):
 
         o3 = atmosphere['O3'][-1, :]
         z = atmosphere['z'][-1, :]
         p, phlev = atmosphere['plev'], atmosphere['phlev']
         T = atmosphere['T'][-1, :]
-        source, sink_ox, sink_nox, sink_hox = self._ozone.tendencies(z, p, phlev, T, o3, zenith)
+        source, sink_ox, sink_nox, sink_hox = self._ozone.tendencies(
+            z, p, phlev, T, o3, zenith)
         transport_ox = self.ozone_transport(o3, z, convection)
         do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
 
