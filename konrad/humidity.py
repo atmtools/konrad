@@ -5,6 +5,7 @@ import logging
 
 import numpy as np
 from scipy.stats import skewnorm
+from scipy.interpolate import interp1d
 
 from konrad.component import Component
 from konrad.physics import relative_humidity2vmr
@@ -269,3 +270,53 @@ class CoupledRH(Humidity):
             self.p_tropo = p_tropo
 
         return self.get_vmr_profile(atmosphere)
+
+
+class Romps14(Humidity):
+    """Relative humidity model described by an invariant RH-T relation.
+
+    References:
+        Romps, D.M., 2014: An Analytical Model for Tropical Relative Humidity.
+        J. Climate, 27, 7432–7449, https://doi.org/10.1175/JCLI-D-14-00255.1
+    """
+    def __init__(self):
+        super().__init__()
+        self._rh_func = None
+
+    def __call__(self, atmosphere, **kwargs):
+        return self.get_vmr_profile(atmosphere)
+
+    def get_relative_humidity_profile(self, T):
+        """Return relative humidity according to an invariant RH-T relation.
+
+        Parameters:
+            T (ndarray): Atmospheric temperature [K].
+        """
+        if self._rh_func is None:
+            self._rh_func = interp1d(
+                # Values read from Fig. 6 in Romps (2014).
+                x=np.array([300, 240, 200, 190, 188, 186]),
+                y=np.array([0.8, 0.6, 0.7, 1.0, 0.5, 0.1]),
+                kind='linear',
+                fill_value='extrapolate',
+            )
+
+        return self._rh_func(T)
+
+    def get_vmr_profile(self, atmosphere):
+        p = atmosphere.get('plev')
+        T = atmosphere.get('T', keepdims=False)
+        z = atmosphere.get('z', keepdims=False)
+
+        if self._vmr_profile is None:
+            vmr = relative_humidity2vmr(
+                relative_humidity=self.get_relative_humidity_profile(T),
+                pressure=p,
+                temperature=T,
+            )
+        else:
+            vmr = self._vmr_profile
+
+        vmr = self.adjust_stratospheric_vmr(vmr, p, T, z)
+
+        return vmr
