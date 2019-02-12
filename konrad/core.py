@@ -2,7 +2,6 @@
 """Implementation of a radiative-convective equilibrium model (RCE).
 """
 import logging
-from numbers import Number
 
 import numpy as np
 
@@ -10,7 +9,7 @@ from konrad import utils
 from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
-from konrad.humidity import (Humidity, FixedRH)
+from konrad.humidity import FixedRH
 from konrad.surface import (Surface, SurfaceHeatCapacity)
 from konrad.cloud import (Cloud, ClearSky)
 from konrad.convection import (Convection, HardAdjustment, RelaxedAdjustment)
@@ -89,8 +88,7 @@ class RCE:
         self.ozone = utils.return_if_type(ozone, 'ozone',
                                           Ozone, OzonePressure())
 
-        self.humidity = utils.return_if_type(humidity, 'humidity',
-                                             Humidity, FixedRH())
+        self.humidity = FixedRH() if humidity is None else humidity
         self.surface = utils.return_if_type(surface, 'surface',
                                             Surface, SurfaceHeatCapacity())
         self.cloud = utils.return_if_type(cloud, 'cloud',
@@ -245,8 +243,8 @@ class RCE:
             )
 
             # Update the humidity profile.
-            self.atmosphere['H2O'][0, :] = self.humidity(
-                self.atmosphere,
+            self.humidity.adjust_humidity(
+                atmosphere=self.atmosphere,
                 convection=self.convection,
                 surface=self.surface,
             )
