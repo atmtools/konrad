@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """This module contains classes handling different treatments of ozone."""
 
+import os
 import abc
 import logging
 import numpy as np
@@ -145,7 +146,9 @@ class OzoneCariolle(Ozone):
         return -w_array * do3dz
 
     def get_params(self, p):
-        cariolle_data = Dataset('Cariolle_data.nc')
+        cariolle_data = Dataset(
+            os.path.join(os.path.dirname(__file__),
+                         '../Cariolle_data.nc'))
         p_data = cariolle_data['p'][:]
         alist = []
         for param_num in range(1, 8):
