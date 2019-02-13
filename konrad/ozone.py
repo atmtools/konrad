@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """This module contains classes handling different treatments of ozone."""
 
+import os
 import abc
 import logging
+import numpy as np
+from netCDF4 import Dataset
 from scipy.interpolate import interp1d
-
 from konrad.component import Component
-from konrad.utils import ozone_profile_rcemip, refined_pgrid
 
 __all__ = [
     'Ozone',
     'OzonePressure',
     'OzoneHeight',
     'OzoneNormedPressure',
+    'OzoneCariolle',
+    'OzoneSiRaChA',
 ]
 
 logger = logging.getLogger(__name__)
@@ -61,7 +64,6 @@ class OzoneHeight(Ozone):
                 atmosphere['O3'],
                 fill_value='extrapolate',
             )
-
         atmosphere['O3'] = (('time', 'plev'), self._f(atmosphere['z'][0, :]))
 
 
@@ -96,3 +98,129 @@ class OzoneNormedPressure(Ozone):
             ('time', 'plev'),
             self._f(atmosphere['plev'] / norm_new).reshape(1, -1)
         )
+
+
+class OzoneCariolle(Ozone):
+    """Implementation of the Cariolle ozone scheme for the tropics.
+    """
+    def __init__(self, w=0):
+        """
+        Parameters:
+            w (ndarray / int / float): upwelling velocity [mm / s]
+        """
+        super().__init__()
+        self.w = w * 86.4  # in m / day
+
+    def ozone_transport(self, o3, z, convection):
+        """Rate of change of ozone is calculated based on the ozone gradient
+        and an upwelling velocity.
+
+        Parameters:
+            o3 (ndarray): ozone concentration [ppv]
+            z (ndarray): height [m]
+            convection (konrad.convection): to get the convective top index
+        Returns:
+            ndarray: change in ozone concentration [ppv / day]
+        """
+        if self.w == 0:
+            return np.zeros(len(z))
+
+        if isinstance(self.w, np.ndarray):
+            w_array = self.w
+        else:  # w is a single value
+            # apply transport only above convective top
+            w = self.w
+            numlevels = len(z)
+            contopi = convection.get('convective_top_index')[0]
+            if np.isnan(contopi):
+                # No convective top index found; do not apply transport term
+                return np.zeros(numlevels)
+            contopi = int(np.round(contopi))
+            w_factor = np.ones(numlevels)
+            w_factor[:contopi] = 0
+            w_array = w*w_factor
+
+        do3dz = (o3[1:] - o3[:-1]) / np.diff(z)
+        do3dz = np.hstack(([0], do3dz))
+
+        return -w_array * do3dz
+
+    def get_params(self, p):
+        cariolle_data = Dataset(
+            os.path.join(os.path.dirname(__file__),
+                         '../Cariolle_data.nc'))
+        p_data = cariolle_data['p'][:]
+        alist = []
+        for param_num in range(1, 8):
+            a = cariolle_data[f'A{param_num}'][:]
+            alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
+        return alist
+
+    def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
+
+        from SiRaChA.utils import overhead_molecules
+
+        T = atmosphere['T'][0, :]
+        p = atmosphere['plev']  # [Pa]
+        phlev = atmosphere['phlev']
+        o3 = atmosphere['O3'][0, :]  # moles of ozone / moles of air
+        z = atmosphere['z'][0, :]  # m
+
+        o3col = overhead_molecules(o3, p, phlev, z, T
+                                   ) * 10 ** -4  # in molecules / cm2
+
+        A1, A2, A3, A4, A5, A6, A7 = self.get_params(p)
+        # A7 is in molecules / cm2
+        # tendency of ozone volume mixing ratio per second
+        do3dt = A1 + A2*(o3 - A3) + A4*(T - A5) + A6*(o3col - A7)
+
+        # transport term
+        transport_ox = self.ozone_transport(o3, z, convection)
+
+        atmosphere['O3'] = (
+            ('time', 'plev'),
+            (o3 + (do3dt * 24 * 60**2 + transport_ox) * timestep).reshape(1, -1)
+        )
+
+
+class OzoneSiRaChA(OzoneCariolle):
+
+    def __init__(self, w=0):
+        """
+        Parameters:
+            w (ndarray / int / float): upwelling velocity [mm / s]
+        """
+        super().__init__()
+
+        from SiRaChA import SiRaChA
+
+        self.w = w * 86.4  # in m / day
+        self._ozone = SiRaChA()
+
+    def __call__(self, atmosphere, convection, timestep, zenith, *args,
+                 **kwargs):
+
+        o3 = atmosphere['O3'][-1, :]
+        z = atmosphere['z'][-1, :]
+        p, phlev = atmosphere['plev'], atmosphere['phlev']
+        T = atmosphere['T'][-1, :]
+        source, sink_ox, sink_nox, sink_hox = self._ozone.tendencies(
+            z, p, phlev, T, o3, zenith)
+        transport_ox = self.ozone_transport(o3, z, convection)
+        do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
+
+        atmosphere['O3'] = (
+            ('time', 'plev'),
+            (o3 + do3dt * timestep).reshape(1, -1)
+        )
+
+        for term, tendency in [('ozone_source', source),
+                               ('ozone_sink_ox', sink_ox),
+                               ('ozone_sink_nox', sink_nox),
+                               ('ozone_transport', transport_ox),
+                               ('ozone_sink_hox', sink_hox)
+                               ]:
+            if term in self.data_vars:
+                self.set(term, tendency)
+            else:
+                self.create_variable(term, tendency)

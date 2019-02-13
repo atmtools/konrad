@@ -27,16 +27,6 @@ class NoUpwelling(Upwelling):
         pass
 
 
-def contop_index(radheat, radheatmin=0.0001):
-    try:
-        contopi = np.min(np.where(radheat > -radheatmin))
-    except ValueError:
-        # If a ValueError is thrown, no minimum in radiative heating has
-        # been found. Return the function without applying any upwelling.
-        return
-    return int(contopi)
-
-
 class StratosphericUpwelling(Upwelling):
     """Apply a dynamical cooling, based on a specified upwelling velocity."""
     def __init__(self, w=0.2, lowest_level=None):
@@ -50,7 +40,7 @@ class StratosphericUpwelling(Upwelling):
         self.w = w * 86.4  # in m/day
         self.lowest_level = lowest_level
 
-    def cool(self, atmosphere, radheat, timestep):
+    def cool(self, atmosphere, convection, timestep):
         """Apply cooling above the convective top (level where the net
         radiative heating becomes small)."""
 
@@ -60,9 +50,10 @@ class StratosphericUpwelling(Upwelling):
         if self.lowest_level is not None:
             contopi = self.lowest_level
         else:
-            contopi = contop_index(radheat)
-            if type(contopi) is not int:
+            contopi = convection.get('convective_top_index')[0]
+            if contopi is np.nan:
                 return
+        contopi = int(np.round(contopi))
         T_new = T[contopi:] + Q[contopi:] * timestep
         atmosphere['T'][0, contopi:] = T_new
 
