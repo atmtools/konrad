@@ -25,6 +25,23 @@ class HeightConstant:
         return self._rh_cache
 
 
+class ConstantFreezingLevel:
+    """Constant rel. humidity up to the freezing level and then decreasing."""
+    def __init__(self, rh_surface=0.77):
+        self.rh_surface = rh_surface
+
+    def __call__(self, atmosphere, **kwargs):
+        plev = atmosphere['plev']
+        rh_profile = self.rh_surface * np.ones_like(plev)
+
+        fl = atmosphere.get_triple_point_index()
+        rh_profile[fl:] = (
+            self.rh_surface * (plev[fl:] / plev[fl])**(1/4)
+        )
+
+        return rh_profile
+
+
 class FixedUTH:
     """Idealised model of a fixed C-shaped relative humidity distribution."""
     def __init__(self, rh_surface=0.8, uth=0.8, uth_plev=170e2, uth_offset=0):
