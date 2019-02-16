@@ -5,19 +5,12 @@ from scipy.interpolate import interp1d
 
 
 class HeightConstant:
+    """Constant relative humidity profile throughout the whole troposphere."""
     def __init__(self, rh_surface=0.62):
         self.rh_surface = rh_surface
         self._rh_cache = None
 
     def __call__(self, atmosphere, **kwargs):
-        """
-
-        Parameters:
-            atmosphere (``konrad.atmosphere.Atmosphere``):
-                Atmosphere component.
-            **kwargs: Additional components may be passed as keyword arguments.
-                Depending on the used humidity model their are used or ignored.
-        """
         if self._rh_cache is None:
             p = atmosphere['plev']
             self._rh_cache = self.rh_surface * np.ones_like(p)
@@ -44,7 +37,8 @@ class ConstantFreezingLevel:
 
 class FixedUTH:
     """Idealised model of a fixed C-shaped relative humidity distribution."""
-    def __init__(self, rh_surface=0.8, uth=0.8, uth_plev=170e2, uth_offset=0):
+    def __init__(self, rh_surface=0.77, uth=0.75, uth_plev=170e2,
+                 uth_offset=0):
         """Couple the upper-tropospheric humidity peak to the convective top.
 
         Parameters:
@@ -59,11 +53,15 @@ class FixedUTH:
         self.uth_plev = uth_plev
         self.uth_offset = uth_offset
 
+        self._rh_base_profile = None
+
     def get_relative_humidity_profile(self, atmosphere):
         p = atmosphere['plev']
 
-        # Exponential decay from the surface value throughout the atmosphere.
-        rh = self.rh_surface * (p / p[0]) ** 1.15
+        # Use Manabe (1967) relative humidity model as base/background.
+        if self._rh_base_profile is None:
+            manabe_model = Manabe67(rh_surface=self.rh_surface)
+            self._rh_base_profile = manabe_model(atmosphere)
 
         # Add skew-normal distribution.
         uth = self.uth * norm.pdf(
@@ -72,7 +70,7 @@ class FixedUTH:
             scale=0.4,
         )
 
-        return np.maximum(rh, uth)
+        return np.maximum(self._rh_base_profile, uth)
 
     def __call__(self, atmosphere, **kwargs):
         return self.get_relative_humidity_profile(atmosphere)
