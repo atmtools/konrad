@@ -1,31 +1,69 @@
 """This module contains functions related to physics."""
+from numbers import Number
+
+import numpy as np
 import typhon.physics as typ
 
+from konrad import constants
 
-def saturation_pressure(temperature, Tmin=130, Tmax=340, **kwargs):
-    """Calculate equilibrium vapor pressure of water.
 
-    The equilibrium vapor pressure is defined with respect to saturation
-    over ice below -23°C and with respect to saturation over water above 0°C.
-    In between an interpolation is applied (defaults to ``quadratic``).
+# TODO: Replace with typhon version after next release (>0.7.0)
+def saturation_pressure(temperature):
+    r"""Return equilibrium pressure of water with respect to the mixed-phase.
+
+    The equilibrium pressure over water is taken for temperatures above the
+    triple point :math:`T_t` the value over ice is taken for temperatures
+    below :math:`T_t–23\,\mathrm{K}`.  For intermediate temperatures the
+    equilibrium pressure is computed as a combination
+    of the values over water and ice according to the IFS documentation:
+
+    .. math::
+        e_\mathrm{s} = \begin{cases}
+            T > T_t, & e_\mathrm{liq} \\
+            T < T_t - 23\,\mathrm{K}, & e_\mathrm{ice} \\
+            else, & e_\mathrm{ice}
+                + (e_\mathrm{liq} - e_\mathrm{ice})
+                \cdot \left(\frac{T - T_t - 23}{23}\right)^2
+        \end{cases}
+
+    References:
+        IFS Documentation – Cy45r1,
+        Operational implementation 5 June 2018,
+        Part IV: Physical Processes, Chapter 12, Eq. 12.13,
+        https://www.ecmwf.int/node/18714
 
     Parameters:
         temperature (float or ndarray): Temperature [K].
-        Tmin (float): Lower bound of temperature interpolation [K].
-        Tmax (float): Upper bound of temperature interpolation [K].
-        **kwargs: All remaining keyword arguments are passed to
-            :func:`typhon.physics.e_eq_mixed_mk`.
+
+    See also:
+        :func:`~typhon.physics.e_eq_ice_mk`
+            Equilibrium pressure of water over ice.
+        :func:`~typhon.physics.e_eq_water_mk`
+            Equilibrium pressure of water over liquid water.
 
     Returns:
-        float or ndarray: Equilibrium vapor pressure [Pa].
+        float or ndarray: Equilibrium pressure [Pa].
+    """
+    # Keep track of input type to match the return type.
+    is_float_input = isinstance(temperature, Number)
+    if is_float_input:
+        # Convert float input to ndarray to allow indexing.
+        temperature = np.asarray([temperature])
 
-    References:
-        Murphy, D. M. and Koop, T. (2005): Review of the vapour pressures of
-        ice and supercooled water for atmospheric applications,
-        Quarterly Journal of the Royal Meteorological Society 131(608):
-        1539–1565. doi:10.1256/qj.04.94
-        """
-    return typ.e_eq_mixed_mk(temperature, Tmin=Tmin, Tmax=Tmax, **kwargs)
+    e_eq_water = typ.e_eq_water_mk(temperature)
+    e_eq_ice = typ.e_eq_ice_mk(temperature)
+
+    is_water = temperature > constants.triple_point_water
+
+    is_ice = temperature < (constants.triple_point_water - 23.)
+
+    e_eq = (e_eq_ice + (e_eq_water - e_eq_ice)
+            * ((temperature - constants.triple_point_water + 23) / 23)**2
+            )
+    e_eq[is_ice] = e_eq_ice[is_ice]
+    e_eq[is_water] = e_eq_water[is_water]
+
+    return float(e_eq) if is_float_input else e_eq
 
 
 def relative_humidity2vmr(relative_humidity, pressure, temperature):
