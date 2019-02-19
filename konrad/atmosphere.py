@@ -253,18 +253,14 @@ class Atmosphere(Component):
 
         plev = self['plev']  # Air pressure at full-levels.
         phlev = self['phlev']  # Air pressure at half-levels.
+        T = self['T']  # Air temperature at full-levels.
 
-        # Air temperature on half levels
-        T_phlev = interp1d(plev, self['T'][0, :],
-                           fill_value='extrapolate')(phlev)
-        # Calculate the air density from current atmospheric state.
-        rho_phlev = typhon.physics.density(phlev[:-1], T_phlev[:-1])
-
+        rho = typhon.physics.density(plev, T)
         dp = np.hstack((np.array([plev[0] - phlev[0]]), np.diff(plev)))
+
         # Use the hydrostatic equation to calculate geopotential height from
         # given pressure, density and gravity.
-        z = np.cumsum(-dp / (rho_phlev * g))
-        return z
+        return np.cumsum(-dp / (rho * g))
 
     def update_height(self):
         """Update the value for height."""
@@ -321,10 +317,7 @@ class Atmosphere(Component):
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
-        lapse_rate = np.diff(self['T'][0, :]) / np.diff(self['z'][0, :])
-        lapse_rate = typhon.math.interpolate_halflevels(lapse_rate)
-        lapse_rate = np.append(lapse_rate[0], lapse_rate)
-        return np.append(lapse_rate, lapse_rate[-1])
+        return np.gradient(self['T'][0, :], self['z'][0, :])
 
     def get_potential_temperature(self, p0=1000e2):
         r"""Calculate the potential temperature.
@@ -360,9 +353,9 @@ class Atmosphere(Component):
 
         # Calculate potential temperature and its vertical derivative.
         theta = self.get_potential_temperature()
-        dtheta = np.diff(theta) / np.diff(p)
+        dtheta = np.gradient(theta, p)
 
-        return -(t / theta)[:-1] * dtheta
+        return -(t / theta) * dtheta
 
     def get_diabatic_subsidence(self, radiative_cooling):
         """Calculate the diabatic subsidence.
@@ -376,7 +369,7 @@ class Atmosphere(Component):
         """
         sigma = self.get_static_stability()
 
-        return -radiative_cooling[:-1] / sigma
+        return -radiative_cooling / sigma
 
     def get_subsidence_convergence_max(self, radiative_cooling):
         """Return index of maximum subsidence convergence.
@@ -392,11 +385,9 @@ class Atmosphere(Component):
         """
         plev = self['plev']
         omega = self.get_diabatic_subsidence(radiative_cooling)
-        domega = np.diff(omega) / np.diff(plev[:-1])
+        domega = np.gradient(omega, plev)
 
-        # The found maximum is off by 1 due to numerical differentiation in
-        # the subsidence calculation. Therefore, return the pressure above.
-        max_index = np.argmax(domega[plev[:-2] > self.pmin]) + 1
+        max_index = np.argmax(domega[plev > self.pmin])
         max_plev = plev[max_index]
 
         self.create_variable('diabatic_convergence_max_index', [max_index])
