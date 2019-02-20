@@ -59,12 +59,10 @@ class StratosphericUpwelling(Upwelling):
 
     def coolingrates(self, atmosphere):
         """Get cooling rates associated with the upwelling velocity w."""
-        dz = np.diff(atmosphere['z'][0, :])
-        dT = np.diff(atmosphere['T'][0, :])
+        dTdz = np.gradient(atmosphere['T'][0, :], atmosphere['z'][0, :])
 
         g = constants.g
         Cp = constants.Cp
-        Q = -self.w * (dT/dz + g/Cp)
+        Q = -self.w * (dTdz + g/Cp)
 
-        # NOTE: This is not properly interpolated and is half a level out.
-        return np.hstack((Q[0], Q))
+        return Q
