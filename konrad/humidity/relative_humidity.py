@@ -29,7 +29,7 @@ class ConstantFreezingLevel:
 
         fl = atmosphere.get_triple_point_index()
         rh_profile[fl:] = (
-            self.rh_surface * (plev[fl:] / plev[fl])**(1/4)
+            self.rh_surface * (plev[fl:] / plev[fl])**1.3
         )
 
         return rh_profile
