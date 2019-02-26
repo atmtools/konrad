@@ -23,8 +23,8 @@ class StratosphereCoupler(metaclass=abc.ABCMeta):
 class ColdPointCoupling(StratosphereCoupler):
     """Keep stratospheric VMR constant from the cold point on."""
     def adjust_stratospheric_vmr(self, atmosphere):
-            cp_index = atmosphere.get_cold_point_index()
-            atmosphere['H2O'][-1, cp_index:] = atmosphere['H2O'][-1, cp_index]
+        cp_index = atmosphere.get_cold_point_index()
+        atmosphere['H2O'][-1, cp_index:] = atmosphere['H2O'][-1, cp_index]
 
 
 class FixedStratosphericVMR(StratosphereCoupler):
