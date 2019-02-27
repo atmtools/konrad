@@ -36,7 +36,7 @@ setup(
         'scipy>=0.19.0',
         'typhon>=0.7.0',
         'xarray>=0.9.1',
-        'climt>=0.16.0',
+        'climt==0.16.0',
         'sympl>=0.4.0',
     ],
     setup_requires=['pytest-runner'],
