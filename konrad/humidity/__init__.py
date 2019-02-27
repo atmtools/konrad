@@ -28,6 +28,14 @@ class FixedRH(Component):
         self._rh_func = rh_func
         self._rh_profile = None
 
+    @property
+    def rh_func(self):
+        return type(self._rh_func).__name__
+
+    @property
+    def stratosphere_coupling(self):
+        return type(self._stratosphere_coupling).__name__
+
     def adjust_humidity(self, atmosphere, **kwargs):
         """Determine the humidity profile based on atmospheric state.
 

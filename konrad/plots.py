@@ -89,12 +89,13 @@ def plot_overview_z(data, lw_htngrt, sw_htngrt, axes, **kwargs):
     ax3.legend(loc='upper center')
 
 
-def gregory_plot(temperature, forcing, ax=None, **kwargs):
+def gregory_plot(temperature, forcing, draw_fit=True, ax=None, **kwargs):
     """Gregory plot to estimate climate sensitivity.
 
     Parameters:
           temperature (ndarray): Surface temperatures [K].
           forcing (ndarray): Radiation budget at top of atmosphere [W//m^2].
+          draw_fit (bool): Whether to draw the linear regression.
           ax (AxesSubplot): Axes to plot in.
           **kwargs: Additional keyword arguments are passed to ``plt.plot``.
 
@@ -139,8 +140,9 @@ def gregory_plot(temperature, forcing, ax=None, **kwargs):
     # temperature change and zero forcing.
     x = np.linspace(0, - eff_forcing / sensitivity, 10)
 
-    # Plot linear "Gregory" fit into same axis.
-    ax.plot(x, eff_forcing + sensitivity * x, color=line.get_color())
+    if draw_fit:
+        # Plot linear "Gregory" fit into same axis.
+        ax.plot(x, eff_forcing + sensitivity * x, color=line.get_color())
 
     # Return the estimated climate sensivity in units of K / (W/m^2) and the
     # effective forcing in W / m^2.

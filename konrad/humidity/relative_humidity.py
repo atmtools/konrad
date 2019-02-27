@@ -29,7 +29,7 @@ class ConstantFreezingLevel:
 
         fl = atmosphere.get_triple_point_index()
         rh_profile[fl:] = (
-            self.rh_surface * (plev[fl:] / plev[fl])**(1/4)
+            self.rh_surface * (plev[fl:] / plev[fl])**1.3
         )
 
         return rh_profile
@@ -86,6 +86,28 @@ class CoupledUTH(FixedUTH):
         self.uth_plev = convection.get('convective_top_plev')[0]
 
         return self.get_relative_humidity_profile(atmosphere)
+
+
+class Cshape:
+    """Idealized model of a C-shaped RH profile using a quadratic equation."""
+    def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
+        self.uth_plev = uth_plev
+        self.rh_min = rh_min
+        self.uth = uth
+        self.rh_surface = uth
+
+    def __call__(self, atmosphere, **kwargs):
+        self.uth_plev = atmosphere.get_cold_point_plev()
+
+        x = np.log10(atmosphere['plev'])
+        xmin = np.log10(self.uth_plev)
+        xmax = x[0]
+
+        a = (self.uth - self.rh_min) * 4 / (xmin - xmax)**2
+        b = (xmin + xmax) / 2
+        c = self.rh_min
+
+        return np.clip(a * (x - b)**2 + c, a_min=0, a_max=1)
 
 
 class Manabe67:
