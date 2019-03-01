@@ -199,6 +199,16 @@ class Atmosphere(Component):
 
         return atmfield
 
+    def hash_attributes(self):
+        """Create hash based on some basic characteristics"""
+        return hash((
+            self['plev'].min(),  # Pressure at top of the atmosphere
+            self['plev'].max(),  # Surface pressure
+            self['plev'].size,  # Number of pressure layers
+            np.round(self['CO2'][0] / 1e-6),  # CO2 ppmv
+            np.round(self['T'][-1, 0], 3),  # Surface temperature
+        ))
+
     def refine_plev(self, pgrid, **kwargs):
         """Refine the pressure grid of an atmosphere object.
 
