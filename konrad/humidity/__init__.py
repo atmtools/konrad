@@ -2,6 +2,7 @@
 import logging
 
 from konrad.component import Component
+from konrad.utils import prefix_dict_keys
 from konrad.physics import (relative_humidity2vmr, vmr2relative_humidity)
 from .stratosphere import *
 from .relative_humidity import *
@@ -27,6 +28,33 @@ class FixedRH(Component):
 
         self._rh_func = rh_func
         self._rh_profile = None
+
+    @property
+    def attrs(self):
+        # Overrides ``Component.attrs`` by returning a composite of the
+        # attribtues of both ``rh_func`` and ``stratosphere_coupling``.
+        # The returned attributes are prefixed with their parent-attribute's
+        # name for clarity.
+        attrs = dict(
+            **prefix_dict_keys(
+                getattr(self._rh_func, 'attrs', {}), 'rh_func'
+            ),
+            **prefix_dict_keys(
+                self._stratosphere_coupling.attrs, 'stratosphere_coupling',
+            )
+        )
+        attrs['rh_func/class'] = self.rh_func
+        attrs['stratosphere_coupling/class'] = self.stratosphere_coupling
+
+        return attrs
+
+    def hash_attributes(self):
+        # Make sure that non-``Component`` attributes do not break hashing.
+        return hash(tuple(
+            attr.hash_attributes()
+            for attr in (self._rh_func, self._stratosphere_coupling)
+            if hasattr(attr, 'hash_attributes')
+        ))
 
     @property
     def rh_func(self):
