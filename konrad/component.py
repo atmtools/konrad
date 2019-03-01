@@ -75,6 +75,10 @@ class Component:
         dims = ', '.join(f'{d}: {np.size(v)}' for d, v in self.coords.items())
         return f'<{self.__class__.__name__}({dims}) object at {id(self)} >'
 
+    def __hash__(self):
+        # Prevent hashing by default as components are most likely mutable.
+        raise TypeError(f'unhashable type: {type(self).__name__}')
+
     @property
     def netcdf_nelem(self):
         """Total number of netCDF elements (attributes and data variables."""
