@@ -76,7 +76,10 @@ class Component:
 
     def __repr__(self):
         dims = ', '.join(f'{d}: {np.size(v)}' for d, v in self.coords.items())
-        return f'<{self.__class__.__name__}({dims}) object at {id(self)} >'
+        return f'<{self}({dims}) object at {id(self)}>'
+
+    def __str__(self):
+        return self.__class__.__name__
 
     def __hash__(self):
         # Prevent hashing by default as components are most likely mutable.
