@@ -98,8 +98,8 @@ class Surface(Component, metaclass=abc.ABCMeta):
             else:
                 dataset = root
 
-            t = dataset.variables['temperature'][timestep]
-            z = dataset.variables['height'][timestep]
+            t = dataset['temperature'][timestep].data
+            z = float(dataset['height'][:])
 
         # TODO: Should other variables (e.g. albedo) also be read?
         return cls(temperature=t, height=z, **kwargs)
