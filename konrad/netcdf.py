@@ -95,6 +95,7 @@ class NetcdfHandler:
     def create_group(self, component, groupname):
         with netCDF4.Dataset(self.filename, 'a') as root:
             group = root.createGroup(groupname)
+            group.setncattr('class', type(component).__name__)
 
             for attr, value in component.attrs.items():
                 self.create_variable(group, attr, value)
