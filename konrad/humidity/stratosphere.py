@@ -3,8 +3,10 @@ import abc
 
 import numpy as np
 
+from konrad.component import Component
 
-class StratosphereCoupler(metaclass=abc.ABCMeta):
+
+class StratosphereCoupler(Component, metaclass=abc.ABCMeta):
     """Define the coupling of tropospheric and stratospheric water vapor."""
     @abc.abstractmethod
     def adjust_stratospheric_vmr(self, atmosphere):

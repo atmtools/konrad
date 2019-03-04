@@ -1,3 +1,6 @@
+import collections
+import operator
+
 import numpy as np
 import xarray as xr
 
@@ -73,7 +76,26 @@ class Component:
 
     def __repr__(self):
         dims = ', '.join(f'{d}: {np.size(v)}' for d, v in self.coords.items())
-        return f'<{self.__class__.__name__}({dims}) object at {id(self)} >'
+        return f'<{self}({dims}) object at {id(self)}>'
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __hash__(self):
+        # Prevent hashing by default as components are most likely mutable.
+        raise TypeError(f'unhashable type: {type(self).__name__}')
+
+    def hash_attributes(self):
+        """Create a hash from all **hashable** component attributes."""
+        attrs_sorted_by_key = sorted(self.attrs.items(),
+                                     key=operator.itemgetter(0))
+
+        hashable_values = tuple(item[1] for item in attrs_sorted_by_key
+                                if isinstance(item[1], collections.Hashable))
+
+        # Include the class name to distinguish between different
+        # inheriting classes using the same attributes.
+        return hash((self.__class__.__name__, *hashable_values))
 
     @property
     def netcdf_nelem(self):

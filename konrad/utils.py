@@ -25,6 +25,7 @@ __all__ = [
     'humidity_profile_rcemip',
     'parse_fraction_of_day',
     'standard_atmosphere',
+    'prefix_dict_keys',
 ]
 
 logger = logging.getLogger(__name__)
@@ -353,3 +354,23 @@ def standard_atmosphere(z, coordinates='height'):
             'Use "height" or "pressure".')
 
     return interp1d(z_ref, temp + 273.15, fill_value='extrapolate')(z)
+
+
+def prefix_dict_keys(dictionary, prefix, delimiter='/'):
+    """Return a copy of a dictionary with a prefix added to every key.
+
+    Parameters:
+        dictionary (dict): Input dictionary.
+        prefix (str): Prefix to add to every key.
+        delimiter (str): String used to separate prefix and original key.
+
+    Returns:
+        dict
+
+    Example:
+        >>> prefix_dict_keys({'bar': 42}, prefix='foo', delimiter='.')
+        {'foo.bar': 42}
+
+    """
+    return {delimiter.join((prefix, key)): val
+            for key, val in dictionary.items()}

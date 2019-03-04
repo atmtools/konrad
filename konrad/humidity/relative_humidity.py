@@ -1,10 +1,29 @@
 """Different models to describe the vertical relative humidity distribution."""
+import abc
+
 import numpy as np
 from scipy.stats import norm
 from scipy.interpolate import interp1d
 
+from konrad.component import Component
 
-class HeightConstant:
+
+class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
+    def __call__(self, atmosphere, **kwargs):
+        """Return the vertical distirbution of relative humidity.
+
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere: Atmosphere component.
+            **kwargs: Arbitrary number of additional arguments,
+                depending on the actual implementation.
+
+        Returns:
+            ndarray: Relative humidity profile.
+        """
+        ...
+
+
+class HeightConstant(RelativeHumidityModel):
     """Constant relative humidity profile throughout the whole troposphere."""
     def __init__(self, rh_surface=0.62):
         self.rh_surface = rh_surface
@@ -18,7 +37,7 @@ class HeightConstant:
         return self._rh_cache
 
 
-class ConstantFreezingLevel:
+class ConstantFreezingLevel(RelativeHumidityModel):
     """Constant rel. humidity up to the freezing level and then decreasing."""
     def __init__(self, rh_surface=0.77):
         self.rh_surface = rh_surface
@@ -35,7 +54,7 @@ class ConstantFreezingLevel:
         return rh_profile
 
 
-class FixedUTH:
+class FixedUTH(RelativeHumidityModel):
     """Idealised model of a fixed C-shaped relative humidity distribution."""
     def __init__(self, rh_surface=0.77, uth=0.75, uth_plev=170e2,
                  uth_offset=0):
@@ -88,7 +107,7 @@ class CoupledUTH(FixedUTH):
         return self.get_relative_humidity_profile(atmosphere)
 
 
-class Cshape:
+class Cshape(RelativeHumidityModel):
     """Idealized model of a C-shaped RH profile using a quadratic equation."""
     def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
         self.uth_plev = uth_plev
@@ -110,7 +129,7 @@ class Cshape:
         return np.clip(a * (x - b)**2 + c, a_min=0, a_max=1)
 
 
-class Manabe67:
+class Manabe67(RelativeHumidityModel):
     """Relative humidity model following Manabe and Wetherald (1967)."""
     def __init__(self, rh_surface=0.77):
         """Initialize a humidity model.
@@ -126,7 +145,7 @@ class Manabe67:
         return self.rh_surface * (p / p[0] - 0.02) / (1 - 0.02)
 
 
-class Cess76:
+class Cess76(RelativeHumidityModel):
     """Relative humidity model following Cess (1976).
 
     The relative humidity profile depends on the surface temperature.
@@ -154,7 +173,7 @@ class Cess76:
         return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
 
 
-class Romps14:
+class Romps14(RelativeHumidityModel):
     """Return relative humidity according to an invariant RH-T relation."""
     def __call__(self, atmosphere, **kwargs):
         if self._rh_func is None:
