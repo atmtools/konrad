@@ -95,5 +95,10 @@ class FixedRH(Component):
 
 class FixedVMR(Component):
     """Keep the water vapor volume mixing ratio constant."""
+    def __init__(self):
+        # Set both attributes for consistent user interface and netCDF output.
+        self._rh_func = None
+        self._stratosphere_coupling = None
+
     def adjust_humidity(self, atmosphere, **kwargs):
         return

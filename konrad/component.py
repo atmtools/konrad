@@ -97,11 +97,6 @@ class Component:
         # inheriting classes using the same attributes.
         return hash((self.__class__.__name__, *hashable_values))
 
-    @property
-    def netcdf_nelem(self):
-        """Total number of netCDF elements (attributes and data variables."""
-        return len(self.data_vars) + len(self.attrs)
-
     def to_dataset(self):
         """Convert model component into an `xarray.Dataset`."""
         if self.coords is None:
