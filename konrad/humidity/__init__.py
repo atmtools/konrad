@@ -95,7 +95,12 @@ class FixedRH(Component):
 
 class FixedVMR(Component):
     """Keep the water vapor volume mixing ratio constant."""
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        if len(args) + len(kwargs) > 0:
+            # Allow arguments to be passed for consistent interface but
+            # warn the user.
+            logger.warning(f'All input arguments to {self} are ignored.')
+
         # Set both attributes for consistent user interface and netCDF output.
         self._rh_func = None
         self._stratosphere_coupling = None
