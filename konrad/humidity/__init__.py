@@ -102,8 +102,8 @@ class FixedVMR(Component):
             logger.warning(f'All input arguments to {self} are ignored.')
 
         # Set both attributes for consistent user interface and netCDF output.
-        self._rh_func = None
-        self._stratosphere_coupling = None
+        self.rh_func = 'FixedVMR'
+        self.stratosphere_coupling = 'FixedVMR'
 
     def adjust_humidity(self, atmosphere, **kwargs):
         return
