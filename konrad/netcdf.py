@@ -137,8 +137,7 @@ class NetcdfHandler:
         if len(self._component_cache) == 0:
             for attr in dir(self.rce):
                 if ((not attr.startswith('_')
-                     and isinstance(getattr(self.rce, attr), Component)
-                     and getattr(self.rce, attr).netcdf_nelem > 0)):
+                     and isinstance(getattr(self.rce, attr), Component))):
                     self._component_cache.append(attr)
 
         # Ensure that the atmosphere component is stored first as it holds
