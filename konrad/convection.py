@@ -243,14 +243,14 @@ class HardAdjustment(Convection):
         """
         convective_heating = (T_con - T_rad) / timestep
         # Convective heating must be positive somewhere
-        if np.any(convective_heating > lim*timestep):
+        if np.any(convective_heating > lim):
             # NOTE: `np.argmax` returns the first occurrence of the maximum value.
             # In this example, the index of the first `True` value,
             # corresponding to the convective top, is returned.
             # The convective top corresponds to the first near zero / negative
             # convective heating rate above the region which is being heated
             # (the region which has a positive convective heating rate).
-            positive_i = int(np.argmax(convective_heating > lim*timestep))
+            positive_i = int(np.argmax(convective_heating > lim))
             contop_i = int(np.argmax(
                 convective_heating[positive_i:] < lim)) + positive_i
 
