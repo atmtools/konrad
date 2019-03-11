@@ -223,7 +223,7 @@ class HardAdjustment(Convection):
 
         return T_con, float(diff)
 
-    def calculate_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.1):
+    def calculate_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.2):
         """Find the pressure where the radiative heating has a certain value.
 
         Note:
@@ -282,7 +282,7 @@ class HardAdjustment(Convection):
 
         return
 
-    def calculate_convective_top_height(self, z, lim=0.1):
+    def calculate_convective_top_height(self, z, lim=0.2):
         convective_heating = self.get('convective_heating_rate')[0]
         if not np.allclose(convective_heating, np.zeros(z.shape)):
             contop_i = int(np.argmax(convective_heating < lim))
