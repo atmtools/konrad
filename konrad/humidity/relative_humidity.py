@@ -37,6 +37,28 @@ class HeightConstant(RelativeHumidityModel):
         return self._rh_cache
 
 
+class VerticallyUniform(RelativeHumidityModel):
+    def __init__(self, rh_surface=0.5, rh_tropopause=0.3):
+        self.rh_surface = rh_surface
+        self.rh_tropopause = rh_tropopause
+        self.convective_top = 300e2
+        self.cold_point = 100e2
+
+    def __call__(self, atmosphere, convection, **kwargs):
+        p = atmosphere['plev']
+        self.convective_top = convection.get('convective_top_plev')[0]
+        self.cold_point = atmosphere.get_cold_point_plev()
+
+        rh = (
+            (self.rh_tropopause - self.rh_surface)
+            / (self.cold_point - self.convective_top)
+            * (p - self.convective_top) + self.rh_surface
+        )
+        rh[p > self.convective_top] = self.rh_surface
+
+        return rh
+
+
 class ConstantFreezingLevel(RelativeHumidityModel):
     """Constant rel. humidity up to the freezing level and then decreasing."""
     def __init__(self, rh_surface=0.77):
@@ -107,7 +129,7 @@ class CoupledUTH(FixedUTH):
         return self.get_relative_humidity_profile(atmosphere)
 
 
-class Cshape(RelativeHumidityModel):
+class CshapeConstant(RelativeHumidityModel):
     """Idealized model of a C-shaped RH profile using a quadratic equation."""
     def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
         self.uth_plev = uth_plev
@@ -115,8 +137,8 @@ class Cshape(RelativeHumidityModel):
         self.uth = uth
         self.rh_surface = uth
 
-    def __call__(self, atmosphere, **kwargs):
-        self.uth_plev = atmosphere.get_cold_point_plev()
+    def __call__(self, atmosphere, convection, **kwargs):
+        self.uth_plev = convection.get('convective_top_plev')[0]
 
         x = np.log10(atmosphere['plev'])
         xmin = np.log10(self.uth_plev)
@@ -127,6 +149,32 @@ class Cshape(RelativeHumidityModel):
         c = self.rh_min
 
         return np.clip(a * (x - b)**2 + c, a_min=0, a_max=1)
+
+
+class CshapeDecrease(RelativeHumidityModel):
+    """Idealized model of a C-shaped RH profile using a quadratic equation."""
+    def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
+        self.uth_plev = uth_plev
+        self.rh_min = rh_min
+        self.uth = uth
+        self.rh_surface = uth
+
+    def __call__(self, atmosphere, convection, **kwargs):
+        self.uth_plev = convection.get('convective_top_plev')[0]
+
+        x = np.log10(atmosphere['plev'])
+        xmin = np.log10(self.uth_plev)
+        xmax = x[0]
+
+        a = (self.uth - self.rh_min) * 4 / (xmin - xmax)**2
+        b = (xmin + xmax) / 2
+        c = self.rh_min
+
+        rh = np.clip(a * (x - b)**2 + c, a_min=0, a_max=1)
+
+        rh[x < xmin] *= (10**x / 10**xmin)[x < xmin]
+
+        return rh
 
 
 class Manabe67(RelativeHumidityModel):
