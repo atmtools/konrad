@@ -3,7 +3,7 @@
     {
       "name": "Kluft, Lukas",
       "affiliation": "Max Planck Institute for Meteorology",
-      "orcid": "0000-0002-5312-6729"
+      "orcid": "0000-0002-6533-3928"
     },
     {
       "name": "Dacie, Sally",
@@ -14,6 +14,7 @@
     "python3",
     "atmospheric-science"
   ],
-  "language": "eng",
-  "license": "MIT License"
+  "access_right": "open", 
+  "upload_type": "software",
+  "license": "mit-license"
 }
