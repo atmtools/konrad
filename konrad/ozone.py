@@ -158,7 +158,7 @@ class OzoneCariolle(Ozone):
 
     def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
 
-        from SiRaChA.utils import overhead_molecules
+        from simotrostra.utils import overhead_molecules
 
         T = atmosphere['T'][0, :]
         p = atmosphere['plev']  # [Pa]
@@ -192,10 +192,10 @@ class OzoneSiRaChA(OzoneCariolle):
         """
         super().__init__()
 
-        from SiRaChA import SiRaChA
+        from simotrostra import simotrostra
 
         self.w = w * 86.4  # in m / day
-        self._ozone = SiRaChA()
+        self._ozone = simotrostra()
 
     def __call__(self, atmosphere, convection, timestep, zenith, *args,
                  **kwargs):
