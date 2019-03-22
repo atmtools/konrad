@@ -148,7 +148,7 @@ class OzoneCariolle(Ozone):
     def get_params(self, p):
         cariolle_data = Dataset(
             os.path.join(os.path.dirname(__file__),
-                         '../Cariolle_data.nc'))
+                         'data/Cariolle_data.nc'))
         p_data = cariolle_data['p'][:]
         alist = []
         for param_num in range(1, 8):
