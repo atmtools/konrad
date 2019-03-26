@@ -148,7 +148,7 @@ class OzoneCariolle(Ozone):
     def get_params(self, p):
         cariolle_data = Dataset(
             os.path.join(os.path.dirname(__file__),
-                         '../Cariolle_data.nc'))
+                         'data/Cariolle_data.nc'))
         p_data = cariolle_data['p'][:]
         alist = []
         for param_num in range(1, 8):
@@ -158,7 +158,7 @@ class OzoneCariolle(Ozone):
 
     def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
 
-        from SiRaChA.utils import overhead_molecules
+        from simotrostra.utils import overhead_molecules
 
         T = atmosphere['T'][0, :]
         p = atmosphere['plev']  # [Pa]
@@ -192,10 +192,10 @@ class OzoneSiRaChA(OzoneCariolle):
         """
         super().__init__()
 
-        from SiRaChA import SiRaChA
+        from simotrostra import simotrostra
 
         self.w = w * 86.4  # in m / day
-        self._ozone = SiRaChA()
+        self._ozone = simotrostra()
 
     def __call__(self, atmosphere, convection, timestep, zenith, *args,
                  **kwargs):
