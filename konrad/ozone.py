@@ -39,7 +39,8 @@ class Ozone(Component, metaclass=abc.ABCMeta):
             atmosphere (konrad.atmosphere): atmosphere model containing ozone
                 concentration profile, height, temperature, pressure and half
                 pressure levels at the current timestep
-            convection (konrad.convection): convection scheme
+            convection (konrad.convection): convection model containing
+                information about the convective top
             timestep (float): timestep of run [days]
             zenith (float): solar zenith angle,
                 angle of the Sun to the vertical [degrees]
@@ -111,14 +112,13 @@ class OzoneCariolle(Ozone):
         super().__init__()
         self.w = w * 86.4  # in m / day
 
-    def ozone_transport(self, o3, z, convection):
+    def ozone_transport(self, o3, z):
         """Rate of change of ozone is calculated based on the ozone gradient
         and an upwelling velocity.
 
         Parameters:
             o3 (ndarray): ozone concentration [ppv]
             z (ndarray): height [m]
-            convection (konrad.convection): to get the convective top index
         Returns:
             ndarray: change in ozone concentration [ppv / day]
         """
@@ -128,16 +128,10 @@ class OzoneCariolle(Ozone):
         if isinstance(self.w, np.ndarray):
             w_array = self.w
         else:  # w is a single value
-            # apply transport only above convective top
+            # apply transport everywhere
             w = self.w
             numlevels = len(z)
-            contopi = convection.get('convective_top_index')[0]
-            if np.isnan(contopi):
-                # No convective top index found; do not apply transport term
-                return np.zeros(numlevels)
-            contopi = int(np.round(contopi))
             w_factor = np.ones(numlevels)
-            w_factor[:contopi] = 0
             w_array = w*w_factor
 
         do3dz = (o3[1:] - o3[:-1]) / np.diff(z)
@@ -156,7 +150,7 @@ class OzoneCariolle(Ozone):
             alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
         return alist
 
-    def __call__(self, atmosphere, convection, timestep, *args, **kwargs):
+    def __call__(self, atmosphere, timestep, **kwargs):
 
         from simotrostra.utils import overhead_molecules
 
@@ -175,7 +169,7 @@ class OzoneCariolle(Ozone):
         do3dt = A1 + A2*(o3 - A3) + A4*(T - A5) + A6*(o3col - A7)
 
         # transport term
-        transport_ox = self.ozone_transport(o3, z, convection)
+        transport_ox = self.ozone_transport(o3, z)
 
         atmosphere['O3'] = (
             ('time', 'plev'),
@@ -206,7 +200,7 @@ class OzoneSiRaChA(OzoneCariolle):
         T = atmosphere['T'][-1, :]
         source, sink_ox, sink_nox, sink_hox = self._ozone.tendencies(
             z, p, phlev, T, o3, zenith)
-        transport_ox = self.ozone_transport(o3, z, convection)
+        transport_ox = self.ozone_transport(o3, z)
         do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
 
         atmosphere['O3'] = (
