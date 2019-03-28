@@ -8,14 +8,16 @@ import numpy as np
 from netCDF4 import Dataset
 from scipy.interpolate import interp1d
 from konrad.component import Component
+from konrad.utils import ozone_profile_rcemip
 
 __all__ = [
     'Ozone',
     'OzonePressure',
     'OzoneHeight',
     'OzoneNormedPressure',
-    'OzoneCariolle',
-    'OzoneSiRaChA',
+    'Cariolle',
+    'Simotrostra',
+    'LowerStratosphericSimotrostra'
 ]
 
 logger = logging.getLogger(__name__)
@@ -101,7 +103,7 @@ class OzoneNormedPressure(Ozone):
         )
 
 
-class OzoneCariolle(Ozone):
+class Cariolle(Ozone):
     """Implementation of the Cariolle ozone scheme for the tropics.
     """
     def __init__(self, w=0):
@@ -177,24 +179,32 @@ class OzoneCariolle(Ozone):
         )
 
 
-class OzoneSiRaChA(OzoneCariolle):
-
+class Simotrostra(Cariolle):
+    """Wrapper for Ed Charlesworth's simple chemistry scheme.
+    """
     def __init__(self, w=0):
         """
         Parameters:
             w (ndarray / int / float): upwelling velocity [mm / s]
         """
-        super().__init__()
+        super().__init__(w=w)
 
         from simotrostra import simotrostra
 
-        self.w = w * 86.4  # in m / day
         self._ozone = simotrostra()
 
-    def __call__(self, atmosphere, convection, timestep, zenith, *args,
-                 **kwargs):
-
-        o3 = atmosphere['O3'][-1, :]
+    def simotrostra_profile(self, o3, atmosphere, timestep, zenith):
+        """
+        Parameters:
+            o3 (ndarray): ozone profile
+            atmosphere (konrad.atmosphere)
+            timestep (float): timestep of run [days]
+            zenith (float): solar zenith angle,
+                angle of the Sun to the vertical [degrees]
+        Returns:
+            ndarray: new ozone profile
+            list of ndarrays: source and sink terms
+        """
         z = atmosphere['z'][-1, :]
         p, phlev = atmosphere['plev'], atmosphere['phlev']
         T = atmosphere['T'][-1, :]
@@ -202,12 +212,15 @@ class OzoneSiRaChA(OzoneCariolle):
             z, p, phlev, T, o3, zenith)
         transport_ox = self.ozone_transport(o3, z)
         do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
+        o3_new = o3 + do3dt*timestep
+        return o3_new, [source, sink_ox, sink_nox, transport_ox, sink_hox]
 
-        atmosphere['O3'] = (
-            ('time', 'plev'),
-            (o3 + do3dt * timestep).reshape(1, -1)
-        )
-
+    def store_sink_terms(self, sink_terms):
+        """
+        Parameters:
+            sink_terms (list of ndarrays): source and sink terms [ppv / day]
+        """
+        source, sink_ox, sink_nox, transport_ox, sink_hox = sink_terms
         for term, tendency in [('ozone_source', source),
                                ('ozone_sink_ox', sink_ox),
                                ('ozone_sink_nox', sink_nox),
@@ -218,3 +231,67 @@ class OzoneSiRaChA(OzoneCariolle):
                 self.set(term, tendency)
             else:
                 self.create_variable(term, tendency)
+
+    def __call__(self, atmosphere, timestep, zenith, **kwargs):
+
+        o3 = atmosphere['O3'][-1, :]
+        o3_new, sink_terms = self.simotrostra_profile(o3, atmosphere,
+                                                      timestep, zenith)
+
+        atmosphere['O3'] = (('time', 'plev'), o3_new.reshape(1, -1))
+
+        self.store_sink_terms(sink_terms)
+
+
+class LowerStratosphericSimotrostra(Simotrostra):
+    """Use Ed Charlesworth's simple chemistry scheme in the lower stratosphere,
+    and merge to an idealised profile above.
+    """
+    def __init__(self, w=0, profile_for_merge=None):
+        """
+        Parameters:
+            w (ndarray / int / float): upwelling velocity [mm / s]
+            profile_for_merge (ndarray): ozone profile used above 20/30 hPa
+                if None, the RCEMIP profile is used
+        """
+        super().__init__(w=w)
+
+        self._o3_simotrostra = None
+        self._weighting = None
+        self._cut = None
+        self._profile_for_merge = profile_for_merge
+
+    def __call__(self, atmosphere, timestep, zenith, **kwargs):
+
+        if self._o3_simotrostra is None:  # first time only
+            self._o3_simotrostra = atmosphere['O3'][-1, :]
+
+        o3_simotrostra, sink_terms = self.simotrostra_profile(
+            self._o3_simotrostra, atmosphere, timestep, zenith)
+
+        # Weighting for merge
+        if self._weighting is None:  # first time only
+            p = atmosphere['plev'][:]
+            # merge region between 20 and 30 hPa, below use simotrostra,
+            # above use the rcemip profile
+            self._weighting = interp1d(np.log([20e2, 30e2]), [1, 0],
+                                       fill_value=(1, 0), bounds_error=False
+                                       )(np.log(p))  # one in upper stratosphere
+            self._cut = p < 20e2
+        if self._profile_for_merge is None:
+            # first time only and only if not specified in initialisation
+            self._profile_for_merge = ozone_profile_rcemip(p)
+
+        # new ozone profile with smooth merge
+        new_o3 = (o3_simotrostra * (1 - self._weighting)
+                  + self._profile_for_merge * self._weighting)
+
+        atmosphere['O3'] = (('time', 'plev'), new_o3.reshape(1, -1))
+
+        self.store_sink_terms(sink_terms)
+
+        # new profile for simotrostra calculation which keeps simotrostra
+        # values up to the top of the merge region, so that the merge region is
+        # not biased towards the profile chosen for the upper stratosphere
+        self._o3_simotrostra = (o3_simotrostra * (1 - self._cut)
+                                + self._profile_for_merge * self._cut)
