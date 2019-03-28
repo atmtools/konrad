@@ -29,6 +29,16 @@ class ColdPointCoupling(StratosphereCoupler):
         atmosphere['H2O'][-1, cp_index:] = atmosphere['H2O'][-1, cp_index]
 
 
+class NonIncreasing(StratosphereCoupler):
+    """Prevent the VMR from increasing with height anywhere in the column."""
+    def adjust_stratospheric_vmr(self, atmosphere):
+        h2o = atmosphere['H2O'][-1, :]
+        h2o_grad = np.diff(h2o)
+        if not np.all(h2o_grad < 0):
+            index = np.argmax(h2o_grad > 0)
+            atmosphere['H2O'][-1, index+1:] = atmosphere['H2O'][-1, index]
+
+
 class FixedStratosphericVMR(StratosphereCoupler):
     def __init__(self, stratospheric_vmr=5e-6):
         """Keep stratospheric VMR fixed at a constant value.
