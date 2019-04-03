@@ -290,5 +290,10 @@ variable_description = {
     'ozone_sink_hox': {
         'units': 'ppv / day',
         'dims': ('time', 'plev'),
+    },
+    # Upwelling
+    'w': {
+        'units': 'm / day',
+        'dims': ('time', 'plev'),
     }
 }
