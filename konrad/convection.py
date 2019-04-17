@@ -14,6 +14,7 @@ from konrad.surface import SurfaceFixedTemperature
 __all__ = [
     'energy_difference',
     'energy_threshold',
+    'interp_variable',
     'Convection',
     'NonConvective',
     'HardAdjustment',
@@ -61,6 +62,33 @@ def energy_threshold(surface):
         # heat_capacity is not defined for fixed temperature surfaces
         near_zero = 10**-8
     return near_zero
+
+
+def interp_variable(variable, convective_heating, lim):
+    """Find the value of a variable corresponding to where the convective
+    heating equals a certain specified value (lim).
+    Parameters:
+        variable (ndarray): variable to be interpolated
+        convective_heating (ndarray): interpolate based on where this variable
+            equals 'lim'
+        lim (float/int): value of 'convective_heating' used to find the
+            corresponding value of 'variable'
+    Returns:
+         float: interpolated value of 'variable'
+    """
+    positive_i = int(np.argmax(convective_heating > lim))
+    contop_index = int(np.argmax(
+        convective_heating[positive_i:] < lim)) + positive_i
+
+    # Create auxiliary arrays storing the Qr, T and p values above and below
+    # the threshold value. These arrays are used as input for the interpolation
+    # in the next step.
+    heat_array = np.array([convective_heating[contop_index - 1],
+                           convective_heating[contop_index]])
+    var_array = np.array([variable[contop_index - 1], variable[contop_index]])
+
+    # Interpolate the values to where the convective heating rate equals `lim`.
+    return interp1d(heat_array, var_array)(lim)
 
 
 class Convection(Component, metaclass=abc.ABCMeta):
@@ -238,11 +266,12 @@ class HardAdjustment(Convection):
         return T_con, float(diff)
 
     def calculate_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.2):
-        """Find the pressure where the radiative heating has a certain value.
+        """Find the pressure and temperature where the radiative heating has a
+        certain value.
 
         Note:
             In the HardAdjustment case, for a contop temperature that is not
-            dependent on the number of distribution of pressure levels, it is
+            dependent on the number or distribution of pressure levels, it is
             better to take a value of lim not equal or very close to zero.
 
         Parameters:
@@ -251,63 +280,44 @@ class HardAdjustment(Convection):
             p (ndarray): model pressure levels [Pa]
             timestep (float): model timestep [days]
             lim (float): Threshold value [K/day].
-
-        Returns:
-            float: Pressure at height of convective top [Pa].
         """
         convective_heating = (T_con - T_rad) / timestep
-        # Convective heating must be positive somewhere
-        if np.any(convective_heating > lim):
-            # NOTE: `np.argmax` returns the first occurrence of the maximum value.
-            # In this example, the index of the first `True` value,
-            # corresponding to the convective top, is returned.
-            # The convective top corresponds to the first near zero / negative
-            # convective heating rate above the region which is being heated
-            # (the region which has a positive convective heating rate).
-            positive_i = int(np.argmax(convective_heating > lim))
-            contop_i = int(np.argmax(
-                convective_heating[positive_i:] < lim)) + positive_i
-
-            # Create auxiliary arrays storing the Qr, T and p values above and
-            # below the threshold value. These arrays are used as input for the
-            # interpolation in the next step.
-            heat_array = np.array([convective_heating[contop_i-1],
-                                   convective_heating[contop_i]])
-            p_array = np.array([p[contop_i-1], p[contop_i]])
-            T_array = np.array([T_con[contop_i-1], T_con[contop_i]])
-            index_array = np.array([contop_i-1, contop_i])
-
-            # Interpolate the pressure value to where the convective heating rate
-            # equals `lim`.
-            contop_index = interp1d(heat_array, index_array)(lim)
-            contop_p = interp1d(heat_array, p_array)(lim)
-            contop_T = interp1d(heat_array, T_array)(lim)
-
-        else:
-            convective_heating = np.zeros(p.shape)
-            contop_index = np.nan
-            contop_p = np.nan
-            contop_T = np.nan
-
         self.create_variable('convective_heating_rate', convective_heating)
-        self.create_variable('convective_top_plev', np.array([contop_p]))
-        self.create_variable('convective_top_temperature', np.array([contop_T]))
-        self.create_variable('convective_top_index', np.array([contop_index]))
+
+        if np.any(convective_heating > lim):  # if there is convective heating
+            # find the values of pressure and temperature at the convective top
+            contop_p = interp_variable(p, convective_heating, lim)
+            contop_T = interp_variable(T_con, convective_heating, lim)
+            contop_index = interp_variable(
+                np.arange(0, p.shape[0]), convective_heating, lim
+            )
+
+        else:  # if there is no convective heating
+            contop_index, contop_p, contop_T = np.nan, np.nan, np.nan
+
+        for name, value in [('convective_top_plev', contop_p),
+                            ('convective_top_temperature', contop_T),
+                            ('convective_top_index', contop_index),
+                            ]:
+            self.create_variable(name, np.array([value]))
 
         return
 
     def calculate_convective_top_height(self, z, lim=0.2):
+        """Find the height where the radiative heating has a certain value.
+
+        Parameters:
+            z (ndarray): height array [m]
+            lim (float): Threshold convective heating value [K/day]
+        """
         convective_heating = self.get('convective_heating_rate')[0]
-        if not np.allclose(convective_heating, np.zeros(z.shape)):
-            contop_i = int(np.argmax(convective_heating < lim))
-            heat_array = np.array([convective_heating[contop_i - 1],
-                                  convective_heating[contop_i]])
-            z_array = np.array([z[contop_i - 1], z[contop_i]])
-            contop_z = interp1d(heat_array, z_array, fill_value='extrapolate')(lim)
-        else:
+        if np.any(convective_heating > lim):  # if there is convective heating
+            contop_z = interp_variable(z, convective_heating, lim=lim)
+        else:  # if there is no convective heating
             contop_z = np.nan
-        self.create_variable('convective_top_height', [contop_z])
+        self.create_variable('convective_top_height', np.array([contop_z]))
         return
+
 
 class RelaxedAdjustment(HardAdjustment):
     """Adjustment with relaxed convection in upper atmosphere.
