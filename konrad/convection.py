@@ -12,6 +12,8 @@ from konrad.surface import SurfaceFixedTemperature
 
 
 __all__ = [
+    'energy_difference',
+    'energy_threshold',
     'Convection',
     'NonConvective',
     'HardAdjustment',
@@ -41,6 +43,24 @@ def energy_difference(T_2, T_1, sst_2, sst_1, dp, eff_Cp_s):
     termdiff = - np.sum(Cp/g * dT * dp) + eff_Cp_s * dT_s
 
     return termdiff
+
+
+def energy_threshold(surface):
+    """Calculate the threshold for how close the test profile must be to
+    'satisfy' energy conservation. This is scaled with the effective heat
+    capacity of the surface, ensuring that very thick surfaces reach the target.
+
+    Parameters:
+        surface (konrad.surface model)
+    Returns:
+        float: value close to zero
+    """
+    try:
+        near_zero = float(surface.heat_capacity / 1e13)
+    except KeyError:
+        # heat_capacity is not defined for fixed temperature surfaces
+        near_zero = 10**-8
+    return near_zero
 
 
 class Convection(Component, metaclass=abc.ABCMeta):
@@ -101,13 +121,7 @@ class HardAdjustment(Convection):
                 surface associated with old temperature profile
             timestep (float): only required for slow convection
         """
-        # The threshold is scaled with the effective heat capacity of the
-        # surface. Otherwise very thick surfaces may never reach the target.
-        try:
-            near_zero = float(surface.heat_capacity / 1e13)
-        except KeyError:
-            # heat_capacity is not defined for fixed temperature surfaces
-            near_zero = 10**-8
+        near_zero = energy_threshold(surface=surface)
 
         # Interpolate density and lapse rate on pressure half-levels.
         density1 = typhon.physics.density(p, T_rad)
