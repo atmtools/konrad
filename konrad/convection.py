@@ -15,6 +15,7 @@ __all__ = [
     'energy_difference',
     'energy_threshold',
     'interp_variable',
+    'pressure_lapse_rate',
     'Convection',
     'NonConvective',
     'HardAdjustment',
@@ -182,44 +183,42 @@ class HardAdjustment(Convection):
                                            surfaceTpos, lp,
                                            timestep=timestep)
 
-        # this is the temperature profile required if we have a set-up with a
-        # fixed surface temperature, then the energy does not matter.
+        # This is the temperature profile required if we have a set-up with a
+        # fixed surface temperature. In this case, energy is not conserved.
         if isinstance(surface, SurfaceFixedTemperature):
             return T_con, surface['temperature']
-        # for other cases, if we find a decrease or approx no change in energy,
+
+        # For other cases, if we find a decrease or approx no change in energy,
         # the atmosphere is not being warmed by the convection,
-        # as it is not unstable to convection, so no adjustment is applied
+        # as it is not unstable to convection, so no adjustment is applied.
         if diffpos < near_zero:
             return T_con, surface['temperature']
 
-        # if the atmosphere is unstable to convection, a fixed surface temp
-        # produces an increase in energy (as convection warms the atmosphere).
-        # this surface temperature is an upper bound to the energy-conserving
-        # surface temperature.
-        # taking the surface temperature as the coldest temperature in the
-        # radiative profile gives us a lower bound.
+        # If the atmosphere is unstable to convection, a fixed surface
+        # temperature produces an increase in energy, as convection warms the
+        # atmosphere. Therefore 'surfaceTpos' is an upper bound for the
+        # energy-conserving surface temperature we are trying to find.
+        # Taking the surface temperature as the coldest temperature in the
+        # radiative profile gives us a lower bound. In this case, convection
+        # would not warm the atmosphere, so we do not change the atmospheric
+        # temperature profile and calculate the energy change simply from the
+        # surface temperature change.
         surfaceTneg = np.array([np.min(T_rad)])
         eff_Cp_s = surface.heat_capacity
         diffneg = eff_Cp_s * (surfaceTneg - surface['temperature'])
-        # good guess for energy-conserving profile (unlikely!)
         if np.abs(diffneg) < near_zero:
             return T_con, surfaceTneg
-
-        # NOTE (lkluft): Dirty workaround to always initialize `surfaceT`.
-        # I encountered situations where the while-loop did not run a single
-        # iteration and therefore the return-statement failed.
-        surfaceT = (surfaceTneg + (surfaceTpos - surfaceTneg)
-                    * (-diffneg) / (-diffneg + diffpos))
 
         # Now we have a upper and lower bound for the surface temperature of
         # the energy conserving profile. Iterate to get closer to the energy-
         # conserving temperature profile.
         counter = 0
-        while diffpos >= near_zero and -diffneg >= near_zero:
+        while diffpos >= near_zero and np.abs(diffneg) >= near_zero:
             surfaceT = (surfaceTneg + (surfaceTpos - surfaceTneg)
                         * (-diffneg) / (-diffneg + diffpos))
             T_con, diff = self.test_profile(T_rad, p, phlev, surface, surfaceT,
                                             lp, timestep=timestep)
+            # update either upper or lower bound
             if diff > 0:
                 diffpos = diff
                 surfaceTpos = surfaceT
@@ -260,13 +259,18 @@ class HardAdjustment(Convection):
         """
         # dp, thicknesses of atmosphere layers, for energy calculation
         dp = np.diff(phlev)
-        # for lapse rate integral
+
+        # for the lapse rate integral use a different dp, considering that the
+        # lapse rate is given on half levels
         dp_lapse = np.hstack((np.array([p[0] - phlev[0]]), np.diff(p)))
         T_con = surfaceT - np.cumsum(dp_lapse * lp)
+
         if np.any(T_con > T_rad):
             contop = np.max(np.where(T_con > T_rad))
             T_con[contop+1:] = T_rad[contop+1:]
         else:
+            # convective adjustment is only applied to the atmospheric profile,
+            # if it causes heating somewhere
             T_con = T_rad
 
         # If run with a fixed surface temperature, always return the
@@ -360,7 +364,7 @@ class RelaxedAdjustment(HardAdjustment):
         if self.convective_tau is not None:
             return self.convective_tau
 
-        tau0 = 1/24 # 1 hour
+        tau0 = 1/24  # 1 hour
         tau = tau0*np.exp(p[0] / p)
 
         return tau
@@ -403,5 +407,3 @@ class RelaxedAdjustment(HardAdjustment):
         diff = energy_difference(T_con, T_rad, surfaceT,
                                  surface['temperature'], dp, eff_Cp_s)
         return T_con, float(diff)
-
-
