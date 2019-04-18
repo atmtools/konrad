@@ -91,6 +91,27 @@ def interp_variable(variable, convective_heating, lim):
     return interp1d(heat_array, var_array)(lim)
 
 
+def pressure_lapse_rate(p, phlev, T, lapse):
+    """Calculate the pressure lapse rate (change in temperature with pressure)
+    from the height lapse rate (change in temperature with height).
+
+    Parameters:
+        p (ndarray): pressure levels
+        phlev (ndarray): pressure half-levels
+        T (ndarray): temperature profile
+        lapse (ndarray): lapse rate [K/m] defined on pressure half-levels
+    Returns:
+        ndarray: pressure lapse rate [K/Pa]
+    """
+    density_p = typhon.physics.density(p, T)
+    # Interpolate density onto pressure half-levels
+    density = interp1d(p, density_p, fill_value='extrapolate')(phlev[:-1])
+
+    g = constants.earth_standard_gravity
+    lp = -lapse / (g * density)
+    return lp
+
+
 class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
@@ -144,19 +165,14 @@ class HardAdjustment(Convection):
             p (ndarray): pressure levels
             phlev (ndarray): half pressure levels
             T_rad (ndarray): old atmospheric temperature profile
-            lapse (konrad.lapserate): lapse rate in K/km
+            lapse (ndarray): critical lapse rate in K/m
+                konrad.lapserate(konrad.atmosphere)
             surface (konrad.surface):
                 surface associated with old temperature profile
             timestep (float): only required for slow convection
         """
         near_zero = energy_threshold(surface=surface)
-
-        # Interpolate density and lapse rate on pressure half-levels.
-        density1 = typhon.physics.density(p, T_rad)
-        density = interp1d(p, density1, fill_value='extrapolate')(phlev[:-1])
-
-        g = constants.earth_standard_gravity
-        lp = -lapse / (g * density)
+        lp = pressure_lapse_rate(p, phlev, T_rad, lapse)
 
         # find energy difference if there is no change to surface temp due to
         # convective adjustment. in this case the new profile should be
