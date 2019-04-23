@@ -232,7 +232,7 @@ class RCE:
             z = self.atmosphere.get('z')[0, :]
             if isinstance(self.convection, HardAdjustment) or isinstance(
                     self.convection, RelaxedAdjustment):
-                self.convection.calculate_convective_top_height(z)
+                self.convection.update_convective_top_height(z)
 
             # Update the ozone profile.
             self.ozone(

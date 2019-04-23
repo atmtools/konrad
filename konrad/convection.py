@@ -150,7 +150,7 @@ class HardAdjustment(Convection):
             timestep=timestep,
         )
         # get convective top temperature and pressure
-        self.calculate_convective_top(T_rad, T_new, p, timestep=timestep)
+        self.update_convective_top(T_rad, T_new, p, timestep=timestep)
         # Update atmospheric temperatures as well as surface temperature.
         atmosphere['T'][0, :] = T_new
         surface['temperature'][0] = T_s_new
@@ -313,7 +313,7 @@ class HardAdjustment(Convection):
 
         return T_con, float(diff)
 
-    def calculate_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.2):
+    def update_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.2):
         """Find the pressure and temperature where the radiative heating has a
         certain value.
 
@@ -351,7 +351,7 @@ class HardAdjustment(Convection):
 
         return
 
-    def calculate_convective_top_height(self, z, lim=0.2):
+    def update_convective_top_height(self, z, lim=0.2):
         """Find the height where the radiative heating has a certain value.
 
         Parameters:
