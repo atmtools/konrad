@@ -47,24 +47,6 @@ def energy_difference(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
     return termdiff
 
 
-def energy_threshold(surface):
-    """Calculate the threshold for how close the test profile must be to
-    'satisfy' energy conservation. This is scaled with the effective heat
-    capacity of the surface, ensuring that very thick surfaces reach the target.
-
-    Parameters:
-        surface (konrad.surface model)
-    Returns:
-        float: value close to zero
-    """
-    try:
-        near_zero = float(surface.heat_capacity / 1e13)
-    except KeyError:
-        # heat_capacity is not defined for fixed temperature surfaces
-        near_zero = 10**-8
-    return near_zero
-
-
 def interp_variable(variable, convective_heating, lim):
     """Find the value of a variable corresponding to where the convective
     heating equals a certain specified value (lim).
@@ -190,7 +172,9 @@ class HardAdjustment(Convection):
 
         # Otherwise we should conserve energy --> our energy change should be
         # less than the threshold 'near_zero'.
-        near_zero = energy_threshold(surface=surface)
+        # The threshold is scaled with the effective heat capacity of the
+        # surface, ensuring that very thick surfaces reach the target.
+        near_zero = float(surface.heat_capacity / 1e13)
 
         # Find the energy difference if there is no change to surface temp due
         # to convective adjustment. In this case the new profile should be
