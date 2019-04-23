@@ -158,19 +158,26 @@ class HardAdjustment(Convection):
     def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
                               timestep=0.1):
         """
-        Find the energy-conserving temperature profile using a iterative
-        procedure with test profiles. Update the atmospheric temperature
-        profile to this one.
+        Find the energy-conserving temperature profile using upper and lower
+        bound profiles (calculated from surface temperature extremes: no change
+        for upper bound and coldest atmospheric temperature for lower bound)
+        and an iterative procedure between them.
+        Return the atmospheric temperature profile which satisfies energy
+        conservation.
 
         Parameters:
-            p (ndarray): pressure levels
-            phlev (ndarray): half pressure levels
-            T_rad (ndarray): old atmospheric temperature profile
-            lapse (ndarray): critical lapse rate in K/m
-                konrad.lapserate(konrad.atmosphere)
+            p (ndarray): pressure levels [Pa]
+            phlev (ndarray): half pressure levels [Pa]
+            T_rad (ndarray): old atmospheric temperature profile [K]
+            lapse (ndarray): critical lapse rate [K/m] defined on pressure
+                half-levels
             surface (konrad.surface):
                 surface associated with old temperature profile
-            timestep (float): only required for slow convection
+            timestep (float): only required for slow convection [days]
+
+        Returns:
+            ndarray: atmospheric temperature profile [K]
+            float: surface temperature [K]
         """
         lp = pressure_lapse_rate(p, phlev, T_rad, lapse)
 
@@ -189,14 +196,13 @@ class HardAdjustment(Convection):
         # to convective adjustment. In this case the new profile should be
         # associated with an increase in energy in the atmosphere.
         surfaceTpos = surface['temperature']
-        T_con, diffpos = self.test_profile(T_rad, p, phlev, surface,
-                                           surfaceTpos, lp,
-                                           timestep=timestep)
+        T_con, diff_pos = self.create_and_check_profile(
+            T_rad, p, phlev, surface, surfaceTpos, lp, timestep=timestep)
 
         # For other cases, if we find a decrease or approx no change in energy,
         # the atmosphere is not being warmed by the convection,
         # as it is not unstable to convection, so no adjustment is applied.
-        if diffpos < near_zero:
+        if diff_pos < near_zero:
             return T_con, surface['temperature']
 
         # If the atmosphere is unstable to convection, a fixed surface
@@ -210,25 +216,30 @@ class HardAdjustment(Convection):
         # surface temperature change.
         surfaceTneg = np.array([np.min(T_rad)])
         eff_Cp_s = surface.heat_capacity
-        diffneg = eff_Cp_s * (surfaceTneg - surface['temperature'])
-        if np.abs(diffneg) < near_zero:
+        diff_neg = eff_Cp_s * (surfaceTneg - surface['temperature'])
+        if np.abs(diff_neg) < near_zero:
             return T_con, surfaceTneg
 
         # Now we have a upper and lower bound for the surface temperature of
         # the energy conserving profile. Iterate to get closer to the energy-
         # conserving temperature profile.
         counter = 0
-        while diffpos >= near_zero and np.abs(diffneg) >= near_zero:
+        while diff_pos >= near_zero and np.abs(diff_neg) >= near_zero:
+            # Use a surface temperature between our upper and lower bounds and
+            # closer to the bound associated with a smaller energy change.
             surfaceT = (surfaceTneg + (surfaceTpos - surfaceTneg)
-                        * (-diffneg) / (-diffneg + diffpos))
-            T_con, diff = self.test_profile(T_rad, p, phlev, surface, surfaceT,
-                                            lp, timestep=timestep)
-            # update either upper or lower bound
+                        * (-diff_neg) / (-diff_neg + diff_pos))
+            # Calculate temperature profile and energy change associated with
+            # this surface temperature.
+            T_con, diff = self.create_and_check_profile(
+                T_rad, p, phlev, surface, surfaceT, lp, timestep=timestep)
+
+            # Update either upper or lower bound.
             if diff > 0:
-                diffpos = diff
+                diff_pos = diff
                 surfaceTpos = surfaceT
             else:
-                diffneg = diff
+                diff_neg = diff
                 surfaceTneg = surfaceT
 
             # to avoid getting stuck in a loop if something weird is going on
@@ -238,7 +249,6 @@ class HardAdjustment(Convection):
                     "No energy conserving convective profile can be found"
                 )
 
-        # save new temperature profile
         return T_con, surfaceT
 
     def convective_profile(self, T_rad, p, phlev, surfaceT, lp, **kwargs):
@@ -274,9 +284,9 @@ class HardAdjustment(Convection):
 
         return T_con
 
-    def test_profile(self, T_rad, p, phlev, surface, surfaceT, lp,
-                     timestep=0.1):
-        """Create a convectively adjusted temperature profile and test how
+    def create_and_check_profile(self, T_rad, p, phlev, surface, surfaceT, lp,
+                                 timestep=0.1):
+        """Create a convectively adjusted temperature profile and calculate how
         close it is to satisfying energy conservation.
 
         Parameters:
