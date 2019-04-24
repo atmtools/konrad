@@ -248,8 +248,6 @@ class RCE:
             # Update the humidity profile.
             self.humidity.adjust_humidity(
                 atmosphere=self.atmosphere,
-                convection=self.convection,
-                surface=self.surface,
             )
 
             self.cloud.update_cloud_profile(self.atmosphere,
