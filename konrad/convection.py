@@ -13,7 +13,6 @@ from konrad.surface import SurfaceFixedTemperature
 
 __all__ = [
     'energy_difference',
-    'energy_threshold',
     'interp_variable',
     'pressure_lapse_rate',
     'Convection',
