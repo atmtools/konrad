@@ -4,6 +4,7 @@ import abc
 
 import numpy as np
 import typhon
+from typhon.physics import vmr2mixing_ratio
 from scipy.interpolate import interp1d
 
 from konrad import constants
@@ -12,7 +13,8 @@ from konrad.surface import SurfaceFixedTemperature
 
 
 __all__ = [
-    'energy_difference',
+    'energy_difference_dry',
+    'latent_heat_difference',
     'interp_variable',
     'pressure_lapse_rate',
     'Convection',
@@ -22,7 +24,7 @@ __all__ = [
 ]
 
 
-def energy_difference(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
+def energy_difference_dry(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
     """
     Calculate the energy difference between two atmospheric profiles (2 - 1).
 
@@ -41,9 +43,26 @@ def energy_difference(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
     dT = T_2 - T_1  # convective temperature change of atmosphere
     dT_s = sst_2 - sst_1  # of surface
 
-    termdiff = - np.sum(Cp/g * dT * np.diff(phlev)) + eff_Cp_s * dT_s
+    term_diff = - np.sum(Cp/g * dT * np.diff(phlev)) + eff_Cp_s * dT_s
 
-    return termdiff
+    return term_diff
+
+
+def latent_heat_difference(h2o_2, h2o_1):
+    """Calculate the difference in energy from latent heating between two
+    water vapour profiles (2 - 1).
+
+    Parameters:
+        h2o_2 (ndarray): water vapour content [kg m^-2]
+        h2o_1 (ndarray): water vapour content [kg m^-2]
+    Returns:
+        float: energy difference [J m^-2]
+    """
+
+    Lv = constants.Lv  # TODO: include pressure/temperature dependence?
+    term_diff = np.sum((h2o_2-h2o_1) * Lv)
+
+    return term_diff
 
 
 def interp_variable(variable, convective_heating, lim):
@@ -96,17 +115,58 @@ def pressure_lapse_rate(p, phlev, T, lapse):
     return lp
 
 
+def update_temporary_atmosphere(atmosphere, T, humidity):
+    """Update atmospheric temperature, corresponding water vapour content,
+    and height.
+
+    Parameters:
+        atmosphere (konrad.atmosphere): atmosphere model to be updated
+        T (ndarray): temperature profile
+        humidity (konrad.humidity): humidity model
+    """
+    atmosphere['T'][-1] = T
+    humidity.adjust_humidity(
+        atmosphere=atmosphere,
+    )
+    atmosphere.update_height()
+    return
+
+
+def water_vapour_profile(atmosphere):
+    """Calculate the mass of water vapour in each model layer
+
+    Parameters:
+        atmosphere (konrad.atmosphere): atmosphere model
+    Returns:
+        ndarray: atmospheric water vapour content [kg m^-2]
+    """
+
+    h2o = vmr2mixing_ratio(atmosphere['H2O'][-1])
+
+    rho = typhon.physics.density(
+        atmosphere['plev'], atmosphere['T'][-1])  # kg m-3
+    z = atmosphere.get('z')[-1]  # m
+    dz = np.gradient(z)  # TODO: gradient or calculate diff from half levels?
+    h2o *= rho * dz  # kg m-2
+
+    return h2o
+
+
 class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
-    def stabilize(self, atmosphere, lapse, surface, timestep):
+    def stabilize(self, atmosphere, atmosphere_old, humidity, lapse, surface,
+                  timestep):
         """Stabilize the temperature profile by redistributing energy.
 
         Parameters:
-              atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
-              lapse (ndarray): Temperature lapse rate [K/day].
-              surface (konrad.surface): Surface model.
-              timestep (float): Timestep width [day].
+            atmosphere (konrad.atmosphere): atmosphere model
+            atmosphere_old (konrad.atmosphere): atmosphere model with properties
+                of previous timestep
+            humidity (konrad.humidity): humidity model
+            lapse (ndarray): Temperature lapse rate [K/day].
+            surface (konrad.surface): Surface model.
+            timestep (float): Timestep width [day].
         """
 
 
@@ -118,13 +178,16 @@ class NonConvective(Convection):
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
-    def stabilize(self, atmosphere, lapse, surface, timestep):
+    def stabilize(self, atmosphere, atmosphere_old, humidity, lapse, surface, timestep):
 
         T_rad = atmosphere['T'][0, :]
         p = atmosphere['plev']
 
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
+            atmosphere,
+            atmosphere_old,
+            humidity,
             p=p,
             phlev=atmosphere['phlev'],
             T_rad=T_rad,
@@ -138,8 +201,8 @@ class HardAdjustment(Convection):
         atmosphere['T'][0, :] = T_new
         surface['temperature'][0] = T_s_new
 
-    def convective_adjustment(self, p, phlev, T_rad, lapse, surface,
-                              timestep=0.1):
+    def convective_adjustment(self, atmosphere, atmosphere_old, humidity, p,
+                              phlev, T_rad, lapse, surface, timestep=0.1):
         """
         Find the energy-conserving temperature profile using upper and lower
         bound profiles (calculated from surface temperature extremes: no change
@@ -182,6 +245,7 @@ class HardAdjustment(Convection):
         # associated with an increase in energy in the atmosphere.
         surfaceTpos = surface['temperature']
         T_con, diff_pos = self.create_and_check_profile(
+            atmosphere, atmosphere_old, humidity,
             T_rad, p, phlev, surface, surfaceTpos, lp, timestep=timestep)
 
         # For other cases, if we find a decrease or approx no change in energy,
@@ -217,6 +281,7 @@ class HardAdjustment(Convection):
             # Calculate temperature profile and energy change associated with
             # this surface temperature.
             T_con, diff = self.create_and_check_profile(
+                atmosphere, atmosphere_old, humidity,
                 T_rad, p, phlev, surface, surfaceT, lp, timestep=timestep)
 
             # Update either upper or lower bound.
@@ -269,8 +334,9 @@ class HardAdjustment(Convection):
 
         return T_con
 
-    def create_and_check_profile(self, T_rad, p, phlev, surface, surfaceT, lp,
-                                 timestep=0.1):
+    def create_and_check_profile(self, atmosphere, atmosphere_old, humidity,
+                                 T_rad, p, phlev,
+                                 surface, surfaceT, lp, timestep=0.1):
         """Create a convectively adjusted temperature profile and calculate how
         close it is to satisfying energy conservation.
 
@@ -293,8 +359,22 @@ class HardAdjustment(Convection):
 
         eff_Cp_s = surface.heat_capacity
 
-        diff = energy_difference(T_con, T_rad, surfaceT,
-                                 surface['temperature'], phlev, eff_Cp_s)
+        atmosphere_con = atmosphere.copy_atmosphere()
+        update_temporary_atmosphere(atmosphere_con, T_con, humidity)
+
+        h2o_old = water_vapour_profile(atmosphere_old)
+        h2o_new = water_vapour_profile(atmosphere_con)
+
+        # difference in energy due to temperature change between radiatively
+        # and convectively adjusted profiles
+        diff = energy_difference_dry(
+            T_con, T_rad, surfaceT, surface['temperature'], phlev, eff_Cp_s)
+
+        # difference due to latent heating between previous timestep and
+        # current timestep
+        wet_diff = latent_heat_difference(h2o_new, h2o_old)
+
+        diff += wet_diff
 
         return T_con, float(diff)
 
