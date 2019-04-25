@@ -200,16 +200,16 @@ class PhysicalCloud(Cloud):
                  ice_particle_size, droplet_radius):
         """
         Parameters:
-        z (ndarray): an array with the size of the model levels
-        cloud_fraction (float / ndarray / DataArray): cloud area fraction
-        mass_ice (float / ndarray / DataArray): mass content of cloud ice
-            [kg m-2]
-        mass_water (float / ndarray / DataArray): mass content of cloud
-            liquid water [kg m-2]
-        ice_particle_size (float / ndarray / DataArray): cloud ice particle
-            size [micrometers]
-        droplet_radius (float / ndarray / DataArray): cloud water droplet
-            radius [micrometers]
+            z (ndarray): an array with the size of the model levels
+            cloud_fraction (float / ndarray / DataArray): cloud area fraction
+            mass_ice (float / ndarray / DataArray): mass content of cloud ice
+                [kg m-2]
+            mass_water (float / ndarray / DataArray): mass content of cloud
+                liquid water [kg m-2]
+            ice_particle_size (float / ndarray / DataArray): cloud ice particle
+                size [micrometers]
+            droplet_radius (float / ndarray / DataArray): cloud water droplet
+                radius [micrometers]
         """
         super().__init__(
             numlevels=numlevels,

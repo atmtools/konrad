@@ -40,7 +40,9 @@ def append_description(dataset, description=None):
             The keys are the variable keys used in the Dataset.
             The values are dictionaries themselves containing attributes
             and their names as keys, e.g.:
-                desc = {'T': {'units': 'K', 'standard_name': 'temperature'}}
+
+            >>> desc = {'T': {'units': 'K', 'standard_name': 'temperature'}}
+
     """
     if description is None:
         description = constants.variable_description
@@ -61,7 +63,8 @@ def append_timestep_netcdf(filename, data, timestamp):
         data (dict{ndarray}): Dict-like object containing the data arrays.
             The key is the variable name and the value is an ``ndarray``, a
             ``pandas.Series`` or an ``xarray.DataArray`` e.g.:
-                >>> data = {'T': np.array([290, 295, 300])}
+
+               >>> data = {'T': np.array([290, 295, 300])}
 
         timestamp (float): Timestamp of values appended.
     """
@@ -198,13 +201,15 @@ def get_pressure_grids(start=1000e2, stop=1, num=200, squeeze=0.5):
 def ozonesquash(o3, z, squash):
     """
     Squashes the ozone profile upwards or stretches it downwards, with no
-        change to the shape of the profile above the ozone concentration maximum
+    change to the shape of the profile above the ozone concentration maximum
+
     Parameters:
         o3 (ndarray): initial ozone profile
         z (ndarray): corresponding height values
         squash: float, with 1 being no squash,
             numbers < 1 squashing the profile towards the maximum,
             numbers > 1, stretching the profile downwards
+
     Returns:
         ndarray: new ozone profile
     """
@@ -217,7 +222,7 @@ def ozonesquash(o3, z, squash):
 
 
 def ozone_profile_rcemip(plev, g1=3.6478, g2=0.83209, g3=11.3515):
-    """Compute the ozone volumetric mixing ratio from pressure.
+    r"""Compute the ozone volumetric mixing ratio from pressure.
 
     .. math::
         O_3 = g_1 \cdot p^{g_2} e^\frac{-p}{g_3}
@@ -276,11 +281,11 @@ def parse_fraction_of_day(time):
     Parameters:
         time (str or float): Specified time delta (e.g. '6h').
             Valid units:
-                's' for seconds
-                'm' for minutes
-                'h' for hours
-                'd' for days
-                'w' for weeks
+                * 's' for seconds
+                * 'm' for minutes
+                * 'h' for hours
+                * 'd' for days
+                * 'w' for weeks
             If numeric, return value.
 
     Returns:
@@ -325,6 +330,7 @@ def standard_atmosphere(z, coordinates='height'):
 
         .. plot::
             :include-source:
+
             import numpy as np
             from typhon.plots import (profile_p_log, profile_z)
             from typhon.physics import standard_atmosphere

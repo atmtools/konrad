@@ -13,7 +13,6 @@ from konrad.surface import SurfaceFixedTemperature
 
 __all__ = [
     'energy_difference',
-    'energy_threshold',
     'interp_variable',
     'pressure_lapse_rate',
     'Convection',
@@ -50,12 +49,14 @@ def energy_difference(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
 def interp_variable(variable, convective_heating, lim):
     """Find the value of a variable corresponding to where the convective
     heating equals a certain specified value (lim).
+
     Parameters:
         variable (ndarray): variable to be interpolated
         convective_heating (ndarray): interpolate based on where this variable
             equals 'lim'
         lim (float/int): value of 'convective_heating' used to find the
             corresponding value of 'variable'
+
     Returns:
          float: interpolated value of 'variable'
     """
