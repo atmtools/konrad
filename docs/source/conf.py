@@ -46,6 +46,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'matplotlib.sphinxext.plot_directive',
 ]
 
 # -- General configuration ------------------------------------------------
