@@ -6,9 +6,42 @@
 konrad documentation
 ====================
 
+Core Model
+----------
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+
+   konrad.core
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   konrad.atmosphere
+   konrad.cloud
+   konrad.constants
+   konrad.convection
+   konrad.humidity
+   konrad.lapserate
+   konrad.ozone
+   konrad.plots
+   konrad.radiation
+   konrad.surface
+   konrad.upwelling
+
+Miscellaneous
+-------------
+
+.. toctree::
+   :maxdepth: 1
+
+   konrad.component
+   konrad.netcdf
+   konrad.physics
+   konrad.utils
 
 Indices and tables
 ==================
