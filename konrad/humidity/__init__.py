@@ -19,7 +19,8 @@ class FixedRH(Component):
         Parameters:
             rh_func (callable): Callable that describes the vertical
                 relative humidity distribution.
-            stratosphere_coupling (callable):
+            stratosphere_coupling (callable): Callable that describes how the
+                humidity should be treated in the stratosphere.
         """
         if stratosphere_coupling is None:
             self._stratosphere_coupling = ColdPointCoupling()

@@ -1,5 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Module containing classes describing different surface models.
+"""This module contains classes describing different surfaces. A surface is
+required by both the radiation and the convective models used inside the RCE
+simulations.
+
+**Example**
+
+Create a surface model, *e.g.* :py:class:`SurfaceHeatCapacity`,
+and use it in an RCE simulation.
+    >>> import konrad
+    >>> surface_temperature_start = ...
+    >>> surface = konrad.surface.SurfaceHeatCapacity(
+    >>>     temperature=surface_temperature_start)
+    >>> rce = konrad.RCE(atmosphere=..., surface=surface)
+    >>> rce.run()
+    >>> surface_temperature_end = surface['temperature'][-1]
 """
 import abc
 import logging
@@ -122,13 +136,15 @@ class SurfaceFixedTemperature(Surface):
 
 #TODO: Rename `SlabOcean`?
 class SurfaceHeatCapacity(Surface):
-    """Surface model with adjustable temperature.
-
-    Parameters:
-          depth (float): Ocean depth [m].
-          **kwargs: Additional keyword arguments are passed to `Surface`.
-    """
+    """Surface model with adjustable temperature."""
     def __init__(self, *args, depth=50., **kwargs):
+        """
+        Parameters:
+            depth (float): Ocean depth [m].
+            albedo (float): Surface albedo, default 0.2
+            temperature (float): Surface temperature [K], default 288
+            height (float): Surface height [m], default 0
+        """
         super().__init__(*args, **kwargs)
         self.rho = constants.density_sea_water
         self.c_p = constants.specific_heat_capacity_sea_water
@@ -158,13 +174,16 @@ class SurfaceHeatCapacity(Surface):
 
 
 class SurfaceHeatSink(SurfaceHeatCapacity):
-    """Surface model with adjustable temperature.
-
-    Parameters:
-        heat_flux (float):
-        **kwargs: Additional keyword arguments are passed to `Surface`.
-    """
+    """Surface model with adjustable temperature."""
     def __init__(self, *args, heat_flux=0, **kwargs):
+        """
+        Parameters:
+            heat_flux(float): Flux of energy out of the surface [W m^-2]
+            depth (float): Ocean depth [m], default 50
+            albedo (float): Surface albedo, default 0.2
+            temperature (float): Surface temperature [K], default 288
+            height (float): Surface height [m], default 0
+        """
         super().__init__(*args, **kwargs)
         self.heat_flux = heat_flux
 

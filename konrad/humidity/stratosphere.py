@@ -40,9 +40,9 @@ class NonIncreasing(StratosphereCoupler):
 
 
 class FixedStratosphericVMR(StratosphereCoupler):
+    """Keep stratospheric VMR fixed at a constant value."""
     def __init__(self, stratospheric_vmr=5e-6):
-        """Keep stratospheric VMR fixed at a constant value.
-
+        """
         Parameters:
             stratospheric_vmr (float): Stratospheric water vapor amount [VMR].
         """
@@ -54,9 +54,9 @@ class FixedStratosphericVMR(StratosphereCoupler):
 
 
 class MinimumStratosphericVMR(StratosphereCoupler):
+    """Prevent stratospheric VMR from decreasing below a fixed minimum value."""
     def __init__(self, minimum_vmr=5e-6):
-        """Prevent stratospheric VMR from deceding a fixed minimum.
-
+        """
         Parameters:
             minimum_vmr (float): Minimum water vapor amount [VMR].
         """

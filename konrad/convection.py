@@ -1,5 +1,20 @@
 # -*- coding: utf-8 -*-
-"""This module contains classes handling different convection schemes."""
+"""This module contains a choice of convective adjustments, which can be used
+in the RCE simulations.
+
+**Example**
+
+Create an instance of a convective adjustment class, *e.g.* the relaxed
+adjustment class, and use it in an RCE simulation.
+    >>> import konrad
+    >>> relaxed_convection=konrad.convection.RelaxedAdjustment()
+    >>> rce = konrad.RCE(atmosphere=..., convection=relaxed_convection)
+    >>> rce.run()
+
+Currently there are two convective classes that can be used,
+:py:class:`HardAdjustment` and :py:class:`RelaxedAdjustment`, and one class
+which can be used and does nothing, :py:class:`NonConvective`.
+"""
 import abc
 
 import numpy as np

@@ -1,5 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Contains classes for handling atmospheric temperature lapse rates."""
+"""Contains classes for handling atmospheric temperature lapse rates.
+These are used by the convection sub-model to set the temperature profile in
+the troposphere.
+
+**Example**
+
+Calculate the moist adiabatic lapse rate, for a specified atmospheric
+temperature profile.
+    >>> import konrad
+    >>> lapse = konrad.lapserate.MoistLapseRate()
+    >>> critical_lapserate = lapse(atmosphere=...)
+
+Apply convection to an unstable atmosphere, updating the atmospheric temperature
+profile and the surface temperature to follow the :code:`critical_lapserate`.
+    >>> convection = konrad.convection.HardAdjustment()
+    >>> convection.stabilize(
+    >>>     atmosphere=..., surface=..., lapse=critical_lapserate)
+"""
 import abc
 import numbers
 
@@ -30,8 +47,7 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
     def __init__(self, fixed=False):
-        """Initialize a moist-adiabatic lapse rate component.
-
+        """
         Parameters:
             fixed (bool): If `True` the moist adiabatic lapse rate is only
                 calculated for the first time step and kept constant
@@ -72,10 +88,10 @@ class MoistLapseRate(LapseRate):
 
 
 class FixedLapseRate(LapseRate):
-    """Fixed linear lapse rate through the whole atmosphere."""
+    """Fixed constant lapse rate through the whole atmosphere. Linear decrease
+    in temperature with height."""
     def __init__(self, lapserate=0.0065):
-        """Create a handler with fixed linear temperature lapse rate.
-
+        """
         Parameters:
               lapserate (float or ndarray): Critical lapse rate [K/m].
         """

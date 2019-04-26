@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-"""This module contains classes for an upwelling induced cooling term."""
+"""This module contains classes for an upwelling induced cooling term.
+To include an upwelling, use :py:class:`StratosphericUpwelling`, otherwise use
+:py:class:`NoUpwelling`.
+
+**Example**
+
+Create an instance of the upwelling class, set the upwelling velocity,
+and use the upwelling in an RCE simulation.
+    >>> import konrad
+    >>> stratospheric_upwelling = konrad.upwelling.StratosphericUpwelling(w=...)
+    >>> rce = konrad.RCE(atmosphere=..., upwelling=stratospheric_upwelling)
+    >>> rce.run()
+
+"""
 import abc
 
 import numpy as np

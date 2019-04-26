@@ -10,7 +10,7 @@ from konrad.component import Component
 
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
     def __call__(self, atmosphere, **kwargs):
-        """Return the vertical distirbution of relative humidity.
+        """Return the vertical distribution of relative humidity.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere: Atmosphere component.
@@ -24,8 +24,13 @@ class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
 
 
 class HeightConstant(RelativeHumidityModel):
-    """Constant relative humidity profile throughout the whole troposphere."""
+    """Fix the relative humidity to a single value throughout the atmosphere."""
     def __init__(self, rh_surface=0.62):
+        """
+        Parameters:
+            rh_surface (float): Relative humidity at first
+                pressure level (surface)
+        """
         self.rh_surface = rh_surface
         self._rh_cache = None
 
@@ -38,7 +43,15 @@ class HeightConstant(RelativeHumidityModel):
 
 
 class VerticallyUniform(RelativeHumidityModel):
+    """Use a single value of relative humidity up to the convective top and
+    then a linearly decreasing value towards the cold point."""
     def __init__(self, rh_surface=0.5, rh_tropopause=0.3):
+        """
+        Parameters:
+            rh_surface (float): relative humidity from the first pressure level
+                (surface) up to the convective top
+            rh_tropopause (float): relative humidity at the tropopause
+        """
         self.rh_surface = rh_surface
         self.rh_tropopause = rh_tropopause
         self.convective_top = 300e2
@@ -60,8 +73,14 @@ class VerticallyUniform(RelativeHumidityModel):
 
 
 class ConstantFreezingLevel(RelativeHumidityModel):
-    """Constant rel. humidity up to the freezing level and then decreasing."""
+    """Constant relative humidity up to the freezing level and then
+    decreasing."""
     def __init__(self, rh_surface=0.77):
+        """
+        Parameters:
+            rh_surface (float): Relative humidity at first
+                pressure level (surface)
+        """
         self.rh_surface = rh_surface
 
     def __call__(self, atmosphere, **kwargs):
@@ -222,7 +241,7 @@ class Cess76(RelativeHumidityModel):
 
 
 class Romps14(RelativeHumidityModel):
-    """Return relative humidity according to an invariant RH-T relation."""
+    """Relative humidity following an invariant RH-T relation."""
     def __call__(self, atmosphere, **kwargs):
         if self._rh_func is None:
             self._rh_func = interp1d(
