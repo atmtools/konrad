@@ -28,9 +28,11 @@ class RCE:
 
     Examples:
         Create an object to setup and run a simulation:
+
         >>> import konrad
         >>> rce = konrad.RCE(...)
         >>> rce.run()
+
     """
 
     def __init__(self, atmosphere, timestep='3h', max_duration='5000d',
@@ -47,12 +49,12 @@ class RCE:
                 (see :func:`konrad.utils.parse_fraction_of_day`).
             max_duration (float or str): Maximum duration of the simulation.
                 The duration is given in model time:
-                    If float, maximum duration in days.
-                    If str, a timedelta string
-                    (see `konrad.utils.parse_fraction_of_day`).
+                  If float, maximum duration in days.
+                  If str, a timedelta string
+                  (see `konrad.utils.parse_fraction_of_day`).
             outfile (str): netCDF4 file to store output.
             experiment (str): Experiment description (stored in netCDF output).
-            writeevery(int, float or str): Set output frequency.
+            writeevery (int, float or str): Set output frequency.
                 Values can be given in:
                     int: Every nth iteration
                     float: Every nth day in model time
@@ -77,6 +79,7 @@ class RCE:
                 Defaults to :class:`konrad.lapserate.MoistLapseRate`.
             upwelling (konrad.upwelling.Upwelling):
                 Defaults to :class:`konrad.upwelling.NoUpwelling`.
+
         """
         # Sub-models.
         self.atmosphere = atmosphere

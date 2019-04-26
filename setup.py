@@ -41,5 +41,15 @@ setup(
     ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
-    extras_require={'tests': ['pytest']},
+    extras_require={
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+        ],
+        'tests': [
+            'pytest',
+        ],
+    },
+
+
 )
