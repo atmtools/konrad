@@ -51,7 +51,8 @@ def energy_difference_dry(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
 
 
 def latent_heat_difference(h2o_2, h2o_1):
-    """Calculate the difference in energy from latent heating between two
+    """
+    Calculate the difference in energy from latent heating between two
     water vapour profiles (2 - 1).
 
     Parameters:
@@ -68,7 +69,8 @@ def latent_heat_difference(h2o_2, h2o_1):
 
 
 def interp_variable(variable, convective_heating, lim):
-    """Find the value of a variable corresponding to where the convective
+    """
+    Find the value of a variable corresponding to where the convective
     heating equals a certain specified value (lim).
 
     Parameters:
@@ -97,7 +99,8 @@ def interp_variable(variable, convective_heating, lim):
 
 
 def pressure_lapse_rate(p, phlev, T, lapse):
-    """Calculate the pressure lapse rate (change in temperature with pressure)
+    """
+    Calculate the pressure lapse rate (change in temperature with pressure)
     from the height lapse rate (change in temperature with height).
 
     Parameters:
@@ -118,7 +121,8 @@ def pressure_lapse_rate(p, phlev, T, lapse):
 
 
 def update_temporary_atmosphere(atmosphere, T, humidity):
-    """Update atmospheric temperature, corresponding water vapour content,
+    """
+    Update atmospheric temperature, corresponding water vapour content,
     and height.
 
     Parameters:
@@ -343,7 +347,8 @@ class HardAdjustment(Convection):
 
     def create_and_check_profile(self, atmosphere, atmosphere_old, humidity,
                                  surface, surfaceT, lp, timestep=0.1):
-        """Create a convectively adjusted temperature profile and calculate how
+        """
+        Create a convectively adjusted temperature profile and calculate how
         close it is to satisfying energy conservation.
 
         Parameters:
@@ -393,7 +398,8 @@ class HardAdjustment(Convection):
         return T_con, float(diff)
 
     def update_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.2):
-        """Find the pressure and temperature where the radiative heating has a
+        """
+        Find the pressure and temperature where the radiative heating has a
         certain value.
 
         Note:
