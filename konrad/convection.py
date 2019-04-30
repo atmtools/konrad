@@ -41,7 +41,7 @@ __all__ = [
 ]
 
 
-def energy_difference_dry(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
+def energy_difference_dry(T_2, T_1, sst_2, sst_1, phlev, Cp, eff_Cp_s):
     """
     Calculate the energy difference between two atmospheric profiles (2 - 1).
 
@@ -52,9 +52,9 @@ def energy_difference_dry(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
         sst_1: surface temperature (1)
         phlev: pressure half-levels [Pa]
             must be the same for both atmospheric profiles
+        Cp: Specific isobaric heat capacity of the atmosphere.
         eff_Cp_s: effective heat capacity of surface
     """
-    Cp = constants.isobaric_mass_heat_capacity
     g = constants.g
 
     dT = T_2 - T_1  # convective temperature change of atmosphere
@@ -402,7 +402,8 @@ class HardAdjustment(Convection):
         # difference in energy due to temperature change between radiatively
         # and convectively adjusted profiles
         diff = energy_difference_dry(
-            T_con, T_rad, surfaceT, surface['temperature'], phlev, eff_Cp_s)
+            T_con, T_rad, surfaceT, surface['temperature'], phlev,
+            atmosphere.get_heat_capacity(), eff_Cp_s)
 
         # difference due to latent heating between previous timestep and
         # current timestep

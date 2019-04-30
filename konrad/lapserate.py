@@ -69,7 +69,7 @@ class MoistLapseRate(LapseRate):
         L = constants.heat_of_vaporization
         Rd = constants.specific_gas_constant_dry_air
         Rv = constants.specific_gas_constant_water_vapor
-        Cp = constants.isobaric_mass_heat_capacity
+        Cp = constants.isobaric_mass_heat_capacity_dry_air
 
         gamma_d = g / Cp  # dry lapse rate
 

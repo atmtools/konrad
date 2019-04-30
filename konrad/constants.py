@@ -5,8 +5,9 @@ import scipy.constants as spc
 import typhon.constants as tyc
 
 
-# Phyiscal constants
-Cp = isobaric_mass_heat_capacity = 1003.5  # J kg^-1 K^-1
+# Physical constants
+c_pd = isobaric_mass_heat_capacity_dry_air = 1004.64  # J kg^-1 K^-1
+c_pv = isobaric_mass_heat_capacity_water_vapor = 1860.46  # J kg^-1 K^-1
 g = earth_standard_gravity = spc.g  # m s^-2
 stefan_boltzmann = 5.67e-8  # W m^-2 K^-4
 heat_of_vaporization = Lv = 2501000  # J kg^-1

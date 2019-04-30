@@ -75,7 +75,7 @@ class StratosphericUpwelling(Upwelling):
         dTdz = np.gradient(atmosphere['T'][0, :], atmosphere['z'][0, :])
 
         g = constants.g
-        Cp = constants.Cp
+        Cp = atmosphere.get_heat_capacity()
         Q = -self.w * (dTdz + g/Cp)
 
         return Q
