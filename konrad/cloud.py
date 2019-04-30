@@ -1,4 +1,34 @@
-"""This module contains classes for handling clouds."""
+"""This module contains a choice of clouds, which can be used either in the RCE
+simulations or simply for radiative flux or heating rate calculations.
+Depending on the choice of cloud, a certain set-up of the RRTMG radiation scheme
+must be used.
+
+**In an RCE simulation**
+
+Create an instance of a cloud class, *e.g.* a :py:class:`DirectInputCloud`,
+create an appropriate radiation model, and run an RCE simulation.
+    >>> import konrad
+    >>> cloudy_cloud = konrad.cloud.DirectInputCloud(
+    >>>     numlevels=..., cloud_fraction=..., lw_optical_thickness=...,
+    >>>     sw_optical_thickness=...)
+    >>> rt = konrad.radiation.RRTMG(
+    >>>     mcica=True, cloud_optical_properties='direct_input')
+    >>> rce = konrad.RCE(atmosphere=..., cloud=cloudy_cloud, radiation=rt)
+    >>> rce.run()
+
+**Calculating radiative fluxes or heating rates**
+
+Create an instance of a cloud class, *e.g.* a :py:class:`PhysicalCloud`,
+create an appropriate radiation model and run radiative transfer.
+    >>> import konrad
+    >>> another_cloud = konrad.cloud.PhysicalCloud(
+    >>>     numlevels=..., cloud_fraction=..., mass_ice=..., mass_water=...,
+    >>>     ice_particle_size=..., droplet_radius=...)
+    >>> rt = konrad.radiation.RRTMG(
+    >>>     mcica=True, cloud_optical_properties='liquid_and_ice_clouds')
+    >>> rt.calc_radiation(atmosphere=..., surface=..., cloud=another_cloud)
+
+"""
 import abc
 import logging
 
@@ -86,6 +116,16 @@ def get_waveband_data_array(values, units='dimensionless', numlevels=200,
 
 
 def get_rectangular_profile(z, value, ztop, depth):
+    """Produce a rectangular profile, an array containing zeros and the value
+    'value' corresponding to a certain height range.
+
+    Parameters:
+        z (ndarray): height
+        value (int/float): non-zero value / thickness of rectangle
+        ztop (int/float): height, indicating the top of the rectangle
+        depth (int/float): height, indicating the depth of the rectangle
+            ztop - depth gives the base of the rectangle
+    """
     p = np.zeros(z.shape)
     inrectangle = np.logical_and(z < ztop, z > ztop - depth)
     p[inrectangle] = value
@@ -97,7 +137,11 @@ class Cloud(metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all cloud handlers.
     Default properties include a cloud area fraction equal to zero everywhere
     (ie no cloud)."""
+
+    #: number of longwave bands used in the radiation scheme
     num_longwave_bands = 16
+
+    #: number of shortwave bands used in the radiation scheme
     num_shortwave_bands = 14
 
     def __init__(self, numlevels, cloud_fraction=0, mass_ice=0, mass_water=0,
@@ -105,7 +149,8 @@ class Cloud(metaclass=abc.ABCMeta):
                  lw_optical_thickness=0, sw_optical_thickness=0,
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9):
-        """Create a cloud.
+        """Create a cloud. Which of the input parameters are used and which
+        ignored depends on the set-up of the radiation scheme.
 
         Parameters:
             numlevels (int): Number of atmospheric levels.
@@ -185,6 +230,8 @@ class Cloud(metaclass=abc.ABCMeta):
 
 
 class ClearSky(Cloud):
+    """No cloud.
+    """
     def update_cloud_profile(self, *args, **kwargs):
         return
 
@@ -200,7 +247,7 @@ class PhysicalCloud(Cloud):
                  ice_particle_size, droplet_radius):
         """
         Parameters:
-            z (ndarray): an array with the size of the model levels
+            numlevels (int): Number of atmospheric levels.
             cloud_fraction (float / ndarray / DataArray): cloud area fraction
             mass_ice (float / ndarray / DataArray): mass content of cloud ice
                 [kg m-2]
@@ -231,6 +278,26 @@ class DirectInputCloud(Cloud):
     def __init__(self, numlevels, cloud_fraction, lw_optical_thickness,
                  sw_optical_thickness, forward_scattering_fraction=0,
                  asymmetry_parameter=0.85, single_scattering_albedo=0.9):
+
+        """Define a cloud based on properties that are directly used by the
+        radiation scheme, namely cloud optical depth and scattering parameters.
+
+        Parameters:
+            numlevels (int): Number of atmospheric levels.
+            cloud_fraction (float / ndarray / DataArray): cloud area fraction
+            lw_optical_thickness (float / DataArray): longwave optical
+                thickness of the cloud
+            sw_optical_thickness (float / DataArray): shortwave optical
+                thickness of the cloud
+            forward_scattering_fraction (float / DataArray): cloud forward
+                scattering fraction (for the shortwave component of RRTMG)
+                This is a scaling factor for the other shortwave parameters,
+                if it is set to 0, no scaling is applied.
+            asymmetry_parameter (float / DataArray): cloud asymmetry parameter
+                (for the shortwave component of RRTMG)
+            single_scattering_albedo (float / DataArray): single scattering
+                albedo due to cloud (for the shortwave component of RRTMG)
+        """
 
         super().__init__(
             numlevels=numlevels,
@@ -391,8 +458,22 @@ class LowCloud(DirectInputCloud):
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9):
         """
-        Additional parameters to parent class:
+        Parameters:
+            numlevels (int): Number of atmospheric levels
             height_of_cloud (float/int): height at which the cloud is fixed [m]
+            cloud_fraction (float / ndarray / DataArray): cloud area fraction
+            lw_optical_thickness (float / DataArray): longwave optical
+                thickness of the cloud
+            sw_optical_thickness (float / DataArray): shortwave optical
+                thickness of the cloud
+            forward_scattering_fraction (float / DataArray): cloud forward
+                scattering fraction (for the shortwave component of RRTMG)
+                This is a scaling factor for the other shortwave parameters,
+                if it is set to 0, no scaling is applied.
+            asymmetry_parameter (float / DataArray): cloud asymmetry parameter
+                (for the shortwave component of RRTMG)
+            single_scattering_albedo (float / DataArray): single scattering
+                albedo due to cloud (for the shortwave component of RRTMG)
         """
         super().__init__(
             numlevels=numlevels,

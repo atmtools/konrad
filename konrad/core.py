@@ -42,42 +42,56 @@ class RCE:
         """Set-up a radiative-convective model.
 
         Parameters:
-            atmosphere (Atmosphere): `konrad.atmosphere.Atmosphere`.
-            timestep (float or str): Model time step (per iteration).
-                If float, time step shall be given in days.
-                If str, a timedelta string may be given
-                (see :func:`konrad.utils.parse_fraction_of_day`).
-            max_duration (float or str): Maximum duration of the simulation.
-                The duration is given in model time:
-                  If float, maximum duration in days.
-                  If str, a timedelta string
-                  (see `konrad.utils.parse_fraction_of_day`).
+
+            atmosphere: :py:class:`konrad.atmosphere.Atmosphere`.
+
+            timestep (float or str): Model time step (per iteration)
+
+                * If float, time step in days.
+                * If str, a timedelta string (see :func:`konrad.utils.parse_fraction_of_day`).
+
+            max_duration (float or str): Maximum duration of the simulation
+                The duration is given in model time
+
+                * If float, maximum duration in days.
+                * If str, a timedelta string (see :func:`konrad.utils.parse_fraction_of_day`).
+
             outfile (str): netCDF4 file to store output.
+
             experiment (str): Experiment description (stored in netCDF output).
+
             writeevery (int, float or str): Set output frequency.
-                Values can be given in:
-                    int: Every nth iteration
-                    float: Every nth day in model time
-                    str: a timedelta string
-                    (see `konrad.utils.parse_fraction_of_day`).
+
+                * int: Every nth iteration
+                * float: Every nth day in model time
+                * str: a timedelta string (see :func:`konrad.utils.parse_fraction_of_day`).
+
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations. Values
                 are given in K/day.
+
             radiation (konrad.radiation): Radiation model.
                 Defaults to :class:`konrad.radiation.RRTMG`.
+
             ozone (konrad.ozone): Ozone model.
                 Defaults to :class:`konrad.ozone.OzonePressure`.
+
             humidity (konrad.humidity): Humidity model.
                 Defaults to :class:`konrad.humidity.FixedRH`.
+
             surface (konrad.surface): Surface model.
                 Defaults to :class:`konrad.surface.SurfaceHeatCapacity`.
+
             cloud (konrad.cloud): Cloud model.
                 Defaults to :class:`konrad.cloud.ClearSky`.
-            convection (konrad.humidity.Convection): Convection scheme.
+
+            convection (konrad.convection): Convection scheme.
                 Defaults to :class:`konrad.convection.HardAdjustment`.
-            lapserate (konrad.lapse.LapseRate): Lapse rate handler.
+
+            lapserate (konrad.lapserate): Lapse rate handler.
                 Defaults to :class:`konrad.lapserate.MoistLapseRate`.
-            upwelling (konrad.upwelling.Upwelling):
+
+            upwelling (konrad.upwelling): Upwelling model.
                 Defaults to :class:`konrad.upwelling.NoUpwelling`.
 
         """

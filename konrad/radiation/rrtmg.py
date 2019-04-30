@@ -20,6 +20,62 @@ class RRTMG(Radiation):
                  cloud_ice_properties='ebert_curry_two',
                  cloud_optical_properties='liquid_and_ice_clouds',
                  **kwargs):
+        """
+        Parameters:
+            zenith_angle (float): angle of the Sun [degrees].
+
+            diurnal_cycle (bool):
+
+                * :code:`True`  include a diurnal cycle
+
+                * :code:`False`  have a constant Sun
+
+            bias (dict-like): include bias corrections to the fluxes and/or
+                heating rates
+
+            solar_constant (int): [W m^-2]
+
+            mcica (bool):
+
+                * :code:`False`
+                    use the nomcica version of RRTMG (clear-sky or overcast)
+
+                * :code:`True`
+                    use the mcica version of RRTMG (needed for partly cloudy
+                    skies)
+
+            cloud_ice_properties (str):
+                Choose which method is used to calculate the cloud optical
+                properties of ice clouds from their physical properties.
+
+                * :code:`ebert_curry_one`
+                * :code:`ebert_curry_two`
+                * :code:`key_streamer_manual`
+                * :code:`fu`
+
+            cloud_optical_properties (str):
+                Choose how cloud properties are calculated. This must match
+                the choice of cloud class used!
+
+                * :code:`direct_input`
+                    Both cloud fraction and optical depth must be
+                    input directly to the :py:mod:`konrad.cloud` instance.
+                    Other cloud properties are irrelevant.
+
+                * :code:`single_cloud_type`
+                    Cloud fraction (1 or 0 at each level) and
+                    cloud physical properties are required as input. Ice and
+                    liquid water clouds are treated together, with a constant
+                    value of cloud absorptivity. Not available with mcica.
+
+                * :code:`liquid_and_ice_clouds`
+                    Cloud fraction and cloud physical properties are required
+                    as input. Ice and liquid clouds are treated separately.
+                    Cloud optical depth is calculated from the cloud ice and
+                    water particle sizes and the mass content of cloud and
+                    water.
+
+        """
         super().__init__(*args, **kwargs)
         self._state_lw = None
         self._state_sw = None

@@ -1,5 +1,31 @@
 # -*- coding: utf-8 -*-
-"""This module contains classes handling different treatments of ozone."""
+"""This module contains classes handling different treatments of ozone.
+The ozone models can either be used in RCE simulations, or it may be of
+interest to run the :py:class:`Cariolle` or :py:class:`Simotrostra` models with
+a fixed atmospheric temperature profile.
+
+**In an RCE simulation**
+
+Create an instance of an ozone class, *e.g.* :py:class:`OzoneHeight`, and use it
+in an RCE simulation.
+    >>> import konrad
+    >>> ozone_fixed_with_height = konrad.ozone.OzoneHeight()
+    >>> rce = konrad.RCE(atmosphere=..., ozone=ozone_fixed_with_height)
+    >>> rce.run()
+
+**Run an ozone model**
+
+Create an ozone model, *e.g.* :py:class:`Cariolle`, and run the ozone model for
+a fixed temperature profile.
+    >>> import konrad
+    >>> ozone_model = konrad.ozone.Cariolle(w=...)
+    >>> atmosphere = konrad.atmosphere.Atmosphere(plev=...)
+    >>> atmosphere['T'][0] = ...  # set the temperature profile
+    >>> atmosphere['O3'][0] = ...  # set the initial ozone profile
+    >>> for iteration in range(0, ...):
+    >>>     ozone_model(atmosphere=atmosphere, timestep=...)
+    >>> final_ozone_profile = atmosphere['O3'][-1]
+"""
 
 import os
 import abc
