@@ -8,7 +8,7 @@ from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.component import Component
-from konrad.utils import append_description
+from konrad.radiation.common import fluxes2heating
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,30 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         self.calc_radiation(atmosphere, surface, cloud)
 
         # self.correct_bias(rad_dataset)
+
+        self['sw_htngrt'][-1] = fluxes2heating(
+            net_fluxes=self['sw_flxu'][-1] - self['sw_flxd'][-1],
+            pressure=atmosphere['phlev'],
+            cp=atmosphere.get_heat_capacity(),
+        )
+
+        self['sw_htngrt_clr'][-1] = fluxes2heating(
+            net_fluxes=self['sw_flxu_clr'][-1] - self['sw_flxd_clr'][-1],
+            pressure=atmosphere['phlev'],
+            cp=atmosphere.get_heat_capacity(),
+        )
+
+        self['lw_htngrt'][-1] = fluxes2heating(
+            net_fluxes=self['lw_flxu'][-1] - self['lw_flxd'][-1],
+            pressure=atmosphere['phlev'],
+            cp=atmosphere.get_heat_capacity(),
+        )
+
+        self['lw_htngrt_clr'][-1] = fluxes2heating(
+            net_fluxes=self['lw_flxu_clr'][-1] - self['lw_flxd_clr'][-1],
+            pressure=atmosphere['phlev'],
+            cp=atmosphere.get_heat_capacity(),
+        )
 
         self.derive_diagnostics()
 
