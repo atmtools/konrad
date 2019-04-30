@@ -4,6 +4,7 @@ import typhon
 import netCDF4
 import numpy as np
 from scipy.interpolate import interp1d
+from copy import copy
 
 from konrad import constants
 from konrad import utils
@@ -254,6 +255,24 @@ class Atmosphere(Component):
 
         # Calculate the geopotential height.
         new_atmosphere.update_height()
+
+        return new_atmosphere
+
+    def copy(self):
+        """Create a copy of the atmosphere.
+
+        Returns:
+            konrad.atmosphere: copy of the atmosphere
+        """
+        datadict = dict()
+        datadict['plev'] = copy(self['plev'])  # Copy pressure grid.
+
+        # Create copies (and not references) of all atmospheric variables.
+        for variable in self.atmosphere_variables:
+            datadict[variable] = copy(self[variable]).ravel()
+
+        # Create a new atmosphere object from the filled data directory.
+        new_atmosphere = type(self).from_dict(datadict)
 
         return new_atmosphere
 
