@@ -205,7 +205,7 @@ class RCE:
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
-            atmosphere_old = self.atmosphere.copy_atmosphere()
+            atmosphere_old = self.atmosphere.copy()
             T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.

@@ -373,7 +373,7 @@ class HardAdjustment(Convection):
 
         eff_Cp_s = surface.heat_capacity
 
-        atmosphere_con = atmosphere.copy_atmosphere()
+        atmosphere_con = atmosphere.copy()
         update_temporary_atmosphere(atmosphere_con, T_con, humidity)
 
         h2o_old = water_vapour_profile(atmosphere_old)

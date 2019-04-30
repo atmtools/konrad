@@ -258,7 +258,7 @@ class Atmosphere(Component):
 
         return new_atmosphere
 
-    def copy_atmosphere(self):
+    def copy(self):
         """Create a copy of the atmosphere.
 
         Returns:
