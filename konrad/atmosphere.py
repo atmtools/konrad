@@ -424,6 +424,21 @@ class Atmosphere(Component):
 
         return max_plev
 
+    def get_heat_capacity(self):
+        r"""Calculate specific heat capacity at constant pressure of moist air
+
+        .. math::
+            c_p = X \cdot (c_{p,v} - c_{p,d}) + c_{p,d}
+
+        Returns:
+            ndarray: Heat capacity [J/K/kg].
+        """
+        cpd = constants.isobaric_mass_heat_capacity_dry_air
+        cpv = constants.isobaric_mass_heat_capacity_water_vapor
+        x = self['H2O'][-1]
+
+        return x * (cpv - cpd) + cpd
+
     def tracegases_rcemip(self):
         """Set trace gas concentrations according to the RCE-MIP configuration.
 
