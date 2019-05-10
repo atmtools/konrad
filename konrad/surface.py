@@ -44,12 +44,12 @@ class Surface(Component, metaclass=abc.ABCMeta):
         Parameters:
             albedo (float): Surface albedo. The default value of 0.2 is a
                 decent choice for clear-sky simulation in the tropics.
-            temperature (float): Surface temperature [K].
-            height (float): Surface height [m].
+            temperature (int / float): Surface temperature [K].
+            height (int / float): Surface height [m].
         """
         self.albedo = albedo
         self.height = height
-        self['temperature'] = (('time',), np.array([temperature]))
+        self['temperature'] = (('time',), np.array([temperature], dtype=float))
 
         # The surface pressure is initialized before the first iteration
         # within the RCE framework to ensure a pressure that is consistent
