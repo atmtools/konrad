@@ -21,6 +21,28 @@ from konrad import constants
 from konrad.component import Component
 
 
+def cooling_rates(T, z, w, base_level):
+    """Get cooling rates associated with the upwelling velocity w.
+
+    Parameters:
+        T (ndarray): temperature profile [K]
+        z (ndarray): height array [m]
+        w (int/float/ndarray): upwelling velocity [m/day]
+        base_level (int): model level index of the base level of the upwelling,
+            below this no upwelling is applied
+    Returns:
+        ndarray: heating rate profile [K/day]
+    """
+    dTdz = np.gradient(T, z)
+
+    g = constants.g
+    Cp = constants.Cp
+    Q = -w * (dTdz + g / Cp)
+    Q[:base_level] = 0
+
+    return Q
+
+
 class Upwelling(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all upwelling handlers."""
 
@@ -57,25 +79,32 @@ class StratosphericUpwelling(Upwelling):
         """Apply cooling above the convective top (level where the net
         radiative heating becomes small)."""
 
-        Q = self.coolingrates(atmosphere)
-        T = atmosphere['T'][0, :]
-
+        # get the base level for the upwelling
         if self.lowest_level is not None:
             contopi = self.lowest_level
         else:
             contopi = convection.get('convective_top_index')[0]
-            if contopi is np.nan:
+            if np.isnan(contopi):
+                # if convection hasn't been applied and a lowest level for the
+                # upwelling has not been specified, upwelling is not applied
                 return
         contopi = int(np.round(contopi))
-        T_new = T[contopi:] + Q[contopi:] * timestep
-        atmosphere['T'][0, contopi:] = T_new
 
-    def coolingrates(self, atmosphere):
-        """Get cooling rates associated with the upwelling velocity w."""
-        dTdz = np.gradient(atmosphere['T'][0, :], atmosphere['z'][0, :])
+        T = atmosphere['T'][0, :]
+        z = atmosphere['z'][0, :]
+        Q = cooling_rates(T, z, self.w, contopi)
 
-        g = constants.g
-        Cp = atmosphere.get_heat_capacity()
-        Q = -self.w * (dTdz + g/Cp)
+        atmosphere['T'][0, :] += Q * timestep
 
-        return Q
+
+class SpecifiedCooling(Upwelling):
+    """Include an upwelling with specified cooling"""
+    def __init__(self, Q):
+        """
+        Parameters:
+            Q (ndarray): heating rate profile [K/day]
+        """
+        self._Q = Q
+
+    def cool(self, atmosphere, timestep, **kwargs):
+        atmosphere['T'][0, :] += self._Q * timestep
