@@ -17,7 +17,6 @@ class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
 
     def __init__(self, *args, solar_constant=510, mcica=False,
-                 cloud_ice_properties='ebert_curry_two',
                  **kwargs):
         """
         Parameters:
@@ -43,15 +42,6 @@ class RRTMG(Radiation):
                     use the mcica version of RRTMG (needed for partly cloudy
                     skies)
 
-            cloud_ice_properties (str):
-                Choose which method is used to calculate the cloud optical
-                properties of ice clouds from their physical properties.
-
-                * :code:`ebert_curry_one`
-                * :code:`ebert_curry_two`
-                * :code:`key_streamer_manual`
-                * :code:`fu`
-
         """
         super().__init__(*args, **kwargs)
         self._state_lw = None
@@ -61,10 +51,11 @@ class RRTMG(Radiation):
         self._rad_sw = None
 
         self._mcica = mcica
-        self._cloud_ice_properties = cloud_ice_properties
 
-        # This is set in the first call and depends on the cloud type.
+        # These are set in the first call and depend on properties set in the
+        # cloud class or instance.
         self._cloud_optical_properties = None
+        self._cloud_ice_properties = None
 
         self.solar_constant = solar_constant
 
@@ -254,6 +245,7 @@ class RRTMG(Radiation):
         """
         if self._state_lw is None or self._state_sw is None:  # first time only
             self._cloud_optical_properties = cloud._rrtmg_cloud_optical_properties
+            self._cloud_ice_properties = cloud._rrtmg_cloud_ice_properties
             self._state_lw, self._state_sw = self.init_radiative_state(
                     atmosphere)
             self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)

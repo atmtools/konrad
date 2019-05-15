@@ -149,7 +149,9 @@ class Cloud(metaclass=abc.ABCMeta):
                  lw_optical_thickness=0, sw_optical_thickness=0,
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9,
-                 rrtmg_cloud_optical_properites='liquid_and_ice_clouds'):
+                 rrtmg_cloud_optical_properites='liquid_and_ice_clouds',
+                 rrtmg_cloud_ice_properties='ebert_curry_two',
+                 ):
         """Create a cloud. Which of the input parameters are used and which
         ignored depends on the set-up of the radiation scheme.
 
@@ -207,6 +209,15 @@ class Cloud(metaclass=abc.ABCMeta):
                     Cloud optical depth is calculated from the cloud ice and
                     water particle sizes and the mass content of cloud and
                     water.
+
+            rrtmg_cloud_ice_properties (str):
+                Choose which method is used to calculate the cloud optical
+                properties of ice clouds from their physical properties.
+
+                * :code:`ebert_curry_one`
+                * :code:`ebert_curry_two`
+                * :code:`key_streamer_manual`
+                * :code:`fu`
         """
         self.numlevels = numlevels
 
@@ -242,6 +253,7 @@ class Cloud(metaclass=abc.ABCMeta):
             single_scattering_albedo, numlevels=self.numlevels)
 
         self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properites
+        self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
