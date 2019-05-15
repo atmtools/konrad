@@ -112,6 +112,7 @@ class RCE:
                                           Cloud,
                                           ClearSky(self.atmosphere['plev'].size)
                                           )
+
         self.convection = utils.return_if_type(convection, 'convection',
                                                Convection, HardAdjustment())
 
