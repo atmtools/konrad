@@ -45,11 +45,19 @@ def cooling_rates(T, z, w, Cp, base_level):
 
 
 def bdc_profile(norm_level):
-    """Define Brewer-Dobson circulation velocity [mm/s] based on the three
-    reanalyses shown in Abalos et al. 2015 (doi: 10.1002/2015JD023182)
+    """Return the Brewer-Dobson circulation velocity.
+
+    The value is based on the three reanalyses shown in Abalos et al. (2015).
+
+    References:
+        Abalos et al. 2015 (doi: 10.1002/2015JD023182)
 
     Parameters:
         norm_level (float/int): normalisation pressure level [Pa]
+
+    Returns:
+        callable: Brewer-Dobson circulation velocity [m / day] as a function
+            of pressure [Pa]
     """
     p = np.array([100, 80, 70, 60, 50, 40, 30, 20, 10])*100
     bdc = np.array([0.28, 0.24, 0.23, 0.225, 0.225, 0.24, 0.27, 0.32, 0.42]
