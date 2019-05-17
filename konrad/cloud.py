@@ -148,33 +148,76 @@ class Cloud(metaclass=abc.ABCMeta):
                  ice_particle_size=20, droplet_radius=10,
                  lw_optical_thickness=0, sw_optical_thickness=0,
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
-                 single_scattering_albedo=0.9):
+                 single_scattering_albedo=0.9,
+                 rrtmg_cloud_optical_properites='liquid_and_ice_clouds',
+                 rrtmg_cloud_ice_properties='ebert_curry_two',
+                 ):
         """Create a cloud. Which of the input parameters are used and which
         ignored depends on the set-up of the radiation scheme.
 
         Parameters:
             numlevels (int): Number of atmospheric levels.
+
             cloud_fraction (float / ndarray / DataArray): cloud area fraction
+
             mass_ice (float / ndarray / DataArray): mass content of cloud ice
                 [kg m-2]
+
             mass_water (float / ndarray / DataArray): mass content of cloud
                 liquid water [kg m-2]
+
             ice_particle_size (float / ndarray / DataArray): cloud ice particle
                 size [micrometers]
+
             droplet_radius (float / ndarray / DataArray): cloud water droplet
                 radius [micrometers]
+
             lw_optical_thickness (float / DataArray): longwave optical
                 thickness of the cloud
+
             sw_optical_thickness (float / DataArray): shortwave optical
                 thickness of the cloud
+
             forward_scattering_fraction (float / DataArray): cloud forward
                 scattering fraction (for the shortwave component of RRTMG)
                 This is a scaling factor for the other shortwave parameters,
                 if it is set to 0, no scaling is applied.
+
             asymmetry_parameter (float / DataArray): cloud asymmetry parameter
                 (for the shortwave component of RRTMG)
+
             single_scattering_albedo (float / DataArray): single scattering
                 albedo due to cloud (for the shortwave component of RRTMG)
+
+            rrtmg_cloud_optical_properties (str):
+                Choose how cloud properties are calculated by RRTMG.
+
+                * :code:`direct_input`
+                    Both cloud fraction and optical depth must be
+                    input directly to the :py:mod:`konrad.cloud` instance.
+                    Other cloud properties are irrelevant.
+
+                * :code:`single_cloud_type`
+                    Cloud fraction (1 or 0 at each level) and
+                    cloud physical properties are required as input. Ice and
+                    liquid water clouds are treated together, with a constant
+                    value of cloud absorptivity. Not available with mcica.
+
+                * :code:`liquid_and_ice_clouds`
+                    Cloud fraction and cloud physical properties are required
+                    as input. Ice and liquid clouds are treated separately.
+                    Cloud optical depth is calculated from the cloud ice and
+                    water particle sizes and the mass content of cloud and
+                    water.
+
+            rrtmg_cloud_ice_properties (str):
+                Choose which method is used to calculate the cloud optical
+                properties of ice clouds from their physical properties.
+
+                * :code:`ebert_curry_one`
+                * :code:`ebert_curry_two`
+                * :code:`key_streamer_manual`
+                * :code:`fu`
         """
         self.numlevels = numlevels
 
@@ -200,7 +243,7 @@ class Cloud(metaclass=abc.ABCMeta):
             forward_scattering_fraction, numlevels=self.numlevels)
 
         self.cloud_asymmetry_parameter = get_waveband_data_array(
-            asymmetry_parameter,numlevels=self.numlevels)
+            asymmetry_parameter, numlevels=self.numlevels)
 
         self.shortwave_optical_thickness_due_to_cloud = \
             get_waveband_data_array(sw_optical_thickness,
@@ -208,6 +251,9 @@ class Cloud(metaclass=abc.ABCMeta):
 
         self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
             single_scattering_albedo, numlevels=self.numlevels)
+
+        self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properites
+        self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
@@ -264,7 +310,8 @@ class PhysicalCloud(Cloud):
             mass_ice=mass_ice,
             mass_water=mass_water,
             ice_particle_size=ice_particle_size,
-            droplet_radius=droplet_radius
+            droplet_radius=droplet_radius,
+            rrtmg_cloud_optical_properites='liquid_and_ice_clouds'
         )
 
     def update_cloud_profile(self, *args, **kwargs):
@@ -306,7 +353,8 @@ class DirectInputCloud(Cloud):
             sw_optical_thickness=sw_optical_thickness,
             forward_scattering_fraction=forward_scattering_fraction,
             asymmetry_parameter=asymmetry_parameter,
-            single_scattering_albedo=single_scattering_albedo
+            single_scattering_albedo=single_scattering_albedo,
+            rrtmg_cloud_optical_properites='direct_input'
         )
 
         self._norm_index = None
@@ -482,7 +530,7 @@ class LowCloud(DirectInputCloud):
             sw_optical_thickness=sw_optical_thickness,
             forward_scattering_fraction=forward_scattering_fraction,
             asymmetry_parameter=asymmetry_parameter,
-            single_scattering_albedo=single_scattering_albedo
+            single_scattering_albedo=single_scattering_albedo,
         )
 
         self._z_of_cloud = height_of_cloud
