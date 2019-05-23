@@ -149,8 +149,9 @@ class CoupledUpwelling(StratosphericUpwelling):
         if self._norm_plev is None:  # first time only and if not specified
             above_level_index = convection.get('convective_top_index')[0]
             if np.isnan(above_level_index):
-                # TODO: what if there is no convective top
-                return
+                raise ValueError(
+                    'No convective top found and no input normalisation level '
+                    'for the coupled upwelling.')
             above_level_index = int(np.round(above_level_index))
             self._norm_plev = atmosphere['plev'][above_level_index]
 
