@@ -72,12 +72,13 @@ class Upwelling(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all upwelling handlers."""
 
     @abc.abstractmethod
-    def cool(self, atmosphere, radheat, timestep):
+    def cool(self, atmosphere, convection, timestep):
         """ Cool the atmosphere according to an upwelling.
+
         Parameters:
-              atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
-              radheat (ndarray): Radiative heatingrate [K/day].
-              timestep (float): Timestep width [day].
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            convection (konrad.convection): Convection model.
+            timestep (float): Timestep width [day].
         """
 
 
@@ -102,7 +103,13 @@ class StratosphericUpwelling(Upwelling):
 
     def cool(self, atmosphere, convection, timestep):
         """Apply cooling above the convective top (level where the net
-        radiative heating becomes small)."""
+        radiative heating becomes small).
+
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            convection (konrad.convection): Convection model.
+            timestep (float): Timestep width [day].
+        """
 
         T = atmosphere['T'][0, :]
         z = atmosphere['z'][0, :]
@@ -133,19 +140,38 @@ class SpecifiedCooling(Upwelling):
         self._Q = Q
 
     def cool(self, atmosphere, timestep, **kwargs):
+        """Cool according to specified cooling rates.
+
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            timestep (float): Timestep width [day].
+        """
         atmosphere['T'][0, :] += self._Q * timestep
 
 
 class CoupledUpwelling(StratosphericUpwelling):
-
+    """Include an upwelling based on reanalysis values for the BDC strength
+    and coupled to the convective top."""
     def __init__(self, norm_plev=None):
-
+        """
+        Parameters:
+            norm_plev (float/int): pressure [Pa] to be used for the
+                normalisation. This should be the convective top of the
+                atmospheric state used for the initialisation.
+        """
         self._norm_plev = norm_plev
         self._w = None
         self._f = None
 
     def cool(self, atmosphere, convection, timestep):
+        """Shift the upwelling velocities according to the convective top level
+        and apply the cooling only above the convective top.
 
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+            convection (konrad.convection): Convection model.
+            timestep (float): Timestep width [day].
+        """
         if self._norm_plev is None:  # first time only and if not specified
             above_level_index = convection.get('convective_top_index')[0]
             if np.isnan(above_level_index):
