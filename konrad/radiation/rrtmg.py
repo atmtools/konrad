@@ -59,7 +59,7 @@ class RRTMG(Radiation):
 
         self.solar_constant = solar_constant
 
-    def init_radiative_state(self, atmosphere):
+    def init_radiative_state(self, atmosphere, surface):
 
         climt.set_constants_from_dict({"stellar_irradiance": {
                 "value": self.solar_constant, "units": 'W m^-2'}})
@@ -116,7 +116,7 @@ class RRTMG(Radiation):
                 dims=('num_longwave_bands', 'mid_levels'),
                 attrs={'units': 'dimensionless'})
         state_lw['surface_longwave_emissivity'] = DataArray(
-            np.ones((num_lw_bands,)),
+            surface.longwave_emissivity * np.ones((num_lw_bands,)),
             dims=('num_longwave_bands'),
             attrs={'units': 'dimensionless'})
 
@@ -132,9 +132,14 @@ class RRTMG(Radiation):
             0, attrs={'units': 'dimensionless'})
         state_sw['flux_adjustment_for_earth_sun_distance'] = DataArray(
             1, attrs={'units': 'dimensionless'})
-        state_sw['zenith_angle'] = DataArray(
-            np.array(np.deg2rad(self.current_solar_angle)),
-            attrs={'units': 'radians'})
+
+        for surface_albedo in ['surface_albedo_for_diffuse_near_infrared',
+                               'surface_albedo_for_direct_near_infrared',
+                               'surface_albedo_for_diffuse_shortwave',
+                               'surface_albedo_for_direct_shortwave']:
+            state_sw[surface_albedo] = DataArray(
+                np.array(float(surface.albedo)),
+                attrs={'units': 'dimensionless'})
 
         for quant in ['shortwave_optical_thickness_due_to_aerosol',
                       'single_scattering_albedo_due_to_aerosol',
@@ -215,16 +220,7 @@ class RRTMG(Radiation):
             np.array(surface['temperature'][-1]),
             attrs={'units': 'degK'})
 
-        if sw:  # surface properties required only for shortwave
-            for surface_albedo in ['surface_albedo_for_diffuse_near_infrared',
-                                   'surface_albedo_for_direct_near_infrared',
-                                   'surface_albedo_for_diffuse_shortwave',
-                                   'surface_albedo_for_direct_shortwave']:
-                state0[surface_albedo] = DataArray(
-                    np.array(float(surface.albedo)),
-                    attrs={'units': 'dimensionless'})
-
-            # Sun
+        if sw:  # properties required only for shortwave
             state0['zenith_angle'] = DataArray(
                 np.array(np.deg2rad(self.current_solar_angle)),
                 attrs={'units': 'radians'})
@@ -247,7 +243,7 @@ class RRTMG(Radiation):
             self._cloud_optical_properties = cloud._rrtmg_cloud_optical_properties
             self._cloud_ice_properties = cloud._rrtmg_cloud_ice_properties
             self._state_lw, self._state_sw = self.init_radiative_state(
-                    atmosphere)
+                    atmosphere, surface)
             self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)
             self.update_cloudy_radiative_state(cloud, self._state_sw, sw=True)
 
