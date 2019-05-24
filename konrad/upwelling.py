@@ -20,6 +20,7 @@ from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.component import Component
+from konrad.constants import meters_per_day
 
 
 def cooling_rates(T, z, w, Cp, base_level):
@@ -59,11 +60,12 @@ def bdc_profile(norm_level):
         callable: Brewer-Dobson circulation velocity [m / day] as a function
             of pressure [Pa]
     """
-    p = np.array([100, 80, 70, 60, 50, 40, 30, 20, 10])*100
+    p = np.array([100, 80, 70, 60, 50, 40, 30, 20, 10])*100  # [Pa]
     bdc = np.array([0.28, 0.24, 0.23, 0.225, 0.225, 0.24, 0.27, 0.32, 0.42]
-                   )*86.4  # [m / day]
+                   )*meters_per_day  # [m / day]
     f = interp1d(np.log(p/norm_level), bdc,
-                 fill_value=(0.42*86.4, 0.28*86.4), bounds_error=False,
+                 fill_value=(0.42*meters_per_day, 0.28*meters_per_day),
+                 bounds_error=False,
                  kind='quadratic')
     return f
 
@@ -98,7 +100,7 @@ class StratosphericUpwelling(Upwelling):
             lowest_level (int or None): The index of the lowest level to which
                 the upwelling is applied. If none, uses the top of convection.
         """
-        self._w = w * 86.4  # in m/day
+        self._w = w * meters_per_day  # in m/day
         self.lowest_level = lowest_level
 
     def cool(self, atmosphere, convection, timestep):
