@@ -20,6 +20,7 @@ molar_gas_constant_dry_air = molar_Rd = spc.gas_constant  # J mol^-1 K^-1
 avogadro = tyc.avogadro  # molecules per mole
 triple_point_water = 273.16  # K
 seconds_in_a_day = 24 * 60 * 60  # s
+meters_per_day = seconds_in_a_day * 0.001  # to convert from mm s^-1 to m/day
 
 # Variable descriptions
 variable_description = {
@@ -289,6 +290,11 @@ variable_description = {
     },
     'ozone_sink_hox': {
         'units': 'ppv / day',
+        'dims': ('time', 'plev'),
+    },
+    # Upwelling
+    'w': {
+        'units': 'm / day',
         'dims': ('time', 'plev'),
     }
 }
