@@ -68,6 +68,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         self['sw_flxd_clr'] = (('time', 'phlev'), None)
 
         self['net_htngrt'] = (('time', 'plev'), None)
+        self['net_htngrt_clr'] = (('time', 'plev'), None)
         self['toa'] = (('time',), None)
 
     @abc.abstractmethod
@@ -140,6 +141,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         """Derive diagnostic variables from radiative transfer results."""
         # Net heating rate.
         self['net_htngrt'] = self['lw_htngrt'] + self['sw_htngrt']
+        self['net_htngrt_clr'] = self['lw_htngrt_clr'] + self['sw_htngrt_clr']
 
         # Radiation budget at top of the atmosphere (TOA).
         self['toa'] = (
