@@ -78,8 +78,9 @@ class MoistLapseRate(LapseRate):
         gamma_m = (gamma_d * ((1 + (L * w_saturated) / (Rd * T)) /
                               (1 + (L**2 * w_saturated) / (Cp * Rv * T**2))
                               )
-        )
-        lapse = interp1d(p, gamma_m, fill_value='extrapolate')(phlev[:-1])
+                   )
+        lapse = interp1d(np.log(p), gamma_m, fill_value='extrapolate')(
+            np.log(phlev[:-1]))
 
         if self.fixed:
             self._lapse_cache = lapse
