@@ -416,7 +416,8 @@ class DirectInputCloud(Cloud):
         interpolation_f = interp1d(
             normed_levels,
             cloud_parameter.values,
-            fill_value='extrapolate',
+            fill_value=0,
+            bounds_error=False,
             axis=0,
         )
         return interpolation_f
