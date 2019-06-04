@@ -426,7 +426,7 @@ class DirectInputCloud(Cloud):
             cloud_parameter (DataArray): cloud property to be shifted
             interpolation_f (scipy.interpolate.interpolate.interp1d):
                 interpolation object calculated by interpolation_function
-            norm_new (int / float): normalisation index [model level]
+            norm_new (int): normalisation index [model level]
 
         Returns:
             DataArray: shifted cloud property
@@ -485,7 +485,9 @@ class HighCloud(DirectInputCloud):
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Keep the cloud attached to the convective top. """
         self.shift_cloud_profile(
-            norm_new=convection.get('convective_top_index')[0],
+            norm_new=np.int(
+                np.round(convection.get('convective_top_index')[0])
+            ),
         )
 
 
