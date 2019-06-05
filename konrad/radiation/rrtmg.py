@@ -1,9 +1,11 @@
 """Define an interface for the RRTMG radiation scheme (through CliMT). """
+from copy import deepcopy
 import numpy as np
 import datetime
 from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
 import climt
+import logging
 
 from .radiation import Radiation
 from konrad.cloud import ClearSky
@@ -63,18 +65,22 @@ class RRTMG(Radiation):
 
         climt.set_constants_from_dict({"stellar_irradiance": {
                 "value": self.solar_constant, "units": 'W m^-2'}})
+        if self._mcica:
+            overlap = 'maximum_random'
+        else:
+            overlap = 'random'
         self._rad_lw = climt.RRTMGLongwave(
             cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
-            cloud_overlap_method='maximum_random',
+            cloud_overlap_method=overlap,
             mcica=self._mcica)
         self._rad_sw = climt.RRTMGShortwave(
             ignore_day_of_year=True,
             cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
-            cloud_overlap_method='maximum_random',
+            cloud_overlap_method=overlap,
             mcica=self._mcica)
         state_lw = {}
         state_sw = {}
@@ -262,6 +268,44 @@ class RRTMG(Radiation):
 
         return lw_fluxes, sw_fluxes
 
+    def calc_cloudy_nomcica_radiation(self, atmosphere, surface, cloud):
+
+        cloud_fraction = deepcopy(cloud.cloud_area_fraction_in_atmosphere_layer)
+
+        if self._state_sw is None:  # first time only
+            cf_cloudy = cloud_fraction[cloud_fraction != 0]
+            if cf_cloudy.shape[0] != 0:
+                if not np.all(cf_cloudy == cf_cloudy[0]):
+                    logging.warning(
+                        'The konrad implementation of nomcica with partial '
+                        'cloud fraction is only suitable for a single '
+                        'rectangular cloud. Consider using mcica instead.')
+
+        cf_max = np.max(cloud_fraction)
+
+        # Calculate overcast and clear sky radiative fluxes.
+        # Make all the cloudy layers overcast, so that the nomcica version of
+        # RRTMG can be used in the shortwave - all wavelengths see cloud.
+        # Use the same approach for the longwave for consistency.
+        cloud.cloud_area_fraction_in_atmosphere_layer[cloud_fraction != 0] = 1
+        lw_overcast, sw_overcast = self.radiative_fluxes(
+            atmosphere, surface, cloud
+        )
+        lw_fluxes, sw_fluxes = lw_overcast[1], sw_overcast[1]
+
+        # Combine overcast and clear sky fluxes and heating rates to get the
+        # all sky fluxes and heating rates.
+        for fluxes in lw_fluxes, sw_fluxes:
+            for key in fluxes.keys():
+                if 'clear_sky' not in key:
+                    clear_part = fluxes[key + '_assuming_clear_sky'][:]
+                    fluxes[key][:] *= cf_max  # weighted by cloud area fraction
+                    fluxes[key][:] += (1 - cf_max) * clear_part
+
+        cloud.cloud_area_fraction_in_atmosphere_layer *= cloud_fraction
+
+        return lw_fluxes, sw_fluxes
+
     def calc_radiation(self, atmosphere, surface, cloud):
         """Updates the shortwave, longwave and net heatingrates.
         Converts output from radiative_fluxes to be in the format required for
@@ -272,10 +316,14 @@ class RRTMG(Radiation):
             surface (konrad.surface): Surface model.
             cloud (konrad.cloud): cloud model
         """
-        lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(atmosphere, surface,
-                                                           cloud)
-        lw_fluxes = lw_dT_fluxes[1]
-        sw_fluxes = sw_dT_fluxes[1]
+        if not self._mcica and not isinstance(cloud, ClearSky):
+            lw_fluxes, sw_fluxes = self.calc_cloudy_nomcica_radiation(
+                atmosphere, surface, cloud)
+        else:
+            lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(
+                atmosphere, surface, cloud)
+            lw_fluxes = lw_dT_fluxes[1]
+            sw_fluxes = sw_dT_fluxes[1]
 
         self['lw_htngrt'] = np.expand_dims(
                 lw_fluxes['air_temperature_tendency_from_longwave'].data, 0)
