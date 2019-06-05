@@ -149,7 +149,7 @@ class Cloud(metaclass=abc.ABCMeta):
                  lw_optical_thickness=0, sw_optical_thickness=0,
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9,
-                 rrtmg_cloud_optical_properites='liquid_and_ice_clouds',
+                 rrtmg_cloud_optical_properties='liquid_and_ice_clouds',
                  rrtmg_cloud_ice_properties='ebert_curry_two',
                  ):
         """Create a cloud. Which of the input parameters are used and which
@@ -252,7 +252,7 @@ class Cloud(metaclass=abc.ABCMeta):
         self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
             single_scattering_albedo, numlevels=self.numlevels)
 
-        self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properites
+        self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properties
         self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
 
     @classmethod
@@ -311,7 +311,7 @@ class PhysicalCloud(Cloud):
             mass_water=mass_water,
             ice_particle_size=ice_particle_size,
             droplet_radius=droplet_radius,
-            rrtmg_cloud_optical_properites='liquid_and_ice_clouds'
+            rrtmg_cloud_optical_properties='liquid_and_ice_clouds'
         )
 
     def update_cloud_profile(self, *args, **kwargs):
@@ -356,7 +356,7 @@ class DirectInputCloud(Cloud):
             forward_scattering_fraction=forward_scattering_fraction,
             asymmetry_parameter=asymmetry_parameter,
             single_scattering_albedo=single_scattering_albedo,
-            rrtmg_cloud_optical_properites='direct_input'
+            rrtmg_cloud_optical_properties='direct_input'
         )
 
         self._norm_index = norm_index
