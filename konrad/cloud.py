@@ -149,7 +149,7 @@ class Cloud(metaclass=abc.ABCMeta):
                  lw_optical_thickness=0, sw_optical_thickness=0,
                  forward_scattering_fraction=0, asymmetry_parameter=0.85,
                  single_scattering_albedo=0.9,
-                 rrtmg_cloud_optical_properites='liquid_and_ice_clouds',
+                 rrtmg_cloud_optical_properties='liquid_and_ice_clouds',
                  rrtmg_cloud_ice_properties='ebert_curry_two',
                  ):
         """Create a cloud. Which of the input parameters are used and which
@@ -252,7 +252,7 @@ class Cloud(metaclass=abc.ABCMeta):
         self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
             single_scattering_albedo, numlevels=self.numlevels)
 
-        self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properites
+        self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properties
         self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
 
     @classmethod
@@ -311,7 +311,7 @@ class PhysicalCloud(Cloud):
             mass_water=mass_water,
             ice_particle_size=ice_particle_size,
             droplet_radius=droplet_radius,
-            rrtmg_cloud_optical_properites='liquid_and_ice_clouds'
+            rrtmg_cloud_optical_properties='liquid_and_ice_clouds'
         )
 
     def update_cloud_profile(self, *args, **kwargs):
@@ -324,7 +324,8 @@ class DirectInputCloud(Cloud):
     """
     def __init__(self, numlevels, cloud_fraction, lw_optical_thickness,
                  sw_optical_thickness, forward_scattering_fraction=0,
-                 asymmetry_parameter=0.85, single_scattering_albedo=0.9):
+                 asymmetry_parameter=0.85, single_scattering_albedo=0.9,
+                 norm_index=None):
 
         """Define a cloud based on properties that are directly used by the
         radiation scheme, namely cloud optical depth and scattering parameters.
@@ -344,6 +345,7 @@ class DirectInputCloud(Cloud):
                 (for the shortwave component of RRTMG)
             single_scattering_albedo (float / DataArray): single scattering
                 albedo due to cloud (for the shortwave component of RRTMG)
+            norm_index (int / None): model level index for coupling the cloud
         """
 
         super().__init__(
@@ -354,10 +356,10 @@ class DirectInputCloud(Cloud):
             forward_scattering_fraction=forward_scattering_fraction,
             asymmetry_parameter=asymmetry_parameter,
             single_scattering_albedo=single_scattering_albedo,
-            rrtmg_cloud_optical_properites='direct_input'
+            rrtmg_cloud_optical_properties='direct_input'
         )
 
-        self._norm_index = None
+        self._norm_index = norm_index
         self._interp_cldf = None
         self._interp_sw = None
         self._interp_lw = None
@@ -414,7 +416,8 @@ class DirectInputCloud(Cloud):
         interpolation_f = interp1d(
             normed_levels,
             cloud_parameter.values,
-            fill_value='extrapolate',
+            fill_value=0,
+            bounds_error=False,
             axis=0,
         )
         return interpolation_f
@@ -426,13 +429,13 @@ class DirectInputCloud(Cloud):
             cloud_parameter (DataArray): cloud property to be shifted
             interpolation_f (scipy.interpolate.interpolate.interp1d):
                 interpolation object calculated by interpolation_function
-            norm_new (int / float): normalisation index [model level]
+            norm_new (int): normalisation index [model level]
 
         Returns:
             DataArray: shifted cloud property
         """
         levels = np.arange(0, self.numlevels)
-        if norm_new is not np.nan:
+        if not np.isnan(norm_new):
             # Move the cloud to the new normalisation level, if there is one.
             cloud_parameter.values = interpolation_f(levels - norm_new)
         else:
@@ -445,6 +448,7 @@ class DirectInputCloud(Cloud):
         if self._norm_index is None:
             self._norm_index = norm_new
 
+        if self._interp_cldf is None:
             self._interp_cldf = self.interpolation_function(
                 cloud_parameter=self.cloud_area_fraction_in_atmosphere_layer,
             )
@@ -485,7 +489,7 @@ class HighCloud(DirectInputCloud):
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Keep the cloud attached to the convective top. """
         self.shift_cloud_profile(
-            norm_new=convection.get('convective_top_index')[0],
+            norm_new=convection.get('convective_top_index')[0]
         )
 
 

@@ -434,12 +434,14 @@ class HardAdjustment(Convection):
         self.create_variable('convective_heating_rate', convective_heating)
 
         if np.any(convective_heating > lim):  # if there is convective heating
-            # find the values of pressure and temperature at the convective top
+            # find the values of pressure and temperature at the convective top,
+            # as defined by a threshold convective heating value
             contop_p = interp_variable(p, convective_heating, lim)
             contop_T = interp_variable(T_con, convective_heating, lim)
-            contop_index = interp_variable(
-                np.arange(0, p.shape[0]), convective_heating, lim
-            )
+
+            # index of the uppermost level where convection is applied (HardAdj)
+            # and causes warming (RlxAdj)
+            contop_index = np.argmin(convective_heating > 0)
 
         else:  # if there is no convective heating
             contop_index, contop_p, contop_T = np.nan, np.nan, np.nan
