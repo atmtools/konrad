@@ -180,14 +180,12 @@ class CoupledUpwelling(StratosphericUpwelling):
                 raise ValueError(
                     'No convective top found and no input normalisation level '
                     'for the coupled upwelling.')
-            above_level_index = int(np.round(above_level_index))
             self._norm_plev = atmosphere['plev'][above_level_index]
 
         if self._f is None:  # first time only
             self._f = bdc_profile(self._norm_plev)
 
-        above_level_index = int(np.round(
-            convection.get('convective_top_index')[0]))
+        above_level_index = convection.get('convective_top_index')[0]
         norm_plev = atmosphere['plev'][above_level_index]
         self._w = self._f(np.log(atmosphere['plev'] / norm_plev))
 

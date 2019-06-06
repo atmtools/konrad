@@ -489,9 +489,7 @@ class HighCloud(DirectInputCloud):
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Keep the cloud attached to the convective top. """
         self.shift_cloud_profile(
-            norm_new=np.int(
-                np.round(convection.get('convective_top_index')[0])
-            ),
+            norm_new=convection.get('convective_top_index')[0]
         )
 
 
