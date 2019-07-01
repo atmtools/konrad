@@ -220,7 +220,6 @@ class RCE:
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
-            atmosphere_old = self.atmosphere.copy()
             T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.
@@ -233,8 +232,6 @@ class RCE:
             # Convective adjustment
             self.convection.stabilize(
                 atmosphere=self.atmosphere,
-                atmosphere_old=atmosphere_old,
-                humidity=self.humidity,
                 lapse=critical_lapserate,
                 timestep=self.timestep,
                 surface=self.surface,
