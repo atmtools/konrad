@@ -176,23 +176,27 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
     return grid
 
 
-def get_pressure_grids(start=1000e2, stop=1, num=200, squeeze=0.5):
-    """Create matching pressure levels and half-levels.
+def get_pressure_grids(surface_pressure=1000e2, num=200):
+    r"""Create matching pressure levels and half-levels.
+
+    The half-levels range from ``surface_pressure`` to 1 Pa.
+
+    The pressure for every level ``i`` ([0, 1]) is given by:
+
+    .. math::
+         \ln(p) = -\frac{\ln(p_\mathrm{s})}{2}
+                  \left(i^2 + i\right) + \ln(p_\mathrm{s})
 
     Parameters:
-        start (float): Pressure of the lowest half-level (surface) [Pa].
-        stop (float): Pressure of the highest half-level (TOA) [Pa].
+        surface_pressure (float): Pressure of the lowest half-level [Pa].
         num (int): Number of **full** pressure levels.
-        squeeze (float): Factor with which the first step width is
-            squeezed in logspace. Has to be between ``(0, 2)``.
-            Values smaller than one compress the half-levels,
-            while values greater than 1 stretch the spacing.
-            The default is ``0.5`` (bottom heavy.)
 
     Returns:
         ndarray, ndarray: Full-level pressure, half-level pressure [Pa].
     """
-    phlev = ty.math.squeezable_logspace(start, stop, num + 1, squeeze=squeeze)
+    i = np.linspace(0, 1, num + 1)
+    lnps = np.log(surface_pressure)
+    phlev = np.exp(-lnps/2 * (i**2 + i) + lnps)
     plev = np.exp(0.5 * (np.log(phlev[1:]) + np.log(phlev[:-1])))
 
     return plev, phlev
