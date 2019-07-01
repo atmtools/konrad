@@ -8,7 +8,7 @@ from konrad import (atmosphere, utils)
 
 @pytest.fixture
 def atmosphere_obj():
-    plev, _ = utils.get_pressure_grids(1000e2, 1, 50)
+    plev, _ = utils.get_pressure_grids(surface_pressure=1000e2, num=50)
 
     return atmosphere.Atmosphere(plev=plev)
 
@@ -32,11 +32,11 @@ class TestAtmosphere:
 
     def test_cold_point_plev(self, atmosphere_obj):
         """Test retrieval of the cold point pressure."""
-        assert np.isclose(atmosphere_obj.get_cold_point_plev(), 20023.067)
+        assert np.isclose(atmosphere_obj.get_cold_point_plev(), 19611.012)
 
     def test_triple_point_plev(self, atmosphere_obj):
         """Test retrieval of the triple point plev."""
-        assert np.isclose(atmosphere_obj.get_triple_point_plev(), 74287.948)
+        assert np.isclose(atmosphere_obj.get_triple_point_plev(), 73875.426)
 
     def test_from_netcdf(self):
         """Test initialisation from netCDF file."""
