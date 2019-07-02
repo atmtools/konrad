@@ -2,7 +2,6 @@
 import abc
 
 import numpy as np
-from scipy.stats import norm
 from scipy.interpolate import interp1d
 
 from konrad.component import Component
@@ -123,12 +122,9 @@ class FixedUTH(RelativeHumidityModel):
             manabe_model = Manabe67(rh_surface=self.rh_surface)
             self._rh_base_profile = manabe_model(atmosphere)
 
-        # Add skew-normal distribution.
-        uth = self.uth * norm.pdf(
-            x=np.log(p),
-            loc=np.log(self.uth_plev + self.uth_offset),
-            scale=0.4,
-        )
+        # Gaussian upper-tropospheric UTH peak in ln(p) coordinates
+        x = p / (self.uth_plev + self.uth_offset)
+        uth = self.uth * np.exp(-np.log(x)**2 * np.pi)
 
         return np.maximum(self._rh_base_profile, uth)
 
