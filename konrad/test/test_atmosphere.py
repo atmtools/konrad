@@ -8,9 +8,9 @@ from konrad import (atmosphere, utils)
 
 @pytest.fixture
 def atmosphere_obj():
-    plev, _ = utils.get_pressure_grids(surface_pressure=1000e2, num=50)
+    _, phlev = utils.get_pressure_grids(surface_pressure=1000e2, num=50)
 
-    return atmosphere.Atmosphere(plev=plev)
+    return atmosphere.Atmosphere(phlev=phlev)
 
 
 class TestAtmosphere:
@@ -18,9 +18,9 @@ class TestAtmosphere:
 
     def test_init(self):
         """Test basic initialization of the atmosphere component."""
-        plev = np.array([1000e2, 750e2, 500e2, 100e2, 10e2, 1e2])
+        phlev = np.array([1000e2, 750e2, 500e2, 100e2, 10e2, 1e2])
 
-        atmosphere.Atmosphere(plev=plev)
+        atmosphere.Atmosphere(phlev=phlev)
 
     def test_cold_point_index(self, atmosphere_obj):
         """Test retrieval of the cold point index."""

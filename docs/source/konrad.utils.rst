@@ -9,7 +9,7 @@ Utilities
    append_description
    append_timestep_netcdf
    return_if_type
-   phlev_from_plev
+   plev_from_phlev
    dz_from_z
    refined_pgrid
    get_pressure_grids

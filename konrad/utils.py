@@ -16,7 +16,7 @@ __all__ = [
     'append_description',
     'append_timestep_netcdf',
     'return_if_type',
-    'phlev_from_plev',
+    'plev_from_phlev',
     'dz_from_z',
     'refined_pgrid',
     'get_pressure_grids',
@@ -115,23 +115,21 @@ def return_if_type(variable, variablename, expect, default):
     return variable
 
 
-def phlev_from_plev(fulllevels):
-    """Returns the linear interpolated halflevels for given array.
+def plev_from_phlev(halflevels):
+    """Returns full-level pressures for given half-level pressures.
+
+    The interpolation is performed in log-space.
 
     Parameters:
-        fulllevels (ndarray): Pressure at fullevels.
+        halflevels (ndarray): Pressure at full-levels.
 
     Returns:
-        ndarray: Coordinates at halflevel.
+        ndarray: Pressure at full-level.
 
     """
-    plev_log = np.log(fulllevels)  # Perform inter-/extrapolation in log-space
+    phlev_log = np.log(halflevels)
 
-    inter = 0.5 * (plev_log[1:] + plev_log[:-1])
-    bottom = plev_log[0] + 0.5 * (plev_log[0] - plev_log[1])
-    top = plev_log[-1] - 0.5 * (plev_log[-2] - plev_log[-1])
-
-    return np.exp(np.hstack((bottom, inter, top)))
+    return np.exp(0.5 * (phlev_log[1:] + phlev_log[:-1]))
 
 
 def dz_from_z(z):
@@ -197,7 +195,7 @@ def get_pressure_grids(surface_pressure=1000e2, num=200):
     i = np.linspace(0, 1, num + 1)
     lnps = np.log(surface_pressure)
     phlev = np.exp(-lnps/2 * (i**2 + i) + lnps)
-    plev = np.exp(0.5 * (np.log(phlev[1:]) + np.log(phlev[:-1])))
+    plev = plev_from_phlev(phlev)
 
     return plev, phlev
 

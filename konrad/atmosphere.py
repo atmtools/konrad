@@ -44,19 +44,20 @@ class Atmosphere(Component):
     ]
     pmin = 10e2
 
-    def __init__(self, plev):
+    def __init__(self, phlev):
         """Initialise atmosphere component.
 
         Parameters:
-            plev (``np.ndarray``): Atmospheric pressure (surface to top) [Pa].
+            phlev (``np.ndarray``): Atmospheric pressure at half-levels
+              (surface to top) [Pa].
         """
         super().__init__()
+        plev = utils.plev_from_phlev(phlev)
 
         self.coords = {
             'time': np.array([]),  # time dimension
             'plev': plev,  # pressure at full-levels
-            # TODO: Should `phlev` be input?
-            'phlev': utils.phlev_from_plev(plev)  # pressure at halflevels
+            'phlev': phlev,  # pressure at half-levels
         }
 
         for varname in self.atmosphere_variables:
@@ -127,8 +128,7 @@ class Atmosphere(Component):
         #  Consider a more flexible user interface.
 
         # Create a Dataset with time and pressure dimension.
-        plev = dictionary['plev']
-        d = cls(plev=plev)
+        d = cls(phlev=dictionary['phlev'])
 
         for var in cls.atmosphere_variables:
             val = dictionary.get(var)
@@ -165,7 +165,7 @@ class Atmosphere(Component):
                         for var in cls.atmosphere_variables
                         if var in dataset.variables
                         }
-            datadict['plev'] = np.array(root['plev'][:])
+            datadict['phlev'] = np.array(root['phlev'][:])
 
         return cls.from_dict(datadict)
 
