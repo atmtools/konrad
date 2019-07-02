@@ -11,7 +11,8 @@ Utilities
    return_if_type
    plev_from_phlev
    dz_from_z
-   refined_pgrid
+   get_squeezable_pgrid
+   get_quadratic_pgrid
    get_pressure_grids
    ozonesquash
    ozone_profile_rcemip

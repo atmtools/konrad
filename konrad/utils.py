@@ -18,7 +18,8 @@ __all__ = [
     'return_if_type',
     'plev_from_phlev',
     'dz_from_z',
-    'refined_pgrid',
+    'get_squeezable_pgrid',
+    'get_quadratic_pgrid',
     'get_pressure_grids',
     'ozonesquash',
     'ozone_profile_rcemip',
@@ -146,7 +147,8 @@ def dz_from_z(z):
     return dz
 
 
-def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
+def get_squeezable_pgrid(start=1000e2, stop=1, num=200, shift=0.5,
+                                 fixpoint=0.):
     """Create a pressure grid with adjustable distribution in logspace.
 
     Notes:
@@ -155,9 +157,9 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
     Parameters:
         start (float): The starting value of the sequence.
         stop (float): The end value of the sequence.
-        num (int): Number of sample to generate (Default is 50).
+        num (int): Number of sample to generate.
         shift (float): Factor with which the first stepwidth is
-            squeezed in logspace. Has to be between  ``(0, 2)`.
+            squeezed in logspace. Has to be between  ``(0, 2)``.
             Values smaller than one compress the gridpoints,
             while values greater than 1 strecht the spacing.
             The default is ``0.5`` (bottom heavy.)
@@ -174,7 +176,7 @@ def refined_pgrid(start, stop, num=200, shift=0.5, fixpoint=0.):
     return grid
 
 
-def get_pressure_grids(surface_pressure=1000e2, num=200):
+def get_quadratic_pgrid(surface_pressure=1000e2, num=200):
     r"""Create matching pressure levels and half-levels.
 
     The half-levels range from ``surface_pressure`` to 1 Pa.
@@ -192,9 +194,28 @@ def get_pressure_grids(surface_pressure=1000e2, num=200):
     Returns:
         ndarray, ndarray: Full-level pressure, half-level pressure [Pa].
     """
-    i = np.linspace(0, 1, num + 1)
+    i = np.linspace(0, 1, num)
     lnps = np.log(surface_pressure)
-    phlev = np.exp(-lnps/2 * (i**2 + i) + lnps)
+
+    return np.exp(-lnps/2 * (i**2 + i) + lnps)
+
+
+def get_pressure_grids(surface_pressure=1000e2, num=200):
+    r"""Create matching pressures at full-levels and half-levels.
+
+    The half-levels range from ``surface_pressure`` to 1 Pa.
+
+    Parameters:
+        surface_pressure (float): Pressure of the lowest half-level [Pa].
+        num (int): Number of **full** pressure levels.
+
+    Returns:
+        ndarray, ndarray: Full-level pressure, half-level pressure [Pa].
+
+    See also:
+        ``konrad.utils.get_quadratic_pgrid``
+    """
+    phlev = get_quadratic_pgrid(surface_pressure=surface_pressure, num=num+1)
     plev = plev_from_phlev(phlev)
 
     return plev, phlev
