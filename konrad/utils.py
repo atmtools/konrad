@@ -148,7 +148,7 @@ def dz_from_z(z):
 
 
 def get_squeezable_pgrid(start=1000e2, stop=1, num=200, shift=0.5,
-                                 fixpoint=0.):
+                         fixpoint=0.):
     """Create a pressure grid with adjustable distribution in logspace.
 
     Notes:
