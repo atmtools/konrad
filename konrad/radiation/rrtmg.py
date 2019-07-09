@@ -274,7 +274,7 @@ class RRTMG(Radiation):
 
         if self._state_sw is None:  # first time only
             cf_cloudy = cloud_fraction[cloud_fraction != 0]
-            if cf_cloudy.shape[0] != 0:
+            if cf_cloudy.size > 0:
                 if not np.all(cf_cloudy == cf_cloudy[0]):
                     logging.warning(
                         'The konrad implementation of nomcica with partial '
