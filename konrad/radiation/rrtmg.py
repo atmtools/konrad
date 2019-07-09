@@ -52,7 +52,7 @@ class RRTMG(Radiation):
         self._rad_lw = None
         self._rad_sw = None
 
-        self._mcica = mcica
+        self._is_mcica = mcica
 
         # These are set in the first call and depend on properties set in the
         # cloud class or instance.
@@ -65,7 +65,7 @@ class RRTMG(Radiation):
 
         climt.set_constants_from_dict({"stellar_irradiance": {
                 "value": self.solar_constant, "units": 'W m^-2'}})
-        if self._mcica:
+        if self._is_mcica:
             overlap = 'maximum_random'
         else:
             overlap = 'random'
@@ -74,14 +74,14 @@ class RRTMG(Radiation):
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
             cloud_overlap_method=overlap,
-            mcica=self._mcica)
+            mcica=self._is_mcica)
         self._rad_sw = climt.RRTMGShortwave(
             ignore_day_of_year=True,
             cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
             cloud_overlap_method=overlap,
-            mcica=self._mcica)
+            mcica=self._is_mcica)
         state_lw = {}
         state_sw = {}
 
@@ -316,7 +316,7 @@ class RRTMG(Radiation):
             surface (konrad.surface): Surface model.
             cloud (konrad.cloud): cloud model
         """
-        if not self._mcica and not isinstance(cloud, ClearSky):
+        if not self._is_mcica and not isinstance(cloud, ClearSky):
             lw_fluxes, sw_fluxes = self.calc_cloudy_nomcica_radiation(
                 atmosphere, surface, cloud)
         else:
