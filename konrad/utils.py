@@ -148,7 +148,7 @@ def dz_from_z(z):
 
 
 def get_squeezable_pgrid(start=1000e2, stop=1, num=200, shift=0.5,
-                                 fixpoint=0.):
+                         fixpoint=0.):
     """Create a pressure grid with adjustable distribution in logspace.
 
     Notes:
@@ -176,37 +176,40 @@ def get_squeezable_pgrid(start=1000e2, stop=1, num=200, shift=0.5,
     return grid
 
 
-def get_quadratic_pgrid(surface_pressure=1000e2, num=200):
+def get_quadratic_pgrid(surface_pressure=1000e2, top_pressure=1, num=200):
     r"""Create matching pressure levels and half-levels.
 
     The half-levels range from ``surface_pressure`` to 1 Pa.
 
-    The pressure for every level ``i`` ([0, 1]) is given by:
+    The pressure for every level ``i`` ([0, N]) is given by:
 
     .. math::
-         \ln(p) = -\frac{\ln(p_\mathrm{s})}{2}
-                  \left(i^2 + i\right) + \ln(p_\mathrm{s})
+      ln(p/p_\mathrm{t}) = -\frac{\ln(p_\mathrm{s}/p_\mathrm{t})}{2}
+        \left(\frac{i^2}{N^2} + \frac{i}{N}\right)
+        \ln(p_\mathrm{s}/p_\mathrm{t})
 
     Parameters:
-        surface_pressure (float): Pressure of the lowest half-level [Pa].
-        num (int): Number of **full** pressure levels.
+        surface_pressure (float): Pressure of the lowest first grid point [Pa].
+        top_pressure (float): Pressure at the highest last grid point [Pa].
+        num (int): Number of grid points.
 
     Returns:
-        ndarray, ndarray: Full-level pressure, half-level pressure [Pa].
+        ndarray: Pressure grid [Pa].
     """
     i = np.linspace(0, 1, num)
-    lnps = np.log(surface_pressure)
+    lnp = np.log(surface_pressure / top_pressure)
 
-    return np.exp(-lnps/2 * (i**2 + i) + lnps)
+    return np.exp(-lnp/2 * (i**2 + i) + lnp) * top_pressure
 
 
-def get_pressure_grids(surface_pressure=1000e2, num=200):
+def get_pressure_grids(surface_pressure=1000e2, top_pressure=1, num=200):
     r"""Create matching pressures at full-levels and half-levels.
 
     The half-levels range from ``surface_pressure`` to 1 Pa.
 
     Parameters:
         surface_pressure (float): Pressure of the lowest half-level [Pa].
+        top_pressure (float): Pressure at the highest half-level [Pa].
         num (int): Number of **full** pressure levels.
 
     Returns:
@@ -215,7 +218,11 @@ def get_pressure_grids(surface_pressure=1000e2, num=200):
     See also:
         ``konrad.utils.get_quadratic_pgrid``
     """
-    phlev = get_quadratic_pgrid(surface_pressure=surface_pressure, num=num+1)
+    phlev = get_quadratic_pgrid(
+        surface_pressure=surface_pressure,
+        top_pressure=top_pressure,
+        num=num+1,
+    )
     plev = plev_from_phlev(phlev)
 
     return plev, phlev
