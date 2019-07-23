@@ -265,7 +265,6 @@ class Atmosphere(Component):
             konrad.atmosphere: copy of the atmosphere
         """
         datadict = dict()
-        datadict['plev'] = copy(self['plev'])  # Copy pressure grid.
         datadict['phlev'] = copy(self['phlev'])  # Copy pressure grid.
 
         # Create copies (and not references) of all atmospheric variables.
