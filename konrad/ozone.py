@@ -184,11 +184,10 @@ class Cariolle(Ozone):
 
         T = atmosphere['T'][0, :]
         p = atmosphere['plev']  # [Pa]
-        phlev = atmosphere['phlev']
         o3 = atmosphere['O3'][0, :]  # moles of ozone / moles of air
         z = atmosphere['z'][0, :]  # m
 
-        o3col = overhead_molecules(o3, p, phlev, z, T
+        o3col = overhead_molecules(o3, p, z, T
                                    ) * 10 ** -4  # in molecules / cm2
 
         A1, A2, A3, A4, A5, A6, A7 = self.get_params(p)
@@ -215,9 +214,9 @@ class Simotrostra(Cariolle):
         """
         super().__init__(w=w)
 
-        from simotrostra import simotrostra
+        from simotrostra import Simotrostra
 
-        self._ozone = simotrostra()
+        self._ozone = Simotrostra()
 
     def simotrostra_profile(self, o3, atmosphere, timestep, zenith):
         """
@@ -239,6 +238,10 @@ class Simotrostra(Cariolle):
         transport_ox = self.ozone_transport(o3, z)
         do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
         o3_new = o3 + do3dt*timestep
+
+        # prevent concentrations getting too low - set tropospheric value
+        o3_new[o3_new < 4 * 10**-8] = 4 * 10**-8
+
         return o3_new, [source, sink_ox, sink_nox, transport_ox, sink_hox]
 
     def store_sink_terms(self, sink_terms):
