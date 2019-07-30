@@ -1,5 +1,5 @@
-import collections
 import operator
+from collections.abc import Hashable
 
 import numpy as np
 import xarray as xr
@@ -91,7 +91,7 @@ class Component:
                                      key=operator.itemgetter(0))
 
         hashable_values = tuple(item[1] for item in attrs_sorted_by_key
-                                if isinstance(item[1], collections.Hashable))
+                                if isinstance(item[1], Hashable))
 
         # Include the class name to distinguish between different
         # inheriting classes using the same attributes.
