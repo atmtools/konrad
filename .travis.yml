@@ -9,5 +9,6 @@ env:
 install:
   - pip install --upgrade pip
   - pip install .[docs,tests]
+  - pip list
 script:
   - ./travis-test.sh
