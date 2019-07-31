@@ -240,7 +240,7 @@ class Simotrostra(Cariolle):
         o3_new = o3 + do3dt*timestep
 
         # prevent concentrations getting too low - set tropospheric value
-        o3_new[o3_new < 4 * 10**-8] = 4 * 10**-8
+        o3_new.clip(min=4e-8, out=o3_new)
 
         return o3_new, [source, sink_ox, sink_nox, transport_ox, sink_hox]
 
