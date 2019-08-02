@@ -360,7 +360,8 @@ class HardAdjustment(Convection):
 
             # index of the uppermost level where convection is applied (HardAdj)
             # and causes warming (RlxAdj)
-            contop_index = np.argmin(convective_heating > 0)
+            contop_index = (len(convective_heating) -
+                            np.argmin(convective_heating[::-1] <= 0))
 
         else:  # if there is no convective heating
             contop_index, contop_p, contop_T = np.nan, np.nan, np.nan
