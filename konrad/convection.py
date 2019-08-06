@@ -358,8 +358,12 @@ class HardAdjustment(Convection):
             contop_p = interp_variable(p, convective_heating, lim)
             contop_T = interp_variable(T_con, convective_heating, lim)
 
-            # index of the uppermost level where convection is applied (HardAdj)
-            # and causes warming (RlxAdj)
+            # At every level above the contop, the convective heating is either
+            # zero (no convection is applied, HardAdj) or negative (RlxAdj).
+            # Convection acts to warm the upper troposphere, but it may either
+            # warm (normally) or cool (at certain times during the diurnal
+            # cycle) the lower troposphere. Therefore, we search for the
+            # convective top index from the top going downwards.
             contop_index = (len(convective_heating) -
                             np.argmin(convective_heating[::-1] <= 0))
 
