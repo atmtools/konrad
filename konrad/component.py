@@ -46,7 +46,10 @@ class Component:
             self._attrs[name] = value
 
     def __getattr__(self, name):
-        return self._attrs[name]
+        try:
+            return self._attrs[name]
+        except KeyError as exc:
+            raise AttributeError(exc)
 
     @property
     def attrs(self):
