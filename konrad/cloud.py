@@ -31,6 +31,7 @@ create an appropriate radiation model and run radiative transfer.
 """
 import abc
 import logging
+import numbers
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -50,69 +51,6 @@ __all__ = [
     'LowCloud',
     'CloudEnsemble',
 ]
-
-
-# TODO: Make this a staticmethod of the ``Cloud`` class?
-def get_p_data_array(values, units='kg m^-2', numlevels=200):
-    """Return a DataArray of values."""
-    if isinstance(values, DataArray):
-        return values
-
-    elif isinstance(values, np.ndarray):
-        if values.shape == (numlevels,):
-            return DataArray(values, dims=('mid_levels',),
-                             attrs={'units': units})
-        else:
-            raise ValueError(
-                'Cloud parameter input array is not the right size'
-                ' for the number of model levels.')
-
-    elif isinstance(values, (int, float)):
-        return DataArray(values * np.ones(numlevels, ),
-                         dims=('mid_levels',),
-                         attrs={'units': units})
-
-    raise TypeError(
-        'Cloud variable input must be a single value, `numpy.ndarray` or a '
-        '`sympl.DataArray`')
-
-
-# TODO: Make this a staticmethod of the ``Cloud`` class?
-def get_waveband_data_array(values, units='dimensionless', numlevels=200,
-                            sw=True):
-    """Return a DataArray of values."""
-    if isinstance(values, DataArray):
-        return values
-
-    if sw:
-        dims_bands = 'num_shortwave_bands'
-        numbands = 14
-    else:
-        dims_bands = 'num_longwave_bands'
-        numbands = 16
-
-    if isinstance(values, (int, float)):
-        return DataArray(values * np.ones((numlevels, numbands)),
-                         dims=('mid_levels', dims_bands),
-                         attrs={'units': units})
-
-    elif isinstance(values, np.ndarray):
-        if values.shape == (numlevels,):
-            return DataArray(
-                np.repeat(values[:, np.newaxis], numbands, axis=1),
-                dims=('mid_levels', dims_bands),
-                attrs={'units': units},
-            )
-        elif values.shape == (numlevels, numbands):
-            return DataArray(
-                values,
-                dims=('mid_levels', dims_bands),
-                attrs={'units': units},
-            )
-
-    raise TypeError(
-        'Cloud variable input must be a single value, `numpy.ndarray` or a '
-        '`sympl.DataArray`')
 
 
 def get_rectangular_profile(z, value, ztop, depth):
@@ -221,39 +159,95 @@ class Cloud(metaclass=abc.ABCMeta):
         """
         self.numlevels = numlevels
 
-        self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = \
-            get_p_data_array(mass_water, numlevels=self.numlevels)
+        self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = self.get_p_data_array(
+            mass_water)
 
-        self.mass_content_of_cloud_ice_in_atmosphere_layer = get_p_data_array(
-            mass_ice, numlevels=self.numlevels)
+        self.mass_content_of_cloud_ice_in_atmosphere_layer = self.get_p_data_array(
+            mass_ice)
 
-        self.cloud_area_fraction_in_atmosphere_layer = get_p_data_array(
-            cloud_fraction, numlevels=self.numlevels, units='dimensionless')
+        self.cloud_area_fraction_in_atmosphere_layer = self.get_p_data_array(
+            cloud_fraction, units='dimensionless')
 
-        self.cloud_ice_particle_size = get_p_data_array(
-            ice_particle_size, numlevels=self.numlevels, units='micrometers')
+        self.cloud_ice_particle_size = self.get_p_data_array(
+            ice_particle_size, units='micrometers')
 
-        self.cloud_water_droplet_radius = get_p_data_array(
-            droplet_radius, numlevels=self.numlevels, units='micrometers')
+        self.cloud_water_droplet_radius = self.get_p_data_array(
+            droplet_radius, units='micrometers')
 
-        self.longwave_optical_thickness_due_to_cloud = get_waveband_data_array(
-            lw_optical_thickness, numlevels=self.numlevels, sw=False)
+        self.longwave_optical_thickness_due_to_cloud = self.get_waveband_data_array(
+            lw_optical_thickness, sw=False)
 
-        self.cloud_forward_scattering_fraction = get_waveband_data_array(
-            forward_scattering_fraction, numlevels=self.numlevels)
+        self.cloud_forward_scattering_fraction = self.get_waveband_data_array(
+            forward_scattering_fraction)
 
-        self.cloud_asymmetry_parameter = get_waveband_data_array(
-            asymmetry_parameter, numlevels=self.numlevels)
+        self.cloud_asymmetry_parameter = self.get_waveband_data_array(
+            asymmetry_parameter)
 
-        self.shortwave_optical_thickness_due_to_cloud = \
-            get_waveband_data_array(sw_optical_thickness,
-                                    numlevels=self.numlevels)
+        self.shortwave_optical_thickness_due_to_cloud = self.get_waveband_data_array(
+            sw_optical_thickness)
 
-        self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
-            single_scattering_albedo, numlevels=self.numlevels)
+        self.single_scattering_albedo_due_to_cloud = self.get_waveband_data_array(
+            single_scattering_albedo)
 
         self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properties
         self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
+
+    def get_p_data_array(self, values, units='kg m^-2'):
+        """Return a DataArray of values."""
+        if isinstance(values, DataArray):
+            return values
+        elif isinstance(values, np.ndarray):
+            if values.shape != (self.numlevels,):
+                raise ValueError(
+                    'shape mismatch: Shape of cloud parameter input array '
+                    f'{values.shape} is not compatible with number of model '
+                    f'levels ({self.numlevels},).'
+                )
+        elif isinstance(values, numbers.Number):
+            values = values * np.ones(self.numlevels,)
+        else:
+            raise TypeError(
+                'Cloud variable input must be a single value, '
+                '`numpy.ndarray` or a `sympl.DataArray`'
+            )
+
+        return DataArray(values, dims=('mid_levels',), attrs={'units': units})
+
+    def get_waveband_data_array(self, values, units='dimensionless', sw=True):
+        """Return a DataArray of values."""
+        if isinstance(values, DataArray):
+            return values
+
+        if sw:
+            dims = ('mid_levels', 'num_shortwave_bands')
+            numbands = self.num_shortwave_bands
+        else:
+            dims = ('mid_levels', 'num_longwave_bands')
+            numbands = self.num_longwave_bands
+
+        if isinstance(values, numbers.Number):
+            values = values * np.ones((self.numlevels, numbands))
+        elif isinstance(values, np.ndarray):
+            if values.shape == (self.numlevels,):
+                values = np.repeat(
+                    values[:, np.newaxis], numbands, axis=1)
+            elif values.shape == (numbands,):
+                values = np.repeat(
+                    values[np.newaxis, :], self.numlevels, axis=0)
+            elif not values.shape == (self.numlevels, numbands):
+                raise ValueError(
+                    f'shape mismatch: input array of shape {values.shape} '
+                    'is not supported. Allowed shapes are: '
+                    f'({self.numlevels},), ({numbands},), or '
+                    f'({self.numlevels}, {numbands}).'
+                )
+        else:
+            raise TypeError(
+                'Cloud variable input must be a single value, '
+                '`numpy.ndarray` or a `sympl.DataArray`'
+            )
+
+        return DataArray(values, dims=dims, attrs={'units': units})
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
