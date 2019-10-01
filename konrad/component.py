@@ -46,6 +46,9 @@ class Component:
             self._attrs[name] = value
 
     def __getattr__(self, name):
+        if name.startswith('__'):
+            raise AttributeError
+
         try:
             return self._attrs[name]
         except KeyError as exc:
