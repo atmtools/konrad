@@ -31,10 +31,13 @@ create an appropriate radiation model and run radiative transfer.
 """
 import abc
 import logging
+import numbers
 
 import numpy as np
 from scipy.interpolate import interp1d
 from sympl import DataArray
+
+from konrad.component import Component
 
 logger = logging.getLogger(__name__)
 
@@ -50,69 +53,6 @@ __all__ = [
     'LowCloud',
     'CloudEnsemble',
 ]
-
-
-# TODO: Make this a staticmethod of the ``Cloud`` class?
-def get_p_data_array(values, units='kg m^-2', numlevels=200):
-    """Return a DataArray of values."""
-    if isinstance(values, DataArray):
-        return values
-
-    elif isinstance(values, np.ndarray):
-        if values.shape == (numlevels,):
-            return DataArray(values, dims=('mid_levels',),
-                             attrs={'units': units})
-        else:
-            raise ValueError(
-                'Cloud parameter input array is not the right size'
-                ' for the number of model levels.')
-
-    elif isinstance(values, (int, float)):
-        return DataArray(values * np.ones(numlevels, ),
-                         dims=('mid_levels',),
-                         attrs={'units': units})
-
-    raise TypeError(
-        'Cloud variable input must be a single value, `numpy.ndarray` or a '
-        '`sympl.DataArray`')
-
-
-# TODO: Make this a staticmethod of the ``Cloud`` class?
-def get_waveband_data_array(values, units='dimensionless', numlevels=200,
-                            sw=True):
-    """Return a DataArray of values."""
-    if isinstance(values, DataArray):
-        return values
-
-    if sw:
-        dims_bands = 'num_shortwave_bands'
-        numbands = 14
-    else:
-        dims_bands = 'num_longwave_bands'
-        numbands = 16
-
-    if isinstance(values, (int, float)):
-        return DataArray(values * np.ones((numlevels, numbands)),
-                         dims=('mid_levels', dims_bands),
-                         attrs={'units': units})
-
-    elif isinstance(values, np.ndarray):
-        if values.shape == (numlevels,):
-            return DataArray(
-                np.repeat(values[:, np.newaxis], numbands, axis=1),
-                dims=('mid_levels', dims_bands),
-                attrs={'units': units},
-            )
-        elif values.shape == (numlevels, numbands):
-            return DataArray(
-                values,
-                dims=('mid_levels', dims_bands),
-                attrs={'units': units},
-            )
-
-    raise TypeError(
-        'Cloud variable input must be a single value, `numpy.ndarray` or a '
-        '`sympl.DataArray`')
 
 
 def get_rectangular_profile(z, value, ztop, depth):
@@ -133,7 +73,7 @@ def get_rectangular_profile(z, value, ztop, depth):
     return p
 
 
-class Cloud(metaclass=abc.ABCMeta):
+class Cloud(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for all cloud handlers.
     Default properties include a cloud area fraction equal to zero everywhere
     (ie no cloud)."""
@@ -221,39 +161,105 @@ class Cloud(metaclass=abc.ABCMeta):
         """
         self.numlevels = numlevels
 
-        self.mass_content_of_cloud_liquid_water_in_atmosphere_layer = \
-            get_p_data_array(mass_water, numlevels=self.numlevels)
+        self.coords = {
+            'mid_levels': np.arange(self.numlevels),
+            'num_longwave_bands': np.arange(self.num_longwave_bands),
+            'num_shortwave_bands': np.arange(self.num_shortwave_bands),
+        }
 
-        self.mass_content_of_cloud_ice_in_atmosphere_layer = get_p_data_array(
-            mass_ice, numlevels=self.numlevels)
+        physical_props = {
+            'mass_content_of_cloud_liquid_water_in_atmosphere_layer':
+                (mass_water, 'kg m^-2'),
+            'mass_content_of_cloud_ice_in_atmosphere_layer':
+                (mass_ice, 'kg m^-2'),
+            'cloud_area_fraction_in_atmosphere_layer':
+                (cloud_fraction, 'dimensionless'),
+            'cloud_ice_particle_size':
+                (ice_particle_size, 'micrometers'),
+            'cloud_water_droplet_radius':
+                (droplet_radius, 'micrometers'),
+        }
 
-        self.cloud_area_fraction_in_atmosphere_layer = get_p_data_array(
-            cloud_fraction, numlevels=self.numlevels, units='dimensionless')
+        for name, (var, unit) in physical_props.items():
+            dataarray = self.get_p_data_array(var, units=unit)
+            self[name] = dataarray.dims, dataarray
 
-        self.cloud_ice_particle_size = get_p_data_array(
-            ice_particle_size, numlevels=self.numlevels, units='micrometers')
+        cloud_optics = {
+            'longwave_optical_thickness_due_to_cloud':
+                (lw_optical_thickness, 'dimensionless', False),
+            'cloud_forward_scattering_fraction':
+                (forward_scattering_fraction, 'dimensionless', True),
+            'cloud_asymmetry_parameter':
+                (asymmetry_parameter, 'dimensionless', True),
+            'shortwave_optical_thickness_due_to_cloud':
+                (sw_optical_thickness, 'dimensionless', True),
+            'single_scattering_albedo_due_to_cloud':
+                (single_scattering_albedo, 'dimensionless', True),
+        }
 
-        self.cloud_water_droplet_radius = get_p_data_array(
-            droplet_radius, numlevels=self.numlevels, units='micrometers')
-
-        self.longwave_optical_thickness_due_to_cloud = get_waveband_data_array(
-            lw_optical_thickness, numlevels=self.numlevels, sw=False)
-
-        self.cloud_forward_scattering_fraction = get_waveband_data_array(
-            forward_scattering_fraction, numlevels=self.numlevels)
-
-        self.cloud_asymmetry_parameter = get_waveband_data_array(
-            asymmetry_parameter, numlevels=self.numlevels)
-
-        self.shortwave_optical_thickness_due_to_cloud = \
-            get_waveband_data_array(sw_optical_thickness,
-                                    numlevels=self.numlevels)
-
-        self.single_scattering_albedo_due_to_cloud = get_waveband_data_array(
-            single_scattering_albedo, numlevels=self.numlevels)
+        for name, (var, unit, is_sw) in cloud_optics.items():
+            dataarray = self.get_waveband_data_array(var, units=unit, sw=is_sw)
+            self[name] = dataarray.dims, dataarray
 
         self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properties
         self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
+
+    def get_p_data_array(self, values, units='kg m^-2'):
+        """Return a DataArray of values."""
+        if isinstance(values, DataArray):
+            return values
+        elif isinstance(values, np.ndarray):
+            if values.shape != (self.numlevels,):
+                raise ValueError(
+                    'shape mismatch: Shape of cloud parameter input array '
+                    f'{values.shape} is not compatible with number of model '
+                    f'levels ({self.numlevels},).'
+                )
+        elif isinstance(values, numbers.Number):
+            values = values * np.ones(self.numlevels,)
+        else:
+            raise TypeError(
+                'Cloud variable input must be a single value, '
+                '`numpy.ndarray` or a `sympl.DataArray`'
+            )
+
+        return DataArray(values, dims=('mid_levels',), attrs={'units': units})
+
+    def get_waveband_data_array(self, values, units='dimensionless', sw=True):
+        """Return a DataArray of values."""
+        if isinstance(values, DataArray):
+            return values
+
+        if sw:
+            dims = ('mid_levels', 'num_shortwave_bands')
+            numbands = self.num_shortwave_bands
+        else:
+            dims = ('mid_levels', 'num_longwave_bands')
+            numbands = self.num_longwave_bands
+
+        if isinstance(values, numbers.Number):
+            values = values * np.ones((self.numlevels, numbands))
+        elif isinstance(values, np.ndarray):
+            if values.shape == (self.numlevels,):
+                values = np.repeat(
+                    values[:, np.newaxis], numbands, axis=1)
+            elif values.shape == (numbands,):
+                values = np.repeat(
+                    values[np.newaxis, :], self.numlevels, axis=0)
+            elif not values.shape == (self.numlevels, numbands):
+                raise ValueError(
+                    f'shape mismatch: input array of shape {values.shape} '
+                    'is not supported. Allowed shapes are: '
+                    f'({self.numlevels},), ({numbands},), or '
+                    f'({self.numlevels}, {numbands}).'
+                )
+        else:
+            raise TypeError(
+                'Cloud variable input must be a single value, '
+                '`numpy.ndarray` or a `sympl.DataArray`'
+            )
+
+        return DataArray(values, dims=dims, attrs={'units': units})
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
@@ -322,6 +328,15 @@ class PhysicalCloud(Cloud):
 class DirectInputCloud(Cloud):
     """ To be used with cloud_optical_properties='direct_input' in climt/RRTMG.
     """
+    direct_input_parameters = {
+        'cloud_area_fraction_in_atmosphere_layer',
+        'longwave_optical_thickness_due_to_cloud',
+        'cloud_forward_scattering_fraction',
+        'cloud_asymmetry_parameter',
+        'shortwave_optical_thickness_due_to_cloud',
+        'single_scattering_albedo_due_to_cloud',
+    }
+
     def __init__(self, numlevels, cloud_fraction, lw_optical_thickness,
                  sw_optical_thickness, forward_scattering_fraction=0,
                  asymmetry_parameter=0.85, single_scattering_albedo=0.9,
@@ -360,9 +375,7 @@ class DirectInputCloud(Cloud):
         )
 
         self._norm_index = norm_index
-        self._interp_cldf = None
-        self._interp_sw = None
-        self._interp_lw = None
+        self._interp_cache = {}
 
     def __add__(self, other):
         """Define the superposition of two clouds in a layer."""
@@ -386,15 +399,15 @@ class DirectInputCloud(Cloud):
         # For each cloud layer, the properties of the bigger cloud (in terms
         # of cloud fraction) is used.
         other_is_bigger = (
-                other.cloud_area_fraction_in_atmosphere_layer
-                > self.cloud_area_fraction_in_atmosphere_layer
+                other['cloud_area_fraction_in_atmosphere_layer']
+                > self['cloud_area_fraction_in_atmosphere_layer']
         )
 
         kwargs = {}
-        for kw_name, attr_name in name_map:
-            arr = getattr(self, attr_name).values.copy()
-            arr[other_is_bigger] = getattr(other, attr_name)[other_is_bigger]
-            kwargs[kw_name] = arr
+        for kwname, varname in name_map:
+            arr = self[varname].values.copy()
+            arr[other_is_bigger] = other[varname][other_is_bigger]
+            kwargs[kwname] = arr
 
         summed_cloud = DirectInputCloud(numlevels=self.numlevels, **kwargs)
 
@@ -448,36 +461,16 @@ class DirectInputCloud(Cloud):
         if self._norm_index is None:
             self._norm_index = norm_new
 
-        if self._interp_cldf is None:
-            self._interp_cldf = self.interpolation_function(
-                cloud_parameter=self.cloud_area_fraction_in_atmosphere_layer,
+        for varname in self.direct_input_parameters:
+            if varname not in self._interp_cache:
+                self._interp_cache[varname] = self.interpolation_function(
+                    cloud_parameter=self[varname])
+
+            self[varname][:] = self.shift_property(
+                cloud_parameter=self[varname],
+                interpolation_f=self._interp_cache[varname],
+                norm_new=norm_new,
             )
-
-            self._interp_sw = self.interpolation_function(
-                cloud_parameter=self.shortwave_optical_thickness_due_to_cloud,
-            )
-
-            self._interp_lw = self.interpolation_function(
-                cloud_parameter=self.longwave_optical_thickness_due_to_cloud,
-            )
-
-        self.cloud_area_fraction_in_atmosphere_layer = self.shift_property(
-            cloud_parameter=self.cloud_area_fraction_in_atmosphere_layer,
-            interpolation_f=self._interp_cldf,
-            norm_new=norm_new,
-        )
-
-        self.shortwave_optical_thickness_due_to_cloud = self.shift_property(
-            cloud_parameter=self.shortwave_optical_thickness_due_to_cloud,
-            interpolation_f=self._interp_sw,
-            norm_new=norm_new,
-        )
-
-        self.longwave_optical_thickness_due_to_cloud = self.shift_property(
-            cloud_parameter=self.longwave_optical_thickness_due_to_cloud,
-            interpolation_f=self._interp_lw,
-            norm_new=norm_new,
-        )
 
     def update_cloud_profile(self, atmosphere, convection, **kwargs):
         """Keep the cloud profile fixed with model level (pressure). """
@@ -573,24 +566,39 @@ class CloudEnsemble(DirectInputCloud):
             raise ValueError(
                 'Only `DirectInputCloud`s can be combined in an ensemble.')
         else:
-            self.clouds = args
+            self._clouds = args
 
         self._superposition = None
         self.superpose()
 
+        self.coords = self._superposition.coords
+
     def __getattr__(self, name):
+        if name.startswith('__'):
+            raise AttributeError
+
         return getattr(self._superposition, name)
 
     def __getitem__(self, name):
-        return getattr(self, name)
+        return self._superposition[name]
 
     def superpose(self):
         """Update the superposed cloud profile."""
-        self._superposition = np.sum(self.clouds)
+        self._superposition = np.sum(self._clouds)
+
+    @property
+    def attrs(self):
+        """Dictionary containing all attributes."""
+        return self._superposition._attrs
+
+    @property
+    def data_vars(self):
+        """Dictionary containing all data variables and their dimensions."""
+        return self._superposition._data_vars
 
     def update_cloud_profile(self, *args, **kwargs):
         """Update every cloud in the cloud ensemble."""
-        for cloud in self.clouds:
+        for cloud in self._clouds:
             cloud.update_cloud_profile(*args, **kwargs)
 
         self.superpose()

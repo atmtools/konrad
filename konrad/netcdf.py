@@ -30,6 +30,9 @@ def convert_unsupported_types(variable):
     if isinstance(variable, str):
         return np.asarray([variable])
 
+    if hasattr(variable, 'values'):
+        return variable.values
+
     return variable
 
 

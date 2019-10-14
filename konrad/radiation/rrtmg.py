@@ -160,21 +160,27 @@ class RRTMG(Radiation):
     def update_cloudy_radiative_state(self, cloud, state0, sw=True):
 
         # Take cloud quantities from cloud class.
-        state0['cloud_ice_particle_size'] = cloud.cloud_ice_particle_size
-        state0['mass_content_of_cloud_liquid_water_in_atmosphere_layer'] = cloud.mass_content_of_cloud_liquid_water_in_atmosphere_layer
-        state0['mass_content_of_cloud_ice_in_atmosphere_layer'] = cloud.mass_content_of_cloud_ice_in_atmosphere_layer
-        state0['cloud_water_droplet_radius'] = cloud.cloud_water_droplet_radius
-        state0['cloud_area_fraction_in_atmosphere_layer'] = cloud.cloud_area_fraction_in_atmosphere_layer
+        props = (
+           'cloud_ice_particle_size',
+           'mass_content_of_cloud_liquid_water_in_atmosphere_layer',
+           'mass_content_of_cloud_ice_in_atmosphere_layer',
+           'cloud_water_droplet_radius',
+           'cloud_area_fraction_in_atmosphere_layer',
+        )
 
-        if not sw:
-            state0['longwave_optical_thickness_due_to_cloud'] = cloud.longwave_optical_thickness_due_to_cloud
-        else:
-            state0['cloud_forward_scattering_fraction'] = cloud.cloud_forward_scattering_fraction
-            state0['cloud_asymmetry_parameter'] = cloud.cloud_asymmetry_parameter
-            state0['shortwave_optical_thickness_due_to_cloud'] = cloud.shortwave_optical_thickness_due_to_cloud
-            state0['single_scattering_albedo_due_to_cloud'] = cloud.single_scattering_albedo_due_to_cloud
+        lw_props = (
+            'longwave_optical_thickness_due_to_cloud',
+        )
 
-        return
+        sw_props = (
+            'cloud_forward_scattering_fraction',
+            'cloud_asymmetry_parameter',
+            'shortwave_optical_thickness_due_to_cloud',
+            'single_scattering_albedo_due_to_cloud',
+        )
+
+        for varname in props + sw_props if sw else props + lw_props:
+            state0[varname] = cloud[varname]
 
     def update_radiative_state(self, atmosphere, surface, state0, sw=True):
         """ Update CliMT formatted atmospheric state using parameters from our
