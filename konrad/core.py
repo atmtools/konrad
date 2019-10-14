@@ -15,6 +15,7 @@ from konrad.cloud import (Cloud, ClearSky)
 from konrad.convection import (Convection, HardAdjustment, RelaxedAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
 from konrad.upwelling import (Upwelling, NoUpwelling)
+from konrad.aerosol import (Aerosol, NoAerosol)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,9 @@ class RCE:
     def __init__(self, atmosphere, timestep='3h', max_duration='5000d',
                  outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
                  radiation=None, ozone=None, humidity=None, surface=None,
-                 cloud=None, convection=None, lapserate=None, upwelling=None):
+                 cloud=None, convection=None, lapserate=None, upwelling=None,
+                 aerosol=None,
+                 ):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -94,6 +97,9 @@ class RCE:
             upwelling (konrad.upwelling): Upwelling model.
                 Defaults to :class:`konrad.upwelling.NoUpwelling`.
 
+            aerosol (konrad.aerosol): Aerosol model.
+                Defaults to :class:`konrad.aerosol.NoAerosol`.
+
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -121,6 +127,11 @@ class RCE:
 
         self.upwelling = utils.return_if_type(upwelling, 'upwelling',
                                               Upwelling, NoUpwelling())
+        
+        self.aerosol=utils.return_if_type(aerosol, 'aerosol',
+                                          Aerosol, 
+                                          NoAerosol(self.atmosphere['plev'].size)
+                                          )
 
         self.max_duration = utils.parse_fraction_of_day(max_duration)
         self.timestep = utils.parse_fraction_of_day(timestep)
@@ -207,6 +218,7 @@ class RCE:
                 atmosphere=self.atmosphere,
                 surface=self.surface,
                 cloud=self.cloud,
+                aerosol=self.aerosol,
             )
 
             # Apply heatingrates/fluxes to the the surface.
@@ -244,8 +256,6 @@ class RCE:
                 timestep=self.timestep,
             )
 
-            # TODO: Consider implementing an Atmosphere.update_diagnostics()
-            #  method to include e.g. convective top in the output.
             self.atmosphere.update_height()
             z = self.atmosphere.get('z')[0, :]
             if isinstance(self.convection, HardAdjustment) or isinstance(
@@ -269,6 +279,9 @@ class RCE:
 
             self.cloud.update_cloud_profile(self.atmosphere,
                                             convection=self.convection)
+
+            self.aerosol.update_aerosols(self.niter * self.timestep,self.atmosphere)
+ 
 
             # Calculate temperature change for convergence check.
             self.deltaT = (self.atmosphere['T'] - T) / self.timestep

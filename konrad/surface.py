@@ -140,7 +140,7 @@ class SurfaceFixedTemperature(Surface):
 #TODO: Rename `SlabOcean`?
 class SurfaceHeatCapacity(Surface):
     """Surface model with adjustable temperature."""
-    def __init__(self, *args, depth=50., **kwargs):
+    def __init__(self, *args, depth=50., **kwargs): 
         """
         Parameters:
             depth (float): Ocean depth [m].

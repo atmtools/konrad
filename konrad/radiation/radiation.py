@@ -72,12 +72,12 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         self['toa'] = (('time',), None)
 
     @abc.abstractmethod
-    def calc_radiation(self, atmosphere, surface, cloud):
+    def calc_radiation(self, atmosphere, surface, cloud, aerosol):
         pass
 
-    def update_heatingrates(self, atmosphere, surface, cloud):
+    def update_heatingrates(self, atmosphere, surface, cloud, aerosol):
         """Returns `xr.Dataset` containing radiative transfer results."""
-        self.calc_radiation(atmosphere, surface, cloud)
+        self.calc_radiation(atmosphere, surface, cloud, aerosol)
 
         # self.correct_bias(rad_dataset)
 
