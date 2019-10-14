@@ -67,16 +67,53 @@ import xarray as xr
 import scipy as sc
 import numpy as np
 import typhon.physics as ty
-from konrad.cloud import get_aerosol_waveband_data_array
+from sympl import DataArray
 
 
+#I have to think about the best place to put this function
+def get_aerosol_waveband_data_array(values, units='dimensionless', numlevels=200,
+                            sw=True):
+    """Return a DataArray of values."""
+    if isinstance(values, DataArray):
+        return values
 
+    if sw:
+        dims_bands = 'num_shortwave_bands'
+        numbands = 14
+    else:
+        dims_bands = 'num_longwave_bands'
+        numbands = 16
+
+    if isinstance(values, (int, float)):
+        return DataArray(values * np.ones((numlevels, numbands)),
+                         dims=('mid_levels', dims_bands),
+                         attrs={'units': units}).T
+
+    elif isinstance(values, np.ndarray):
+        if values.shape == (numlevels,):
+            return DataArray(
+                np.repeat(values[:, np.newaxis], numbands, axis=1),
+                dims=('mid_levels', dims_bands),
+                attrs={'units': units},
+            ).T
+        elif values.shape == (numlevels, numbands):
+            return DataArray(
+                values,
+                dims=('mid_levels', dims_bands),
+                attrs={'units': units},
+            ).T
+
+    raise TypeError(
+        'Aerosol variable input must be a single value, `numpy.ndarray` or a '
+        '`sympl.DataArray`')
 
 class Aerosol(metaclass=abc.ABCMeta):
     def __init__(self,atmNumlevels, aerosol_type='no_aerosol', aerosolLevelShiftInput=0,monthsAfterEruption=2,includeSWForcing=True,\
                  includeLWForcing=True,includeScattering=True,includeAbsorption=True):
-         
+        logger.info('aerosol super init working') 
+
         self._aerosol_type = aerosol_type
+        #print(self.aerosol_type)
         self.includeSWForcing=includeSWForcing
         self.includeLWForcing=includeLWForcing
         self.aerosolLevelShift=aerosolLevelShiftInput
@@ -99,12 +136,11 @@ class Aerosol(metaclass=abc.ABCMeta):
     #- implementation for a changing lapse rate, for now it is implemented only for a fixed lapse rate
     #- add the cold point as an output
     ################################################################
+    
+    
     def update_aerosols(self, time, atmosphere):
         return
     
-    def calculateHeightLevels(self, atmosphere):
-        return
-
 
 class VolcanoAerosol(Aerosol):
     '''
@@ -112,7 +148,7 @@ class VolcanoAerosol(Aerosol):
     '''
     def __init__(self,atmNumlevels, aerosolLevelShiftInput=0,includeSWForcing=True,\
                  includeLWForcing=True,includeScattering=True,includeAbsorption=True):
-        super().__init__(atmNumlevels,aerosol_type='all_aerosol_properties')
+        super().__init__(atmNumlevels,aerosol_type='all_aerosol_properties') 
         self.aerosolLevelShift=aerosolLevelShiftInput
         self.numlevels=atmNumlevels
         self.includeSWForcing=includeSWForcing
@@ -127,6 +163,11 @@ class VolcanoAerosol(Aerosol):
         Translate from height dependance to pressure dependance.
         The aerosol layer is kept fixed and constant throughout the following run.
         '''
+        #the input data has to be scaled to fit to model levels
+        #for compatability with rrtmg input format
+        heights = self.calculateHeightLevels(atmosphere)
+        scaling=np.gradient(heights)
+        
         if not np.count_nonzero(self.optical_thickness_due_to_aerosol_sw.values):
             if self.includeLWForcing:
                 extEarth = xr.open_dataset(
@@ -135,6 +176,18 @@ class VolcanoAerosol(Aerosol):
                                 'data/aerosolData/23dataextEarth1991.nc'
                                 #'data/aerosolData/23dataextEarth1992.nc'
                                 ))
+                if self.aerosolLevelShift:
+                    self.aerosolLevelShiftArray=self.aerosolLevelShift*np.ones(np.shape(extEarth.altitude[:]))
+                    extEarth.altitude.values=extEarth.altitude.values+self.aerosolLevelShiftArray
+                    
+                for lw_band in range(np.shape(extEarth.terrestrial_bands)[0]):
+                    self.optical_thickness_due_to_aerosol_lw[lw_band, :] = \
+                        sc.interpolate.interp1d(
+                            extEarth.altitude.values,
+                            extEarth.ext_earth[8,lw_band, :].values,
+                            bounds_error=False,
+                            fill_value=0)(heights)*scaling
+                    
             if self.includeSWForcing:
                 extSun = xr.open_dataset(
                         os.path.join(
@@ -154,93 +207,32 @@ class VolcanoAerosol(Aerosol):
                                 'data/aerosolData/23dataomegaSun1991.nc'
                                 #'data/aerosolData/23dataomegaSun1992.nc'
                                 ))
-            heights = self.calculateHeightLevels(atmosphere)
-            #the input data has to be scaled to fit to model levels
-            #for compatability with rrtmg input format
-            scaling=np.gradient(heights)
+                if self.aerosolLevelShift:
+                    self.aerosolLevelShiftArraySW=self.aerosolLevelShift*np.ones(np.shape(extSun.altitude[:]))
+                    extSun.altitude.values=extSun.altitude.values+self.aerosolLevelShiftArraySW
+                    gSun.altitude.values=gSun.altitude.values+self.aerosolLevelShiftArraySW
+                    omegaSun.altitude.values=omegaSun.altitude.values+self.aerosolLevelShiftArraySW
             
-            if self.aerosolLevelShift:
-                self.aerosolLevelShiftArray=self.aerosolLevelShift*np.ones(np.shape(extEarth.altitude[:]))
-                extEarth.altitude.values=extEarth.altitude.values+self.aerosolLevelShiftArray
-                extSun.altitude.values=extSun.altitude.values+self.aerosolLevelShiftArray
-                gSun.altitude.values=gSun.altitude.values+self.aerosolLevelShiftArray
-                omegaSun.altitude.values=omegaSun.altitude.values+self.aerosolLevelShiftArray
-            
-            for lw_band in range(np.shape(extEarth.terrestrial_bands)[0]):
-                self.optical_thickness_due_to_aerosol_lw[lw_band, :] = \
-                    sc.interpolate.interp1d(
-                        extEarth.altitude.values,
-                        extEarth.ext_earth[8,lw_band, :].values,
-                        #extEarth.ext_earth[lw_band, :, 1].values,
-                        bounds_error=False,
-                        fill_value=0)(heights)*scaling
-                    
-                
-            for sw_band in range(np.shape(extSun.solar_bands)[0]):
-                self.optical_thickness_due_to_aerosol_sw[sw_band, :] = \
-                    sc.interpolate.interp1d(
-                        extSun.altitude.values,
-                        extSun.ext_sun[sw_band,8, :].values,
-                        #extSun.ext_sun[sw_band, :, 1],
-                        bounds_error=False,
-                        fill_value=0)(heights)*scaling
-                self.asymmetry_factor_aerosol_sw[sw_band, :] = \
-                    sc.interpolate.interp1d(
-                        gSun.altitude.values,
-                        gSun.g_sun[sw_band,8, :].values,
-                        #gSun.g_sun[sw_band, :, 1].values,
-                        bounds_error=False,
-                        fill_value=0)(heights)
-                self.single_scattering_albedo_aerosol_sw[sw_band, :] = \
-                    sc.interpolate.interp1d(
-                        omegaSun.altitude.values,
-                        omegaSun.omega_sun[sw_band,8, :].values,
-                        #omegaSun.omega_sun[sw_band, :, 1].values,
-                        bounds_error=False,
-                        fill_value=0)(heights)
- 
-                if self.includeLWForcing:
-                    self.aerosolLevelShiftArray=self.aerosolLevelShift*np.ones(np.shape(extEarth.altitude[:]))
-                    extEarth.altitude.values=extEarth.altitude.values+self.aerosolLevelShiftArray
-                if self.includeSWForcing:
-                    self.aerosolLevelShiftArray=self.aerosolLevelShift*np.ones(np.shape(extSun.altitude[:]))
-                    extSun.altitude.values=extSun.altitude.values+self.aerosolLevelShiftArray
-                    gSun.altitude.values=gSun.altitude.values+self.aerosolLevelShiftArray
-                    omegaSun.altitude.values=omegaSun.altitude.values+self.aerosolLevelShiftArray
-            
-            if self.includeLWForcing:
-                for lw_band in range(np.shape(extEarth.terrestrial_bands)[0]):
-                    self.optical_thickness_due_to_aerosol_lw[lw_band, :] = \
-                        sc.interpolate.interp1d(
-                            extEarth.altitude.values,
-                            extEarth.ext_earth[8,lw_band, :].values,
-                            #extEarth.ext_earth[lw_band, :, 1].values,
-                            bounds_error=False,
-                            fill_value=0)(heights)*scaling
-                        
-            if self.includeSWForcing:
                 for sw_band in range(np.shape(extSun.solar_bands)[0]):
                     self.optical_thickness_due_to_aerosol_sw[sw_band, :] = \
                         sc.interpolate.interp1d(
                             extSun.altitude.values,
                             extSun.ext_sun[sw_band,8, :].values,
-                            #extSun.ext_sun[sw_band, :, 1],
                             bounds_error=False,
                             fill_value=0)(heights)*scaling
                     self.asymmetry_factor_aerosol_sw[sw_band, :] = \
                         sc.interpolate.interp1d(
                             gSun.altitude.values,
                             gSun.g_sun[sw_band,8, :].values,
-                            #gSun.g_sun[sw_band, :, 1].values,
                             bounds_error=False,
                             fill_value=0)(heights)
                     self.single_scattering_albedo_aerosol_sw[sw_band, :] = \
                         sc.interpolate.interp1d(
                             omegaSun.altitude.values,
                             omegaSun.omega_sun[sw_band,8, :].values,
-                            #omegaSun.omega_sun[sw_band, :, 1].values,
                             bounds_error=False,
                             fill_value=0)(heights)
+ 
  
                 if not self.includeScattering: 
                     '''only absorption
@@ -299,6 +291,4 @@ class NoAerosol(Aerosol):
     def update_aerosols(self, time, atmosphere):
         return
     
-    def calculateHeightLevels(self,atmosphere):
-        return
- 
+

@@ -68,7 +68,7 @@ class RRTMG(Radiation):
         # cloud class or instance.
         self._cloud_optical_properties = None
         self._cloud_ice_properties = None
-        self._aerosol_type = None
+        self._aerosol_type = None 
 
         self.solar_constant = solar_constant
         
@@ -196,11 +196,11 @@ class RRTMG(Radiation):
         for varname in props + sw_props if sw else props + lw_props:
             state0[varname] = cloud[varname]
 
-    def update_aerosol_radiative_properties(self, aerosol, state_sw, state_lw):
-        state_sw['shortwave_optical_thickness_due_to_aerosol'] = aerosol.optical_thickness_due_to_aerosol_sw
-        state_sw['single_scattering_albedo_due_to_aerosol'] = aerosol.single_scattering_albedo_aerosol_sw
-        state_sw['aerosol_asymmetry_parameter'] = aerosol.asymmetry_factor_aerosol_sw
-        state_lw['longwave_optical_thickness_due_to_aerosol'] = aerosol.optical_thickness_due_to_aerosol_lw
+#    def update_aerosol_radiative_properties(self, aerosol, state_sw, state_lw):
+#        state_sw['shortwave_optical_thickness_due_to_aerosol'] = aerosol.optical_thickness_due_to_aerosol_sw
+#        state_sw['single_scattering_albedo_due_to_aerosol'] = aerosol.single_scattering_albedo_aerosol_sw
+#        state_sw['aerosol_asymmetry_parameter'] = aerosol.asymmetry_factor_aerosol_sw
+#        state_lw['longwave_optical_thickness_due_to_aerosol'] = aerosol.optical_thickness_due_to_aerosol_lw
 
         return
 
