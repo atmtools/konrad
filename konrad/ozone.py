@@ -162,8 +162,7 @@ class Cariolle(Ozone):
             w_factor = np.ones(numlevels)
             w_array = w*w_factor
 
-        do3dz = (o3[1:] - o3[:-1]) / np.diff(z)
-        do3dz = np.hstack(([0], do3dz))
+        do3dz = np.gradient(o3, z)
 
         return -w_array * do3dz
 
