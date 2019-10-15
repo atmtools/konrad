@@ -93,7 +93,7 @@ class RRTMG(Radiation):
             cloud_optical_properties=self._cloud_optical_properties,
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties='radius_dependent_absorption',
-            cloud_overlap_method='maximum_random',
+            cloud_overlap_method=overlap,
             aerosol_type=self._aerosol_type,
             mcica=self._is_mcica)
         state_lw = {}

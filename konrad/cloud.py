@@ -54,54 +54,6 @@ __all__ = [
     'CloudEnsemble',
 ]
 
-
-# TODO: Move this to aerosol class
-def get_waveband_data_array(values, units='dimensionless', numlevels=200,
-                            sw=True):
-    """Return a DataArray of values."""
-    if isinstance(values, DataArray):
-        return values
-
-    if sw:
-        dims_bands = 'num_shortwave_bands'
-        numbands = 14
-    else:
-        dims_bands = 'num_longwave_bands'
-        numbands = 16
-
-    if isinstance(values, (int, float)):
-        return DataArray(values * np.ones((numlevels, numbands)),
-                         dims=('mid_levels', dims_bands),
-                         attrs={'units': units})
-
-    elif isinstance(values, np.ndarray):
-        if values.shape == (numlevels,):
-            return DataArray(
-                np.repeat(values[:, np.newaxis], numbands, axis=1),
-                dims=('mid_levels', dims_bands),
-                attrs={'units': units},
-            )
-        elif values.shape == (numlevels, numbands):
-            return DataArray(
-                values,
-                dims=('mid_levels', dims_bands),
-                attrs={'units': units},
-            )
-
-    raise TypeError(
-        'Cloud variable input must be a single value, `numpy.ndarray` or a '
-        '`sympl.DataArray`')
-
-#This is not a nice implementation... Lukas, I guess you do not want this in your cloud class?
-    #should i move it to aerosols or do we have place were we implement all data structures? 
-def get_aerosol_waveband_data_array(values, units='dimensionless', numlevels=200,
-                            sw=True):
-    """Return a DataArray of values as required for aerosol class following the 
-    climt array requirements."""
-    a=get_waveband_data_array(values, units=units, numlevels=numlevels, sw=sw) 
-    return a.T
- 
-
 def get_rectangular_profile(z, value, ztop, depth):
     """Produce a rectangular profile, an array containing zeros and the value
     'value' corresponding to a certain height range.

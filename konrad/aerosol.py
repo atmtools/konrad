@@ -69,8 +69,6 @@ import numpy as np
 import typhon.physics as ty
 from sympl import DataArray
 
-
-#I have to think about the best place to put this function
 def get_aerosol_waveband_data_array(values, units='dimensionless', numlevels=200,
                             sw=True):
     """Return a DataArray of values."""
@@ -110,10 +108,7 @@ def get_aerosol_waveband_data_array(values, units='dimensionless', numlevels=200
 class Aerosol(metaclass=abc.ABCMeta):
     def __init__(self,atmNumlevels, aerosol_type='no_aerosol', aerosolLevelShiftInput=0,monthsAfterEruption=2,includeSWForcing=True,\
                  includeLWForcing=True,includeScattering=True,includeAbsorption=True):
-        logger.info('aerosol super init working') 
-
         self._aerosol_type = aerosol_type
-        #print(self.aerosol_type)
         self.includeSWForcing=includeSWForcing
         self.includeLWForcing=includeLWForcing
         self.aerosolLevelShift=aerosolLevelShiftInput
