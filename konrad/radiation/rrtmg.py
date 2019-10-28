@@ -276,7 +276,7 @@ class RRTMG(Radiation):
 
     def calc_cloudy_nomcica_radiation(self, atmosphere, surface, cloud):
 
-        cloud_fraction = deepcopy(cloud.cloud_area_fraction_in_atmosphere_layer)
+        cloud_fraction = deepcopy(cloud['cloud_area_fraction_in_atmosphere_layer'][:])
 
         if self._state_sw is None:  # first time only
             cf_cloudy = cloud_fraction[cloud_fraction != 0]
@@ -293,7 +293,7 @@ class RRTMG(Radiation):
         # Make all the cloudy layers overcast, so that the nomcica version of
         # RRTMG can be used in the shortwave - all wavelengths see cloud.
         # Use the same approach for the longwave for consistency.
-        cloud.cloud_area_fraction_in_atmosphere_layer[cloud_fraction != 0] = 1
+        cloud['cloud_area_fraction_in_atmosphere_layer'][cloud_fraction != 0] = 1
         lw_overcast, sw_overcast = self.radiative_fluxes(
             atmosphere, surface, cloud
         )
@@ -308,7 +308,7 @@ class RRTMG(Radiation):
                     fluxes[key][:] *= cf_max  # weighted by cloud area fraction
                     fluxes[key][:] += (1 - cf_max) * clear_part
 
-        cloud.cloud_area_fraction_in_atmosphere_layer *= cloud_fraction
+        cloud['cloud_area_fraction_in_atmosphere_layer'][:] *= cloud_fraction
 
         return lw_fluxes, sw_fluxes
 
