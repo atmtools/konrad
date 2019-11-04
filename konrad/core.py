@@ -267,8 +267,11 @@ class RCE:
                 surface=self.surface,
             )
 
-            self.cloud.update_cloud_profile(self.atmosphere,
-                                            convection=self.convection)
+            self.cloud.update_cloud_profile(
+                atmosphere=self.atmosphere,
+                convection=self.convection,
+                radiation=self.radiation,
+            )
 
             # Calculate temperature change for convergence check.
             self.deltaT = (self.atmosphere['T'] - T) / self.timestep

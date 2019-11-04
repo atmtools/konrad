@@ -273,11 +273,13 @@ class Cloud(Component, metaclass=abc.ABCMeta):
         return cls(numlevels=atmosphere['plev'].size, **kwargs)
 
     @abc.abstractmethod
-    def update_cloud_profile(self, atmosphere, convection, **kwargs):
+    def update_cloud_profile(self, atmosphere, convection, radiation,
+                             **kwargs):
         """Return the cloud parameters for the radiation scheme.
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
             convection (konrad.convection): convection scheme
+            radiation (konrad.radiation): radiation scheme
         """
 
 
@@ -338,15 +340,22 @@ class DirectInputCloud(Cloud):
     }
 
     def __init__(self, numlevels, cloud_fraction, lw_optical_thickness,
-                 sw_optical_thickness, forward_scattering_fraction=0,
-                 asymmetry_parameter=0.85, single_scattering_albedo=0.9,
-                 norm_index=None):
+                 sw_optical_thickness, coupling='convective_top',
+                 forward_scattering_fraction=0, asymmetry_parameter=0.85,
+                 single_scattering_albedo=0.9, norm_index=None):
 
         """Define a cloud based on properties that are directly used by the
         radiation scheme, namely cloud optical depth and scattering parameters.
 
         Parameters:
             numlevels (int): Number of atmospheric levels.
+            coupling (str): Mechanism with which the cloud is coupled to the
+                atmospheric profile:
+                    * 'convective_top': Coupling to the convective top
+                    * 'freezing_level': Coupling to the freezing level
+                    * 'subsidence_divergence': Coupling to the level of
+                      maximum subsidence divergence
+                    * 'pressure': Fixed at pressure (no coupling)
             cloud_fraction (float / ndarray / DataArray): cloud area fraction
             lw_optical_thickness (float / DataArray): longwave optical
                 thickness of the cloud
@@ -376,6 +385,7 @@ class DirectInputCloud(Cloud):
 
         self._norm_index = norm_index
         self._interp_cache = {}
+        self.coupling = coupling
 
     def __add__(self, other):
         """Define the superposition of two clouds in a layer."""
@@ -472,79 +482,58 @@ class DirectInputCloud(Cloud):
                 norm_new=norm_new,
             )
 
-    def update_cloud_profile(self, atmosphere, convection, **kwargs):
+    def update_cloud_profile(self, atmosphere, convection, radiation,
+                             **kwargs):
         """Keep the cloud profile fixed with model level (pressure). """
-        return
+        if self.coupling == 'convective_top':
+            self.shift_cloud_profile(
+                norm_new=convection.get('convective_top_index')[0]
+            )
+        elif self.coupling == 'freezing_level':
+            self.shift_cloud_profile(
+                norm_new=atmosphere.get_triple_point_index(),
+            )
+        elif self.coupling == 'subsidence_divergence':
+            Qr = radiation['net_htngrt_clr'][-1]
+            self.shift_cloud_profile(
+                norm_new=atmosphere.get_subsidence_convergence_max_index(Qr),
+            )
+        elif self.coupling == 'pressure':
+            return
+        else:
+            raise ValueError(
+                'The cloud class has been initialized with an invalid '
+                'cloud coupling mechanism.'
+            )
 
 
 class HighCloud(DirectInputCloud):
-    """Representation of a high-level cloud."""
-    def update_cloud_profile(self, atmosphere, convection, **kwargs):
-        """Keep the cloud attached to the convective top. """
-        self.shift_cloud_profile(
-            norm_new=convection.get('convective_top_index')[0]
-        )
+    """Representation of a high-level cloud.
+
+    High-level clouds are coupled to the convective top by default. Another
+    reasonable option is a coupling to the level of maximum diabatic
+    subsidence divergence (`"subsidence_divergence"`).
+    """
+    def __init__(self, *args, coupling='convective_top', **kwargs):
+        super().__init__(*args, coupling=coupling, **kwargs)
 
 
 class MidLevelCloud(DirectInputCloud):
-    """Representation of a mid-level cloud."""
-    def update_cloud_profile(self, atmosphere, convection, **kwargs):
-        """Keep the cloud attached to the freezing point. """
-        self.shift_cloud_profile(
-            norm_new=atmosphere.get_triple_point_index(),
-        )
+    """Representation of a mid-level cloud.
+
+    Mid-level clouds are coupled to the freezing level.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, coupling='freezing_level', **kwargs)
 
 
 class LowCloud(DirectInputCloud):
     """Representation of a low-level cloud.
-    Fixed at the top of the planetary boundary layer."""
-    def __init__(self, numlevels, height_of_cloud, cloud_fraction,
-                 lw_optical_thickness, sw_optical_thickness,
-                 forward_scattering_fraction=0, asymmetry_parameter=0.85,
-                 single_scattering_albedo=0.9):
-        """
-        Parameters:
-            numlevels (int): Number of atmospheric levels
-            height_of_cloud (float/int): height at which the cloud is fixed [m]
-            cloud_fraction (float / ndarray / DataArray): cloud area fraction
-            lw_optical_thickness (float / DataArray): longwave optical
-                thickness of the cloud
-            sw_optical_thickness (float / DataArray): shortwave optical
-                thickness of the cloud
-            forward_scattering_fraction (float / DataArray): cloud forward
-                scattering fraction (for the shortwave component of RRTMG)
-                This is a scaling factor for the other shortwave parameters,
-                if it is set to 0, no scaling is applied.
-            asymmetry_parameter (float / DataArray): cloud asymmetry parameter
-                (for the shortwave component of RRTMG)
-            single_scattering_albedo (float / DataArray): single scattering
-                albedo due to cloud (for the shortwave component of RRTMG)
-        """
-        super().__init__(
-            numlevels=numlevels,
-            cloud_fraction=cloud_fraction,
-            lw_optical_thickness=lw_optical_thickness,
-            sw_optical_thickness=sw_optical_thickness,
-            forward_scattering_fraction=forward_scattering_fraction,
-            asymmetry_parameter=asymmetry_parameter,
-            single_scattering_albedo=single_scattering_albedo,
-        )
 
-        self._z_of_cloud = height_of_cloud
-
-    def update_cloud_profile(self, atmosphere, convection, **kwargs):
-        """Keep the cloud at a fixed height. """
-        z = atmosphere.get('z')[-1]
-        index = int(np.argmax(z > self._z_of_cloud))  # model level above
-        height_array = np.array([z[index-1], z[index]])
-        index_array = np.array([index-1, index])  # model level bounds
-        # Interpolate between two indices for model levels to be closer to that
-        # corresponding to the height at which the cloud should be fixed.
-        norm_new = interp1d(height_array, index_array)(self._z_of_cloud)
-
-        self.shift_cloud_profile(
-            norm_new=norm_new
-        )
+    Low-level clouds are fixed in pressure coordinates.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, coupling='pressure', **kwargs)
 
 
 class CloudEnsemble(DirectInputCloud):
