@@ -400,26 +400,39 @@ class Atmosphere(Component):
 
         return -radiative_cooling / sigma
 
-    def get_subsidence_convergence_max(self, radiative_cooling):
+    def get_subsidence_convergence_max_index(self, radiative_cooling):
         """Return index of maximum subsidence convergence.
 
         Parameters:
             radiative_cooling (ndarray): Radiative cooling rates.
                 Positive values for heating, negative values for cooling!
-            pmin (float): Lower pressure threshold. The cold point has to
-                be below (higher pressure, lower height) that value.
 
         Returns:
-              float: Pressure of maxixum subsidence divergence [Pa].
+              int: Level index of maximum subsidence divergence.
         """
         plev = self['plev']
         omega = self.get_diabatic_subsidence(radiative_cooling)
         domega = np.gradient(omega, plev)
 
         max_index = np.argmax(domega[plev > self.pmin])
-        max_plev = plev[max_index]
 
         self.create_variable('diabatic_convergence_max_index', [max_index])
+
+        return max_index
+
+    def get_subsidence_convergence_max_plev(self, radiative_cooling):
+        """Return pressure of maximum subsidence convergence.
+
+        Parameters:
+            radiative_cooling (ndarray): Radiative cooling rates.
+                Positive values for heating, negative values for cooling!
+
+        Returns:
+              float: Pressure of maximum subsidence divergence [Pa].
+        """
+        max_idx = self.get_subsidence_convergence_max_index(radiative_cooling)
+        max_plev = self['plev'][max_idx]
+
         self.create_variable('diabatic_convergence_max_plev', [max_plev])
 
         return max_plev
