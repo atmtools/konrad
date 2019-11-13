@@ -38,6 +38,7 @@ from scipy.interpolate import interp1d
 from sympl import DataArray
 
 from konrad.component import Component
+from konrad import utils
 
 logger = logging.getLogger(__name__)
 
@@ -282,6 +283,13 @@ class Cloud(Component, metaclass=abc.ABCMeta):
             convection (konrad.convection): convection scheme
             radiation (konrad.radiation): radiation scheme
         """
+
+    def overcast(self):
+        """Set cloud fraction in cloud layers to ``1`` (full overcast)."""
+        cloud_fraction = self['cloud_area_fraction_in_atmosphere_layer'][:]
+        cloud_mask = (cloud_fraction > 0).astype(float)
+
+        self['cloud_area_fraction_in_atmosphere_layer'][:] = cloud_mask
 
 
 class ClearSky(Cloud):
@@ -660,7 +668,7 @@ class CloudEnsemble(DirectInputCloud):
             raise ValueError(
                 'Only `DirectInputCloud`s can be combined in an ensemble.')
         else:
-            self._clouds = args
+            self._clouds = np.asarray(args)
 
         self._superposition = None
         self.superpose()
@@ -696,3 +704,31 @@ class CloudEnsemble(DirectInputCloud):
             cloud.update_cloud_profile(*args, **kwargs)
 
         self.superpose()
+
+    def get_combinations(self):
+        """Get all combinations of overlapping cloud layers."""
+        if not all([isinstance(c, ConceptualCloud) for c in self._clouds]):
+            raise TypeError(
+                'Only `ConceptualCloud`s can be combined.'
+            )
+
+        bool_index, combined_weights = utils.calculate_combined_weights(
+            weights=[cld.cloud_fraction for cld in self._clouds]
+        )
+
+        clouds = []
+        for (i, p) in zip(bool_index, combined_weights):
+            if not any(i):
+                clouds.append(DirectInputCloud(
+                    numlevels=self.coords['mid_levels'].size,
+                    cloud_fraction=0.,
+                    lw_optical_thickness=0.,
+                    sw_optical_thickness=0.,
+                ))
+            else:
+                composed_clouds = np.sum(self._clouds[i])
+                composed_clouds.overcast()
+
+                clouds.append(composed_clouds)
+
+        return combined_weights, clouds
