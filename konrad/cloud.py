@@ -51,6 +51,7 @@ __all__ = [
     'HighCloud',
     'MidLevelCloud',
     'LowCloud',
+    'ConceptualCloud',
     'CloudEnsemble',
 ]
 
@@ -534,6 +535,110 @@ class LowCloud(DirectInputCloud):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, coupling='pressure', **kwargs)
+
+
+class ConceptualCloud(DirectInputCloud):
+    def __init__(self, atmosphere, cloud_top, depth, cloud_fraction,
+                 water_path=100e-3, phase='ice', coupling='pressure'):
+        """Initialize a grey cloud."""
+        super().__init__(
+            numlevels=atmosphere['plev'].size,
+            cloud_fraction=np.nan,
+            lw_optical_thickness=np.nan,
+            sw_optical_thickness=np.nan,
+        )
+
+        self.cloud_top = cloud_top
+        self.depth = depth
+        self.coupling = coupling
+
+        self.cloud_fraction = cloud_fraction
+        self.water_path = water_path
+        self.phase = phase
+
+        self.update_cloud_profile(atmosphere)
+
+    def get_cloud_optical_properties(self, water_content):
+        _ICE_CLOUD_PROPS = dict(
+            single_scattering_albedo_due_to_cloud=.999,
+            cloud_asymmetry_parameter=0.7,
+            cloud_forward_scattering_fraction=0.7 ** 2,
+            shortwave_optical_thickness_due_to_cloud=1.3 * water_content,
+            longwave_optical_thickness_due_to_cloud=1.3 * water_content,
+        )
+
+        _LIQ_CLOUD_PROPS = dict(
+            single_scattering_albedo_due_to_cloud=0.995,
+            cloud_asymmetry_parameter=0.85,
+            cloud_forward_scattering_fraction=0.85 ** 2,
+            shortwave_optical_thickness_due_to_cloud=1. * water_content,
+            longwave_optical_thickness_due_to_cloud=1. * water_content,
+        )
+
+        props = _ICE_CLOUD_PROPS if self.phase == 'ice' else _LIQ_CLOUD_PROPS
+
+        cld_opt_props = {}
+        for name, value in props.items():
+            if 'longwave' in name:
+                cld_opt_props[name] = self.get_waveband_data_array(value,
+                                                                   sw=False)
+            else:
+                cld_opt_props[name] = self.get_waveband_data_array(value)
+
+        return cld_opt_props
+
+    @classmethod
+    def from_atmosphere(cls, atmosphere, **kwargs):
+        return cls(atmosphere['plev'].size, **kwargs)
+
+    def get_cloud_top_plev(self, atmosphere, convection=None, radiation=None):
+        """Determine cloud top pressure depending on coupling mechanism."""
+        if self.coupling.lower() == 'pressure':
+            return self.cloud_top
+        elif self.coupling.lower() == 'convective_top':
+            if convection is None:
+                # Initialisation
+                return self.cloud_top
+
+            return convection.get('convective_top_plev')[0]
+        elif self.coupling.lower() == 'freezing_level':
+            # Center around freezing level
+            return atmosphere.get_triple_point_plev() - self.depth / 2
+        elif self.coupling.lower() == 'subsidence_divergence':
+            if radiation is None:
+                # Initialisation
+                return self.cloud_top
+
+            Qr = radiation['net_htngrt_clr'][-1]
+            return atmosphere.get_subsidence_convergence_max_plev(Qr)
+        else:
+            raise ValueError(
+                'The cloud class has been initialized with an invalid '
+                'cloud coupling mechanism.'
+            )
+
+    def update_cloud_profile(self, atmosphere, convection=None, radiation=None,
+                             **kwargs):
+        cloud_top_plev = self.get_cloud_top_plev(
+            atmosphere, convection, radiation)
+
+        is_cloud = np.logical_and(
+            atmosphere['plev'] > cloud_top_plev,
+            atmosphere['plev'] < cloud_top_plev + self.depth,
+        ).astype(bool)
+
+        self['cloud_area_fraction_in_atmosphere_layer'][:] = (
+            self.cloud_fraction * is_cloud
+        )
+
+        water_content_per_Layer = self.water_path / np.sum(is_cloud)
+
+        cloud_optics = self.get_cloud_optical_properties(
+            water_content=water_content_per_Layer)
+
+        for name, data in cloud_optics.items():
+            self[name][:, :] = 0
+            self[name][is_cloud, :] = data[is_cloud, :]
 
 
 class CloudEnsemble(DirectInputCloud):
