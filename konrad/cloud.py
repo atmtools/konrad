@@ -39,6 +39,7 @@ from sympl import DataArray
 
 from konrad.component import Component
 from konrad import utils
+from konrad.cloudoptics import EchamCloudOptics
 
 logger = logging.getLogger(__name__)
 
@@ -547,7 +548,8 @@ class LowCloud(DirectInputCloud):
 
 class ConceptualCloud(DirectInputCloud):
     def __init__(self, atmosphere, cloud_top, depth, cloud_fraction,
-                 water_path=100e-3, phase='ice', coupling='pressure'):
+                 water_path=100e-3, particle_size=100., phase='ice',
+                 coupling='pressure'):
         """Initialize a grey cloud."""
         super().__init__(
             numlevels=atmosphere['plev'].size,
@@ -562,38 +564,16 @@ class ConceptualCloud(DirectInputCloud):
 
         self.cloud_fraction = cloud_fraction
         self.water_path = water_path
+        self.particle_size = particle_size
         self.phase = phase
 
         self.update_cloud_profile(atmosphere)
 
     def get_cloud_optical_properties(self, water_content):
-        _ICE_CLOUD_PROPS = dict(
-            single_scattering_albedo_due_to_cloud=.999,
-            cloud_asymmetry_parameter=0.7,
-            cloud_forward_scattering_fraction=0.7 ** 2,
-            shortwave_optical_thickness_due_to_cloud=1.3 * water_content,
-            longwave_optical_thickness_due_to_cloud=1.3 * water_content,
-        )
+        cld_opt_props = EchamCloudOptics()
 
-        _LIQ_CLOUD_PROPS = dict(
-            single_scattering_albedo_due_to_cloud=0.995,
-            cloud_asymmetry_parameter=0.85,
-            cloud_forward_scattering_fraction=0.85 ** 2,
-            shortwave_optical_thickness_due_to_cloud=1. * water_content,
-            longwave_optical_thickness_due_to_cloud=1. * water_content,
-        )
-
-        props = _ICE_CLOUD_PROPS if self.phase == 'ice' else _LIQ_CLOUD_PROPS
-
-        cld_opt_props = {}
-        for name, value in props.items():
-            if 'longwave' in name:
-                cld_opt_props[name] = self.get_waveband_data_array(value,
-                                                                   sw=False)
-            else:
-                cld_opt_props[name] = self.get_waveband_data_array(value)
-
-        return cld_opt_props
+        return cld_opt_props.get_cloud_properties(
+            self.particle_size, water_content, self.phase)
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
@@ -644,9 +624,9 @@ class ConceptualCloud(DirectInputCloud):
         cloud_optics = self.get_cloud_optical_properties(
             water_content=water_content_per_Layer)
 
-        for name, data in cloud_optics.items():
+        for name in cloud_optics.data_vars:
             self[name][:, :] = 0
-            self[name][is_cloud, :] = data[is_cloud, :]
+            self[name][is_cloud, :] = cloud_optics[name]
 
 
 class CloudEnsemble(DirectInputCloud):
