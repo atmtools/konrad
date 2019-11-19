@@ -220,8 +220,9 @@ class RRTMG(Radiation):
         ]
 
         for climt_key, konrad_key in gas_name_mapping:
+            vmr = atmosphere.get(konrad_key, default=0, keepdims=False)
             state0[climt_key] = DataArray(
-                atmosphere.get(konrad_key, default=0, keepdims=False),
+                vmr * (1 - vmr_h2o),
                 dims=('mid_levels',),
                 attrs={'units': 'mole/mole'})
 
