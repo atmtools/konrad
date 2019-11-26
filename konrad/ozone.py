@@ -35,7 +35,6 @@ import numbers
 from netCDF4 import Dataset
 from scipy.interpolate import interp1d
 from konrad.component import Component
-from konrad.utils import ozone_profile_rcemip
 
 __all__ = [
     'Ozone',
@@ -44,7 +43,6 @@ __all__ = [
     'OzoneNormedPressure',
     'Cariolle',
     'Simotrostra',
-    'LowerStratosphericSimotrostra'
 ]
 
 logger = logging.getLogger(__name__)
@@ -281,57 +279,3 @@ class Simotrostra(Cariolle):
         atmosphere['O3'] = (('time', 'plev'), o3_new.reshape(1, -1))
 
         self.store_sink_terms(sink_terms)
-
-
-class LowerStratosphericSimotrostra(Simotrostra):
-    """Use Ed Charlesworth's simple chemistry scheme in the lower stratosphere,
-    and merge to an idealised profile above.
-    """
-    def __init__(self, w=0, profile_for_merge=None):
-        """
-        Parameters:
-            w (ndarray / int / float): upwelling velocity [mm / s]
-            profile_for_merge (ndarray): ozone profile used above 20/30 hPa
-                if None, the RCEMIP profile is used
-        """
-        super().__init__(w=w)
-
-        self._o3_simotrostra = None
-        self._weighting = None
-        self._cut = None
-        self._profile_for_merge = profile_for_merge
-
-    def __call__(self, atmosphere, timestep, zenith, **kwargs):
-
-        if self._o3_simotrostra is None:  # first time only
-            self._o3_simotrostra = atmosphere['O3'][-1, :]
-
-        o3_simotrostra, sink_terms = self.simotrostra_profile(
-            self._o3_simotrostra, atmosphere, timestep, zenith)
-
-        # Weighting for merge
-        if self._weighting is None:  # first time only
-            p = atmosphere['plev'][:]
-            # merge region between 20 and 30 hPa, below use simotrostra,
-            # above use the rcemip profile
-            self._weighting = interp1d(np.log([20e2, 30e2]), [1, 0],
-                                       fill_value=(1, 0), bounds_error=False
-                                       )(np.log(p))  # one in upper stratosphere
-            self._cut = p < 20e2
-        if self._profile_for_merge is None:
-            # first time only and only if not specified in initialisation
-            self._profile_for_merge = ozone_profile_rcemip(p)
-
-        # new ozone profile with smooth merge
-        new_o3 = (o3_simotrostra * (1 - self._weighting)
-                  + self._profile_for_merge * self._weighting)
-
-        atmosphere['O3'] = (('time', 'plev'), new_o3.reshape(1, -1))
-
-        self.store_sink_terms(sink_terms)
-
-        # new profile for simotrostra calculation which keeps simotrostra
-        # values up to the top of the merge region, so that the merge region is
-        # not biased towards the profile chosen for the upper stratosphere
-        self._o3_simotrostra = (o3_simotrostra * (1 - self._cut)
-                                + self._profile_for_merge * self._cut)
