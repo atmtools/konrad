@@ -257,6 +257,7 @@ class RCE:
                 atmosphere=self.atmosphere,
                 convection=self.convection,
                 timestep=self.timestep,
+                upwelling=self.upwelling,
                 zenith=self.radiation.current_solar_angle
             )
 

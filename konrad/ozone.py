@@ -31,10 +31,10 @@ import os
 import abc
 import logging
 import numpy as np
+import numbers
 from netCDF4 import Dataset
 from scipy.interpolate import interp1d
 from konrad.component import Component
-from konrad.utils import ozone_profile_rcemip
 
 __all__ = [
     'Ozone',
@@ -43,7 +43,6 @@ __all__ = [
     'OzoneNormedPressure',
     'Cariolle',
     'Simotrostra',
-    'LowerStratosphericSimotrostra'
 ]
 
 logger = logging.getLogger(__name__)
@@ -132,31 +131,39 @@ class OzoneNormedPressure(Ozone):
 class Cariolle(Ozone):
     """Implementation of the Cariolle ozone scheme for the tropics.
     """
-    def __init__(self, w=0):
+    def __init__(self, w=0, is_coupled_upwelling=False):
         """
         Parameters:
             w (ndarray / int / float): upwelling velocity [mm / s]
+            is_coupled_upwelling (bool): whether to couple to upwelling model
         """
         super().__init__()
-        self.w = w * 86.4  # in m / day
+        if not is_coupled_upwelling:
+            self.w = w * 86.4  # in m / day
+        else:
+            self.w = None
+        self._is_coupled_upwelling = is_coupled_upwelling
 
-    def ozone_transport(self, o3, z):
+    def ozone_transport(self, o3, z, upwelling):
         """Rate of change of ozone is calculated based on the ozone gradient
         and an upwelling velocity.
 
         Parameters:
             o3 (ndarray): ozone concentration [ppv]
             z (ndarray): height [m]
+            upwelling (konrad.upwelling): upwelling model
         Returns:
             ndarray: change in ozone concentration [ppv / day]
         """
-        if self.w == 0:
+        if self.w == 0:  # no transport
             return np.zeros(len(z))
 
-        if isinstance(self.w, np.ndarray):
+        if self._is_coupled_upwelling:  # take value from upwelling class
+            w_array = upwelling._w
+        elif isinstance(self.w, np.ndarray):  # use input array
             w_array = self.w
-        else:  # w is a single value
-            # apply transport everywhere
+        elif isinstance(self.w, numbers.Number):  # w is a single value
+            # transform to an array to apply transport everywhere
             w = self.w
             numlevels = len(z)
             w_factor = np.ones(numlevels)
@@ -177,7 +184,7 @@ class Cariolle(Ozone):
             alist.append(interp1d(p_data, a, fill_value='extrapolate')(p))
         return alist
 
-    def __call__(self, atmosphere, timestep, **kwargs):
+    def __call__(self, atmosphere, timestep, upwelling, **kwargs):
 
         from simotrostra.utils import overhead_molecules
 
@@ -195,7 +202,7 @@ class Cariolle(Ozone):
         do3dt = A1 + A2*(o3 - A3) + A4*(T - A5) + A6*(o3col - A7)
 
         # transport term
-        transport_ox = self.ozone_transport(o3, z)
+        transport_ox = self.ozone_transport(o3, z, upwelling)
 
         atmosphere['O3'] = (
             ('time', 'plev'),
@@ -206,18 +213,19 @@ class Cariolle(Ozone):
 class Simotrostra(Cariolle):
     """Wrapper for Ed Charlesworth's simple chemistry scheme.
     """
-    def __init__(self, w=0):
+    def __init__(self, w=0, is_coupled_upwelling=False):
         """
         Parameters:
             w (ndarray / int / float): upwelling velocity [mm / s]
+            is_coupled_upwelling (bool): whether to couple to upwelling model
         """
-        super().__init__(w=w)
+        super().__init__(w=w, is_coupled_upwelling=is_coupled_upwelling)
 
         from simotrostra import Simotrostra
 
         self._ozone = Simotrostra()
 
-    def simotrostra_profile(self, o3, atmosphere, timestep, zenith):
+    def simotrostra_profile(self, o3, atmosphere, timestep, zenith, upwelling):
         """
         Parameters:
             o3 (ndarray): ozone profile
@@ -225,6 +233,7 @@ class Simotrostra(Cariolle):
             timestep (float): timestep of run [days]
             zenith (float): solar zenith angle,
                 angle of the Sun to the vertical [degrees]
+            upwelling (konrad.upwelling): upwelling model
         Returns:
             ndarray: new ozone profile
             list of ndarrays: source and sink terms
@@ -234,7 +243,7 @@ class Simotrostra(Cariolle):
         T = atmosphere['T'][-1, :]
         source, sink_ox, sink_nox, sink_hox = self._ozone.tendencies(
             z, p, phlev, T, o3, zenith)
-        transport_ox = self.ozone_transport(o3, z)
+        transport_ox = self.ozone_transport(o3, z, upwelling)
         do3dt = source - sink_ox - sink_nox + transport_ox - sink_hox
         o3_new = o3 + do3dt*timestep
 
@@ -260,66 +269,13 @@ class Simotrostra(Cariolle):
             else:
                 self.create_variable(term, tendency)
 
-    def __call__(self, atmosphere, timestep, zenith, **kwargs):
+    def __call__(self, atmosphere, timestep, upwelling, zenith, **kwargs):
 
         o3 = atmosphere['O3'][-1, :]
         o3_new, sink_terms = self.simotrostra_profile(o3, atmosphere,
-                                                      timestep, zenith)
+                                                      timestep, zenith,
+                                                      upwelling)
 
         atmosphere['O3'] = (('time', 'plev'), o3_new.reshape(1, -1))
 
         self.store_sink_terms(sink_terms)
-
-
-class LowerStratosphericSimotrostra(Simotrostra):
-    """Use Ed Charlesworth's simple chemistry scheme in the lower stratosphere,
-    and merge to an idealised profile above.
-    """
-    def __init__(self, w=0, profile_for_merge=None):
-        """
-        Parameters:
-            w (ndarray / int / float): upwelling velocity [mm / s]
-            profile_for_merge (ndarray): ozone profile used above 20/30 hPa
-                if None, the RCEMIP profile is used
-        """
-        super().__init__(w=w)
-
-        self._o3_simotrostra = None
-        self._weighting = None
-        self._cut = None
-        self._profile_for_merge = profile_for_merge
-
-    def __call__(self, atmosphere, timestep, zenith, **kwargs):
-
-        if self._o3_simotrostra is None:  # first time only
-            self._o3_simotrostra = atmosphere['O3'][-1, :]
-
-        o3_simotrostra, sink_terms = self.simotrostra_profile(
-            self._o3_simotrostra, atmosphere, timestep, zenith)
-
-        # Weighting for merge
-        if self._weighting is None:  # first time only
-            p = atmosphere['plev'][:]
-            # merge region between 20 and 30 hPa, below use simotrostra,
-            # above use the rcemip profile
-            self._weighting = interp1d(np.log([20e2, 30e2]), [1, 0],
-                                       fill_value=(1, 0), bounds_error=False
-                                       )(np.log(p))  # one in upper stratosphere
-            self._cut = p < 20e2
-        if self._profile_for_merge is None:
-            # first time only and only if not specified in initialisation
-            self._profile_for_merge = ozone_profile_rcemip(p)
-
-        # new ozone profile with smooth merge
-        new_o3 = (o3_simotrostra * (1 - self._weighting)
-                  + self._profile_for_merge * self._weighting)
-
-        atmosphere['O3'] = (('time', 'plev'), new_o3.reshape(1, -1))
-
-        self.store_sink_terms(sink_terms)
-
-        # new profile for simotrostra calculation which keeps simotrostra
-        # values up to the top of the merge region, so that the merge region is
-        # not biased towards the profile chosen for the upper stratosphere
-        self._o3_simotrostra = (o3_simotrostra * (1 - self._cut)
-                                + self._profile_for_merge * self._cut)
