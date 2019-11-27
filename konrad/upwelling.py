@@ -101,7 +101,7 @@ class StratosphericUpwelling(Upwelling):
                 the upwelling is applied. If none, uses the top of convection.
         """
         self._w = w * meters_per_day  # in m/day
-        self.lowest_level = lowest_level
+        self._lowest_level = lowest_level
 
     def cool(self, atmosphere, convection, timestep):
         """Apply cooling above the convective top (level where the net
@@ -117,8 +117,8 @@ class StratosphericUpwelling(Upwelling):
         z = atmosphere['z'][0, :]
         Cp = atmosphere.get_heat_capacity()
 
-        if self.lowest_level is not None:
-            above_level_index = self.lowest_level
+        if self._lowest_level is not None:
+            above_level_index = self._lowest_level
         else:
             above_level_index = convection.get('convective_top_index')[0]
             if np.isnan(above_level_index):
@@ -130,6 +130,8 @@ class StratosphericUpwelling(Upwelling):
         Q = cooling_rates(T, z, self._w, Cp, above_level_index)
 
         atmosphere['T'][0, :] += Q * timestep
+
+        self['cooling_rates'] = (('time', 'plev'), -Q.reshape(1, -1))
 
 
 class SpecifiedCooling(Upwelling):
@@ -196,7 +198,5 @@ class CoupledUpwelling(StratosphericUpwelling):
 
         atmosphere['T'][0, :] += Q * timestep
 
-        if 'w' in self.data_vars:
-            self.set('w', self._w)
-        else:
-            self.create_variable('w', self._w)
+        self['w'] = (('time', 'plev'), self._w.reshape(1, -1))
+        self['cooling_rates'] = (('time', 'plev'), -Q.reshape(1, -1))
