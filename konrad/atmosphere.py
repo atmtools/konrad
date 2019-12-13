@@ -210,7 +210,7 @@ class Atmosphere(Component):
             np.round(self['T'][-1, 0], 3),  # Surface temperature
         ))
 
-    def refine_plev(self, pgrid, **kwargs):
+    def refine_plev(self, phlev, **kwargs):
         """Refine the pressure grid of an atmosphere object.
 
         Note:
@@ -218,7 +218,7 @@ class Atmosphere(Component):
               the original object is maintained!
 
         Parameters:
-              pgrid (ndarray): New pressure grid [Pa].
+              phlev (ndarray): New half-level-pressure grid [Pa].
             **kwargs: Additional keyword arguments are collected
                 and passed to :func:`scipy.interpolate.interp1d`
 
@@ -231,7 +231,9 @@ class Atmosphere(Component):
         # fixed dimension size in xarray.DataArrays.
         datadict = dict()
 
-        datadict['plev'] = pgrid  # Store new pressure grid.
+        # Store new pressure grid.
+        datadict['phlev'] = phlev
+        plev = utils.plev_from_phlev(phlev)
 
         # Loop over all atmospheric variables...
         for variable in self.atmosphere_variables:
@@ -240,9 +242,7 @@ class Atmosphere(Component):
                          axis=-1, fill_value='extrapolate', **kwargs)
 
             # Store the interpolated new data in the data directory.
-            # dims = self.default_dimensions[variable]
-            # datadict[variable] = DataArray(f(pgrid), dims=dims)
-            datadict[variable] = f(pgrid).ravel()
+            datadict[variable] = f(plev).ravel()
 
         # Create a new atmosphere object from the filled data directory.
         # This method also calculates the new phlev coordinates.

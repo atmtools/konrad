@@ -50,3 +50,11 @@ class TestAtmosphere:
         # behaviour during initialisation.
         with pytest.raises(TypeError):
             atmosphere.Atmosphere.from_netcdf('dummy.nc', surface=None)
+
+    def test_refine_plev(self, atmosphere_obj):
+        """Test refinement of pressure grid."""
+        phlev = np.array([1000e2, 500e2, 10e2])
+        atmosphere_new = atmosphere_obj.refine_plev(phlev=phlev)
+
+        #TODO Add a proper test of values
+
