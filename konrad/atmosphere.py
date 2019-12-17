@@ -251,7 +251,6 @@ class Atmosphere(Component):
             datadict[variable] = f(plev).ravel()
 
         # Create a new atmosphere object from the filled data directory.
-        # This method also calculates the new phlev coordinates.
         new_atmosphere = type(self).from_dict(datadict)
 
         # Keep attributes of original atmosphere object.
