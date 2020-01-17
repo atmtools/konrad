@@ -11,6 +11,9 @@ if not sys.version_info >= (3, 5, 1):
     sys.exit('Only support Python version >=3.5.1\n'
              'Found version is {}'.format(sys.version))
 
+with open('README.md') as f:
+    long_description = f.read()
+
 setup(
     name='konrad',
     author='The konrad developers',
@@ -20,6 +23,8 @@ setup(
     packages=find_packages(),
     license='MIT',
     description='Implementation of a radiative-convective equilibrium model.',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     classifiers=[
         # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
         'Intended Audience :: Science/Research',
