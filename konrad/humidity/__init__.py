@@ -35,23 +35,11 @@ class FixedRH(Component):
         self._rh_profile = None
 
     @property
-    def attrs(self):
-        # Overrides ``Component.attrs`` by returning a composite of the
-        # attribtues of both ``rh_func`` and ``stratosphere_coupling``.
-        # The returned attributes are prefixed with their parent-attribute's
-        # name for clarity.
-        attrs = dict(
-            **prefix_dict_keys(
-                getattr(self._rh_func, 'attrs', {}), 'rh_func'
-            ),
-            **prefix_dict_keys(
-                self._stratosphere_coupling.attrs, 'stratosphere_coupling',
-            )
-        )
-        attrs['rh_func/class'] = self.rh_func
-        attrs['stratosphere_coupling/class'] = self.stratosphere_coupling
-
-        return attrs
+    def netcdf_subgroups(self):
+        return {
+            'rh_func': self._rh_func,
+            'stratosphere_coupling': self._stratosphere_coupling,
+        }
 
     def hash_attributes(self):
         # Make sure that non-``Component`` attributes do not break hashing.

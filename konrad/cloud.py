@@ -678,6 +678,11 @@ class CloudEnsemble(DirectInputCloud):
         """Dictionary containing all data variables and their dimensions."""
         return self._superposition._data_vars
 
+    @property
+    def netcdf_subgroups(self):
+        """Dynamically create a netCDF subgroup for each cloud."""
+        return {f"cloud-{i}": cloud for i, cloud in enumerate( self._clouds)}
+
     def update_cloud_profile(self, *args, **kwargs):
         """Update every cloud in the cloud ensemble."""
         for cloud in self._clouds:
