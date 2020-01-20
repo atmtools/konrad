@@ -5,6 +5,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from konrad.component import Component
+from konrad.physics import vmr2relative_humidity
 
 
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
@@ -20,6 +21,21 @@ class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
             ndarray: Relative humidity profile.
         """
         ...
+
+
+class CacheFromAtmosphere(RelativeHumidityModel):
+    """Calculate and cache relative humidity from initial atmosphere."""
+    def __init__(self):
+        self._rh_profile = None
+
+    def __call__(self, atmosphere, **kwargs):
+        if self._rh_profile is None:
+            self._rh_profile = vmr2relative_humidity(
+                vmr=atmosphere['H2O'][-1],
+                pressure=atmosphere['plev'],
+                temperature=atmosphere['T'][-1]
+            )
+        return self._rh_profile
 
 
 class HeightConstant(RelativeHumidityModel):
