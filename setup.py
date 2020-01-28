@@ -7,10 +7,6 @@ from setuptools import find_packages
 
 __version__ = open(join(dirname(__file__), 'konrad', 'VERSION')).read().strip()
 
-if not sys.version_info >= (3, 5, 1):
-    sys.exit('Only support Python version >=3.5.1\n'
-             'Found version is {}'.format(sys.version))
-
 with open('README.md') as f:
     long_description = f.read()
 
@@ -44,8 +40,6 @@ setup(
         'climt==0.16.9',
         'sympl>=0.4.0',
     ],
-    setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
     extras_require={
         'docs': [
             'sphinx',
@@ -55,6 +49,4 @@ setup(
             'pytest',
         ],
     },
-
-
 )
