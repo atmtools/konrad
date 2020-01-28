@@ -74,18 +74,3 @@ class MinimumStratosphericVMR(StratosphereCoupler):
             # from there on, this at least minimizes the discontinuity at
             # the transition point.
             vmr[np.argmin(vmr):] = self.minimum_vmr
-
-
-class NoCoupling(StratosphereCoupler):
-    """Do not adjust stratospheric water vapor.
-
-    This coupler does not change the stratospheric water vapor at all. It
-    may be used together with ``konrad.humidityy.FixedVMR()`` to perform
-    simulations for a given set of VMR values (e.g. observations).
-
-    Warning:
-        This may lead to unrealistic atmospheric states when using models to
-        describe the vertical relative humidity distribution!
-    """
-    def adjust_stratospheric_vmr(self, atmosphere):
-        return
