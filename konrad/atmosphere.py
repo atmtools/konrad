@@ -52,6 +52,12 @@ class Atmosphere(Component):
               (surface to top) [Pa].
         """
         super().__init__()
+
+        if not utils.is_decreasing(phlev):
+            raise ValueError(
+                "The atmospheric pressure grid has to be monotonically decreasing."
+            )
+
         plev = utils.plev_from_phlev(phlev)
 
         self.coords = {
