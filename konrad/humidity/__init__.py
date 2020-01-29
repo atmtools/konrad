@@ -27,7 +27,11 @@ class FixedRH(Component):
         else:
             self._stratosphere_coupling = stratosphere_coupling
 
-        self._rh_func = rh_func
+        if rh_func is None:
+            self._rh_func = CacheFromAtmosphere()
+        else:
+            self._rh_func = rh_func
+
         self._rh_profile = None
 
     @property
@@ -74,19 +78,8 @@ class FixedRH(Component):
         Returns:
             ndarray: Water vapor profile [VMR].
         """
-        if self._rh_func is not None:
-           rh_profile = self._rh_func(atmosphere, **kwargs)
-        else:
-            if self._rh_profile is None:
-                self._rh_profile = vmr2relative_humidity(
-                        vmr=atmosphere['H2O'][-1],
-                        pressure=atmosphere['plev'],
-                        temperature=atmosphere['T'][-1]
-                    )
-            rh_profile = self._rh_profile
-
         atmosphere['H2O'][-1, :] = relative_humidity2vmr(
-            relative_humidity=rh_profile,
+            relative_humidity=self._rh_func(atmosphere, **kwargs),
             pressure=atmosphere['plev'],
             temperature=atmosphere['T'][-1]
 
