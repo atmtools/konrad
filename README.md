@@ -1,5 +1,5 @@
 [![PyPI version](https://badge.fury.io/py/konrad.svg)](https://badge.fury.io/py/konrad)
-[![Travis](https://img.shields.io/travis/atmtools/konrad/master.svg?label=Travis%20CI)](https://travis-ci.org/atmtools/konrad)
+[![Test](https://github.com/atmtools/konrad/workflows/Test/badge.svg?branch=master)](https://github.com/atmtools/konrad/commits/master)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1313687.svg)](https://doi.org/10.5281/zenodo.1313687)
 [![Documentation Status](https://readthedocs.org/projects/konrad/badge/?version=latest)](https://konrad.readthedocs.io/en/latest/?badge=latest)
 
