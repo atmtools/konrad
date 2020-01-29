@@ -27,6 +27,7 @@ __all__ = [
     'parse_fraction_of_day',
     'standard_atmosphere',
     'prefix_dict_keys',
+    'is_decreasing',
 ]
 
 logger = logging.getLogger(__name__)
@@ -410,3 +411,8 @@ def prefix_dict_keys(dictionary, prefix, delimiter='/'):
     """
     return {delimiter.join((prefix, key)): val
             for key, val in dictionary.items()}
+
+
+def is_decreasing(a):
+    """Check if a given array is monotonically decreasing."""
+    return np.all(np.diff(a) < 0)
