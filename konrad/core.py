@@ -39,7 +39,7 @@ class RCE:
                  outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
                  radiation=None, ozone=None, humidity=None, surface=None,
                  cloud=None, convection=None, lapserate=None, upwelling=None,
-                 diurnal_cycle=False):
+                 diurnal_cycle=False, is_co2_adjusting=False):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -97,6 +97,9 @@ class RCE:
 
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
 
+            is_co2_adjusting (bool): Adjust CO2 concentrations towards an
+                equilibrium state following Romps 2020.
+                To be used with :class:`konrad.surface.FixedTemperature`.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -140,6 +143,8 @@ class RCE:
         self.outfile = outfile
         self.nchandler = None
         self.experiment = experiment
+
+        self.is_co2_adjusting = is_co2_adjusting
 
         logging.info('Created Konrad object:\n{}'.format(self))
 
@@ -222,6 +227,13 @@ class RCE:
                 lw_up=self.radiation['lw_flxu'][0, 0],
                 timestep=self.timestep,
             )
+
+            if self.is_co2_adjusting:
+                # adjust CO2 concentrations to find a equilibrium state using
+                # equation 8 of Romps 2020
+                n0 = self.surface.heat_sink
+                self.atmosphere['CO2'] += self.timestep * (
+                    n0 - self.radiation['toa'][0]) / 5.35 * self.atmosphere['CO2']
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
