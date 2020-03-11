@@ -23,7 +23,7 @@ from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.component import Component
-from konrad.surface import SurfaceFixedTemperature
+from konrad.surface import FixedTemperature
 
 
 __all__ = [
@@ -201,7 +201,7 @@ class HardAdjustment(Convection):
 
         # This is the temperature profile required if we have a set-up with a
         # fixed surface temperature. In this case, energy is not conserved.
-        if isinstance(surface, SurfaceFixedTemperature):
+        if isinstance(surface, FixedTemperature):
             T_con = self.convective_profile(
                 T_rad, p, phlev, surface['temperature'], lp, timestep=timestep)
             return T_con, surface['temperature']

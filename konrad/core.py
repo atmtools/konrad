@@ -10,7 +10,7 @@ from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import FixedRH
-from konrad.surface import (Surface, SurfaceHeatCapacity)
+from konrad.surface import (Surface, SlabOcean)
 from konrad.cloud import (Cloud, ClearSky)
 from konrad.convection import (Convection, HardAdjustment, RelaxedAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
@@ -110,7 +110,7 @@ class RCE:
 
         self.humidity = FixedRH() if humidity is None else humidity
         self.surface = utils.return_if_type(surface, 'surface',
-                                            Surface, SurfaceHeatCapacity())
+                                            Surface, SlabOcean())
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud,
                                           ClearSky(self.atmosphere['plev'].size)
