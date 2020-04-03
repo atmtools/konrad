@@ -47,10 +47,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         self.zenith_angle = zenith_angle
         self.diurnal_cycle = diurnal_cycle
 
-        if diurnal_cycle:
-            self.current_solar_angle = 0
-        else:
-            self.current_solar_angle = self.zenith_angle
+        self.current_solar_angle = self.zenith_angle
 
         self._bias = bias
 
