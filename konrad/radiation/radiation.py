@@ -30,14 +30,13 @@ REQUIRED_VARIABLES = [
 
 class Radiation(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, zenith_angle=47.88, diurnal_cycle=False, bias=None):
+    def __init__(self, zenith_angle=47.88, bias=None):
         """
         Parameters:
             zenith_angle (float): Zenith angle of the sun.
                 The default angle of 47.88 degree results in 342 W/m^2
                 solar insolation at the top of the atmosphere when used
                 together with a solar constant of 510 W/m^2.
-            diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
             bias (dict-like): A dict-like object that stores bias
                 corrections for the diagnostic variable specified by its key,
                 e.g. `bias = {'net_htngrt': 2}`.
@@ -45,8 +44,6 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         super().__init__()
 
         self.zenith_angle = zenith_angle
-        self.diurnal_cycle = diurnal_cycle
-
         self.current_solar_angle = self.zenith_angle
 
         self._bias = bias
@@ -168,11 +165,6 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         Parameters:
             time (float): Current time [days].
         """
-        # When the diurnal cycle is disabled, use the constant zenith angle.
-        if not self.diurnal_cycle:
-            self.current_solar_angle = self.zenith_angle
-            return
-
         # The local zenith angle, calculated from the latitude and longitude.
         # Seasons are not considered.
         solar_angle = np.rad2deg(np.arccos(

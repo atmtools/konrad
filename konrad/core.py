@@ -38,7 +38,8 @@ class RCE:
     def __init__(self, atmosphere, timestep='3h', max_duration='5000d',
                  outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
                  radiation=None, ozone=None, humidity=None, surface=None,
-                 cloud=None, convection=None, lapserate=None, upwelling=None):
+                 cloud=None, convection=None, lapserate=None, upwelling=None,
+                 diurnal_cycle=False):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -94,6 +95,8 @@ class RCE:
             upwelling (konrad.upwelling): Upwelling model.
                 Defaults to :class:`konrad.upwelling.NoUpwelling`.
 
+            diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
+
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -122,6 +125,7 @@ class RCE:
         self.upwelling = utils.return_if_type(upwelling, 'upwelling',
                                               Upwelling, NoUpwelling())
 
+        self.diurnal_cycle = diurnal_cycle
         self.max_duration = utils.parse_fraction_of_day(max_duration)
         self.timestep = utils.parse_fraction_of_day(timestep)
         self.writeevery = utils.parse_fraction_of_day(writeevery)
@@ -202,7 +206,8 @@ class RCE:
                 # All other iterations are only logged in DEBUG level.
                 logger.debug(f'Enter iteration {self.niter}.')
 
-            self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
+            if self.diurnal_cycle:
+                self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
             self.radiation.update_heatingrates(
                 atmosphere=self.atmosphere,
                 surface=self.surface,
