@@ -20,6 +20,7 @@ import logging
 
 import netCDF4
 import numpy as np
+from scipy.interpolate import interp1d
 
 from . import constants
 from konrad.component import Component
@@ -78,28 +79,20 @@ class Surface(Component, metaclass=abc.ABCMeta):
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
-        """Initialize a Surface object using the lowest atmosphere layer.
+        """Initialize the surface by extrapolating the atmospheric temperature.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
         """
-        # Extrapolate surface height from geopotential height of lowest two
-        # atmospheric layers.
-        atmosphere.calculate_height()
-        z = atmosphere['z'][0, :]
-        z_sfc = z[0] + 0.5 * (z[0] - z[1])
+        f = interp1d(
+            x=atmosphere['plev'],
+            y=atmosphere['T'][-1],
+            kind="cubic",
+            fill_value="extrapolate",
+        )
 
-        # Calculate the surface temperature following a linear lapse rate.
-        # This prevents "jumps" after the first iteration, when the
-        # convective adjustment is applied.
-        # TODO: Perform linear or quadratic interpolation of T profile.
-        lapse = 0.0065
-        t_sfc = atmosphere['T'][0, 0] + lapse * (z[0] - z_sfc)
-
-        return cls(temperature=t_sfc,
-                   height=z_sfc,
-                   **kwargs,
-                   )
+        # The surface is placed at the lowest half-level pressure (`phlev`).
+        return cls(temperature=f(atmosphere['phlev'][0]), **kwargs)
 
     @classmethod
     def from_netcdf(cls, ncfile, timestep=-1, **kwargs):
