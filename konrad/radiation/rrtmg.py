@@ -23,12 +23,10 @@ class RRTMG(Radiation):
         """
         Parameters:
             zenith_angle (float): angle of the Sun [degrees].
-
-            diurnal_cycle (bool):
-
-                * :code:`True`  include a diurnal cycle
-
-                * :code:`False`  have a constant Sun
+            In konrad, with no diurnal cycle, this should represent a diurnal
+            mean zenith angle. With a diurnal cycle, this represents latitude.
+            For single radiation calculations, this is the angle to the Sun at
+            the time and location of interest.
 
             bias (dict-like): include bias corrections to the fluxes and/or
                 heating rates
