@@ -263,7 +263,7 @@ class RCE:
                 convection=self.convection,
                 timestep=self.timestep,
                 upwelling=self.upwelling,
-                zenith=self.radiation.zenith,
+                zenith=self.radiation.current_solar_angle
             )
 
             # Update the humidity profile.
