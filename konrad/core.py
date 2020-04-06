@@ -237,8 +237,10 @@ class RCE:
                 # adjust CO2 concentrations to find a equilibrium state using
                 # equation 8 of Romps 2020
                 n0 = self.surface.heat_sink
+                A = 5.35
+                tau = 1
                 self.atmosphere['CO2'] += self.timestep * (
-                    n0 - self.radiation['toa'][0]) / 5.35 * self.atmosphere['CO2']
+                    n0 - self.radiation['toa'][0]) / (A * tau) * self.atmosphere['CO2']
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
