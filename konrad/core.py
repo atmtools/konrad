@@ -10,7 +10,7 @@ from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import FixedRH
-from konrad.surface import (Surface, SlabOcean)
+from konrad.surface import (Surface, SlabOcean, FixedTemperature)
 from konrad.cloud import (Cloud, ClearSky)
 from konrad.convection import (Convection, HardAdjustment, RelaxedAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
@@ -145,6 +145,11 @@ class RCE:
         self.experiment = experiment
 
         self.is_co2_adjusting = is_co2_adjusting
+        if is_co2_adjusting and not isinstance(surface, FixedTemperature):
+            raise TypeError(
+                "Runs with adjusting CO2 concentration "
+                "require a fixed surface temperature."
+                )
 
         logging.info('Created Konrad object:\n{}'.format(self))
 
