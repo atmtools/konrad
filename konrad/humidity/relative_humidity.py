@@ -254,6 +254,9 @@ class Cess76(RelativeHumidityModel):
 
 class Romps14(RelativeHumidityModel):
     """Relative humidity following an invariant RH-T relation."""
+    def __init__(self):
+        self._rh_func = None
+
     def __call__(self, atmosphere, **kwargs):
         if self._rh_func is None:
             self._rh_func = interp1d(
