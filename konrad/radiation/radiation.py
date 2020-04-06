@@ -37,6 +37,8 @@ class Radiation(Component, metaclass=abc.ABCMeta):
                 The default angle of 47.88 degree results in 342 W/m^2
                 solar insolation at the top of the atmosphere when used
                 together with a solar constant of 510 W/m^2.
+                If a diurnal cycle is used in full konrad runs, this angle
+                represents latitude.
             bias (dict-like): A dict-like object that stores bias
                 corrections for the diagnostic variable specified by its key,
                 e.g. `bias = {'net_htngrt': 2}`.
