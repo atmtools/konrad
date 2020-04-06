@@ -22,13 +22,7 @@ class RRTMG(Radiation):
                  **kwargs):
         """
         Parameters:
-            zenith_angle (float): angle of the Sun [degrees].
-
-            diurnal_cycle (bool):
-
-                * :code:`True`  include a diurnal cycle
-
-                * :code:`False`  have a constant Sun
+            latitude (float): angle of the Sun [degrees].
 
             bias (dict-like): include bias corrections to the fluxes and/or
                 heating rates
@@ -234,7 +228,7 @@ class RRTMG(Radiation):
 
         if sw:  # properties required only for shortwave
             state0['zenith_angle'] = DataArray(
-                np.array(np.deg2rad(self.current_solar_angle)),
+                np.array(np.deg2rad(self.zenith)),
                 attrs={'units': 'radians'})
 
         return state0
