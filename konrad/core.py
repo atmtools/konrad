@@ -10,7 +10,7 @@ from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import FixedRH
-from konrad.surface import (Surface, SurfaceHeatCapacity)
+from konrad.surface import (Surface, SlabOcean, FixedTemperature)
 from konrad.cloud import (Cloud, ClearSky)
 from konrad.convection import (Convection, HardAdjustment, RelaxedAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
@@ -39,7 +39,7 @@ class RCE:
                  outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
                  radiation=None, ozone=None, humidity=None, surface=None,
                  cloud=None, convection=None, lapserate=None, upwelling=None,
-                 diurnal_cycle=False):
+                 diurnal_cycle=False, co2_adjustment_timescale=np.nan):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -97,6 +97,11 @@ class RCE:
 
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
 
+            co2_adjustment_timescale (int/float): Adjust CO2 concentrations
+                towards an equilibrium state following Romps 2020.
+                To be used with :class:`konrad.surface.FixedTemperature`.
+                Recommended value is 7 (1 week).
+                Defaults to no CO2 adjustment, with `np.nan`.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -110,7 +115,7 @@ class RCE:
 
         self.humidity = FixedRH() if humidity is None else humidity
         self.surface = utils.return_if_type(surface, 'surface',
-                                            Surface, SurfaceHeatCapacity())
+                                            Surface, SlabOcean())
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud,
                                           ClearSky(self.atmosphere['plev'].size)
@@ -140,6 +145,14 @@ class RCE:
         self.outfile = outfile
         self.nchandler = None
         self.experiment = experiment
+
+        self.co2_adjustment_timescale = co2_adjustment_timescale
+        if not np.isnan(co2_adjustment_timescale) and not isinstance(
+                surface, FixedTemperature):
+            raise TypeError(
+                "Runs with adjusting CO2 concentration "
+                "require a fixed surface temperature."
+                )
 
         logging.info('Created Konrad object:\n{}'.format(self))
 
@@ -222,6 +235,16 @@ class RCE:
                 lw_up=self.radiation['lw_flxu'][0, 0],
                 timestep=self.timestep,
             )
+
+            if not np.isnan(self.co2_adjustment_timescale):
+                # adjust CO2 concentrations to find a equilibrium state using
+                # equation 8 of Romps 2020
+                n0 = self.surface.heat_sink
+                A = 5.35
+                tau = self.co2_adjustment_timescale
+                self.atmosphere['CO2'] += self.timestep * (
+                    n0 - self.radiation['toa'][0]) / (A * tau
+                                                      ) * self.atmosphere['CO2']
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.

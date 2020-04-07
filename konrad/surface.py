@@ -5,11 +5,11 @@ simulations.
 
 **Example**
 
-Create a surface model, *e.g.* :py:class:`SurfaceHeatCapacity`,
+Create a surface model, *e.g.* :py:class:`SlabOcean`,
 and use it in an RCE simulation.
     >>> import konrad
     >>> surface_temperature_start = ...
-    >>> surface = konrad.surface.SurfaceHeatCapacity(
+    >>> surface = konrad.surface.SlabOcean(
     >>>     temperature=surface_temperature_start)
     >>> rce = konrad.RCE(atmosphere=..., surface=surface)
     >>> rce.run()
@@ -28,9 +28,8 @@ from konrad.component import Component
 
 __all__ = [
     'Surface',
-    'SurfaceFixedTemperature',
-    'SurfaceHeatCapacity',
-    'SurfaceHeatSink',
+    'FixedTemperature',
+    'SlabOcean',
 ]
 
 
@@ -115,73 +114,25 @@ class Surface(Component, metaclass=abc.ABCMeta):
         return cls(temperature=t, height=z, **kwargs)
 
 
-#TODO: Rename `FixedTemperature`?
-class SurfaceFixedTemperature(Surface):
-    """Surface model with fixed temperature."""
-    def adjust(self, *args, **kwargs):
-        """Do not adjust anything for fixed temperature surfaces.
-
-        This function takes an arbitrary number of positional arguments and
-        keyword arguments and does nothing.
-
-        Notes:
-            Dummy function to fulfill abstract class requirements.
-        """
-        return
-
-
-#TODO: Rename `SlabOcean`?
-class SurfaceHeatCapacity(Surface):
+class SlabOcean(Surface):
     """Surface model with adjustable temperature."""
-    def __init__(self, *args, depth=50., **kwargs):
+    def __init__(self, *args, depth=50., heat_sink=0, **kwargs):
         """
         Parameters:
-            depth (float): Ocean depth [m].
-            albedo (float): Surface albedo, default 0.2
-            temperature (float): Surface temperature [K], default 288
-            height (float): Surface height [m], default 0
-        """
-        super().__init__(*args, **kwargs)
-        self.rho = constants.density_sea_water
-        self.c_p = constants.specific_heat_capacity_sea_water
-        self.depth = depth
-
-        self.heat_capacity = self.rho * self.c_p * depth
-
-    def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
-        """Increase the surface temperature by given heatingrate.
-
-        Parameters:
-            sw_down (float): Shortwave downward flux [W / m**2].
-            sw_up (float): Shortwave upward flux [W / m**2].
-            lw_down (float): Longwave downward flux [W / m**2].
-            lw_up (float): Longwave upward flux [W / m**2].
-            timestep (float): Timestep in days.
-        """
-        timestep *= 24 * 60 * 60  # Convert timestep to seconds.
-
-        net_flux = (sw_down - sw_up) + (lw_down - lw_up)
-
-        logger.debug(f'Net flux: {net_flux:.2f} W /m^2')
-
-        self['temperature'] += (timestep * net_flux / self.heat_capacity)
-
-        logger.debug("Surface temperature: {self['temperature'][0]:.4f} K")
-
-
-class SurfaceHeatSink(SurfaceHeatCapacity):
-    """Surface model with adjustable temperature."""
-    def __init__(self, *args, heat_flux=0, **kwargs):
-        """
-        Parameters:
-            heat_flux(float): Flux of energy out of the surface [W m^-2]
+            heat_sink(float): Flux of energy out of the surface [W m^-2]
             depth (float): Ocean depth [m], default 50
             albedo (float): Surface albedo, default 0.2
             temperature (float): Surface temperature [K], default 288
             height (float): Surface height [m], default 0
         """
         super().__init__(*args, **kwargs)
-        self.heat_flux = heat_flux
+
+        self.rho = constants.density_sea_water
+        self.c_p = constants.specific_heat_capacity_sea_water
+        self.depth = depth
+
+        self.heat_capacity = self.rho * self.c_p * depth
+        self.heat_sink = heat_sink
 
     def adjust(self, sw_down, sw_up, lw_down, lw_up, timestep):
         """Increase the surface temperature using given radiative fluxes. Take
@@ -198,11 +149,28 @@ class SurfaceHeatSink(SurfaceHeatCapacity):
         timestep *= 24 * 60 * 60  # Convert timestep to seconds.
 
         net_flux = (sw_down - sw_up) + (lw_down - lw_up)
-        sink = self.heat_flux
 
         logger.debug(f'Net flux: {net_flux:.2f} W /m^2')
 
-        self['temperature'] += (timestep * (net_flux - sink) /
+        self['temperature'] += (timestep * (net_flux - self.heat_sink) /
                                 self.heat_capacity)
 
         logger.debug("Surface temperature: {self['temperature'][0]:.4f} K")
+
+
+class FixedTemperature(SlabOcean):
+    """Surface model with fixed temperature."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.heat_capacity = np.inf
+
+    def adjust(self, *args, **kwargs):
+        """Do not adjust anything for fixed temperature surfaces.
+
+        This function takes an arbitrary number of positional arguments and
+        keyword arguments and does nothing.
+
+        Notes:
+            Dummy function to fulfill abstract class requirements.
+        """
+        return

@@ -85,7 +85,7 @@ variable_description = {
         'units': '1',
         'standard_name': 'carbon_dioxide_mixing_ratio',
         'arts_name': 'abs_species-CO2',
-        'dims': ('plev',),
+        'dims': ('time', 'plev',),
         'default_vmr': 348e-6,
         },
     'CO': {
