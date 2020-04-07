@@ -39,7 +39,7 @@ class RCE:
                  outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
                  radiation=None, ozone=None, humidity=None, surface=None,
                  cloud=None, convection=None, lapserate=None, upwelling=None,
-                 diurnal_cycle=False, is_co2_adjusting=False):
+                 diurnal_cycle=False, co2_adjustment_timescale=np.nan):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -97,9 +97,11 @@ class RCE:
 
             diurnal_cycle (bool): Toggle diurnal cycle of solar angle.
 
-            is_co2_adjusting (bool): Adjust CO2 concentrations towards an
-                equilibrium state following Romps 2020.
+            co2_adjustment_timescale (int/float): Adjust CO2 concentrations
+                towards an equilibrium state following Romps 2020.
                 To be used with :class:`konrad.surface.FixedTemperature`.
+                Recommended value is 7 (1 week).
+                Defaults to no CO2 adjustment, with `np.nan`.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -144,8 +146,9 @@ class RCE:
         self.nchandler = None
         self.experiment = experiment
 
-        self.is_co2_adjusting = is_co2_adjusting
-        if is_co2_adjusting and not isinstance(surface, FixedTemperature):
+        self.co2_adjustment_timescale = co2_adjustment_timescale
+        if not np.isnan(co2_adjustment_timescale) and not isinstance(
+                surface, FixedTemperature):
             raise TypeError(
                 "Runs with adjusting CO2 concentration "
                 "require a fixed surface temperature."
@@ -233,14 +236,15 @@ class RCE:
                 timestep=self.timestep,
             )
 
-            if self.is_co2_adjusting:
+            if not np.isnan(self.co2_adjustment_timescale):
                 # adjust CO2 concentrations to find a equilibrium state using
                 # equation 8 of Romps 2020
                 n0 = self.surface.heat_sink
                 A = 5.35
-                tau = 1
+                tau = self.co2_adjustment_timescale
                 self.atmosphere['CO2'] += self.timestep * (
-                    n0 - self.radiation['toa'][0]) / (A * tau) * self.atmosphere['CO2']
+                    n0 - self.radiation['toa'][0]) / (A * tau
+                                                      ) * self.atmosphere['CO2']
 
             # Save the old temperature profile. They are compared with
             # adjusted values to check if the model has converged.
