@@ -35,11 +35,27 @@ class RCE:
 
     """
 
-    def __init__(self, atmosphere, timestep='3h', max_duration='5000d',
-                 outfile=None, experiment='RCE', writeevery='1d', delta=1e-4,
-                 radiation=None, ozone=None, humidity=None, surface=None,
-                 cloud=None, convection=None, lapserate=None, upwelling=None,
-                 diurnal_cycle=False, co2_adjustment_timescale=np.nan):
+    def __init__(
+        self,
+        atmosphere,
+        timestep='3h',
+        max_duration='5000d',
+        outfile=None,
+        experiment='RCE',
+        writeevery='1d',
+        delta=1e-4,
+        radiation=None,
+        ozone=None,
+        humidity=None,
+        surface=None,
+        cloud=None,
+        convection=None,
+        lapserate=None,
+        upwelling=None,
+        diurnal_cycle=False,
+        co2_adjustment_timescale=np.nan,
+        logevery=None,
+    ):
         """Set-up a radiative-convective model.
 
         Parameters:
@@ -102,6 +118,14 @@ class RCE:
                 To be used with :class:`konrad.surface.FixedTemperature`.
                 Recommended value is 7 (1 week).
                 Defaults to no CO2 adjustment, with `np.nan`.
+
+            logevery (int): Log the model progress at every nth iteration.
+                Default is no logging.
+
+                This keyword only affects the frequency with which the
+                log messages are generated. You have to enable the logging
+                by using the :module:`logging` standard library or
+                the `konrad.enable_logging()` convenience function.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -137,6 +161,7 @@ class RCE:
 
         self.max_iterations = np.ceil(self.max_duration / self.timestep)
         self.niter = 0
+        self.logevery = logevery
 
         self.delta = delta
         self.deltaT = None
@@ -212,12 +237,9 @@ class RCE:
         # Main loop to control all model iterations until maximum number is
         # reached or a given stop criterion is fulfilled.
         while self.niter < self.max_iterations:
-            if self.niter % 100 == 0:
+            if self.logevery is not None and self.niter % self.logevery == 0:
                 # Write every 100th time step in loglevel INFO.
                 logger.info(f'Enter iteration {self.niter}.')
-            else:
-                # All other iterations are only logged in DEBUG level.
-                logger.debug(f'Enter iteration {self.niter}.')
 
             if self.diurnal_cycle:
                 self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
