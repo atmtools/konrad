@@ -20,6 +20,7 @@ cloudy and clear-sky, longwave and shortwave radiative fluxes and heating rates.
     >>> rad.calc_radiation(atmosphere=..., surface=..., cloud=...)
     >>> longwave_heating_rate = rad['lw_htngrt'][-1]
 """
+from .arts import ARTS
 from .radiation import Radiation
 from .rrtmg import RRTMG
 from .common import *
