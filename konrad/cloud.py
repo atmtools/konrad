@@ -547,10 +547,37 @@ class LowCloud(DirectInputCloud):
 
 
 class ConceptualCloud(DirectInputCloud):
-    def __init__(self, atmosphere, cloud_top, depth, cloud_fraction,
-                 water_path=100e-3, particle_size=100., phase='ice',
-                 coupling='pressure'):
-        """Initialize a grey cloud."""
+    def __init__(
+        self,
+        atmosphere,
+        cloud_top,
+        depth,
+        cloud_fraction,
+        water_path=100e-3,
+        particle_size=100.,
+        phase='ice',
+        coupling='pressure'
+    ):
+        """Initialize a conceptual cloud.
+
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+
+            cloud_top (float): Pressure at cloud top [Pa].
+            depth (float): Cloud depths in pressure units [Pa].
+            cloud_fraction (float): Cloud fraction [0-1].
+            water_path (float): Integrated water path (kg m^-2).
+            particle_size (float): Cloud particle size [microns].
+            phase (str): Phase of cloud particles, either "ice" or "liquid".
+            coupling (str): Mechanism with which the cloud top is coupled to
+                the atmosphere profile:
+                    * "pressure": Fixed at given pressure.
+                    * "convective_top": Coupled to the convectio top.
+                    * "freezing_level": Coupled to the freezing level.
+                    * "subsidence_divergence: Coupled to the maximum subsidence
+                        divergence.
+
+        """
         super().__init__(
             numlevels=atmosphere['plev'].size,
             cloud_fraction=np.nan,
