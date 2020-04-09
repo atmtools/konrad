@@ -38,6 +38,8 @@ from scipy.interpolate import interp1d
 from sympl import DataArray
 
 from konrad.component import Component
+from konrad import utils
+from konrad.cloudoptics import EchamCloudOptics
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,7 @@ __all__ = [
     'HighCloud',
     'MidLevelCloud',
     'LowCloud',
+    'ConceptualCloud',
     'CloudEnsemble',
 ]
 
@@ -281,6 +284,13 @@ class Cloud(Component, metaclass=abc.ABCMeta):
             convection (konrad.convection): convection scheme
             radiation (konrad.radiation): radiation scheme
         """
+
+    def overcast(self):
+        """Set cloud fraction in cloud layers to ``1`` (full overcast)."""
+        cloud_fraction = self['cloud_area_fraction_in_atmosphere_layer'][:]
+        cloud_mask = (cloud_fraction > 0).astype(float)
+
+        self['cloud_area_fraction_in_atmosphere_layer'][:] = cloud_mask
 
 
 class ClearSky(Cloud):
@@ -536,6 +546,116 @@ class LowCloud(DirectInputCloud):
         super().__init__(*args, coupling='pressure', **kwargs)
 
 
+class ConceptualCloud(DirectInputCloud):
+    def __init__(
+        self,
+        atmosphere,
+        cloud_top,
+        depth,
+        cloud_fraction,
+        water_path=100e-3,
+        particle_size=100.,
+        phase='ice',
+        coupling='pressure'
+    ):
+        """Initialize a conceptual cloud.
+
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
+
+            cloud_top (float): Pressure at cloud top [Pa].
+            depth (float): Cloud depths in pressure units [Pa].
+            cloud_fraction (float): Cloud fraction [0-1].
+            water_path (float): Integrated water path (kg m^-2).
+            particle_size (float): Cloud particle size [microns].
+            phase (str): Phase of cloud particles, either "ice" or "liquid".
+            coupling (str): Mechanism with which the cloud top is coupled to
+                the atmosphere profile:
+                    * "pressure": Fixed at given pressure.
+                    * "convective_top": Coupled to the convectio top.
+                    * "freezing_level": Coupled to the freezing level.
+                    * "subsidence_divergence: Coupled to the maximum subsidence
+                        divergence.
+
+        """
+        super().__init__(
+            numlevels=atmosphere['plev'].size,
+            cloud_fraction=np.nan,
+            lw_optical_thickness=np.nan,
+            sw_optical_thickness=np.nan,
+        )
+
+        self.cloud_top = cloud_top
+        self.depth = depth
+        self.coupling = coupling
+
+        self.cloud_fraction = cloud_fraction
+        self.water_path = water_path
+        self.particle_size = particle_size
+        self.phase = phase
+
+        self.update_cloud_profile(atmosphere)
+
+    def get_cloud_optical_properties(self, water_content):
+        cld_opt_props = EchamCloudOptics()
+
+        return cld_opt_props.get_cloud_properties(
+            self.particle_size, water_content, self.phase)
+
+    @classmethod
+    def from_atmosphere(cls, atmosphere, **kwargs):
+        return cls(atmosphere['plev'].size, **kwargs)
+
+    def get_cloud_top_plev(self, atmosphere, convection=None, radiation=None):
+        """Determine cloud top pressure depending on coupling mechanism."""
+        if self.coupling.lower() == 'pressure':
+            return self.cloud_top
+        elif self.coupling.lower() == 'convective_top':
+            if convection is None:
+                # Initialisation
+                return self.cloud_top
+
+            return convection.get('convective_top_plev')[0]
+        elif self.coupling.lower() == 'freezing_level':
+            # Center around freezing level
+            return atmosphere.get_triple_point_plev() - self.depth / 2
+        elif self.coupling.lower() == 'subsidence_divergence':
+            if radiation is None:
+                # Initialisation
+                return self.cloud_top
+
+            Qr = radiation['net_htngrt_clr'][-1]
+            return atmosphere.get_subsidence_convergence_max_plev(Qr)
+        else:
+            raise ValueError(
+                'The cloud class has been initialized with an invalid '
+                'cloud coupling mechanism.'
+            )
+
+    def update_cloud_profile(self, atmosphere, convection=None, radiation=None,
+                             **kwargs):
+        cloud_top_plev = self.get_cloud_top_plev(
+            atmosphere, convection, radiation)
+
+        is_cloud = np.logical_and(
+            atmosphere['plev'] > cloud_top_plev,
+            atmosphere['plev'] < cloud_top_plev + self.depth,
+        ).astype(bool)
+
+        self['cloud_area_fraction_in_atmosphere_layer'][:] = (
+            self.cloud_fraction * is_cloud
+        )
+
+        water_content_per_Layer = self.water_path / np.sum(is_cloud)
+
+        cloud_optics = self.get_cloud_optical_properties(
+            water_content=water_content_per_Layer)
+
+        for name in cloud_optics.data_vars:
+            self[name][:, :] = 0
+            self[name][is_cloud, :] = cloud_optics[name]
+
+
 class CloudEnsemble(DirectInputCloud):
     """Wrapper to combine several clouds into a cloud ensemble.
 
@@ -555,7 +675,7 @@ class CloudEnsemble(DirectInputCloud):
             raise ValueError(
                 'Only `DirectInputCloud`s can be combined in an ensemble.')
         else:
-            self._clouds = args
+            self._clouds = np.asarray(args)
 
         self._superposition = None
         self.superpose()
@@ -585,9 +705,42 @@ class CloudEnsemble(DirectInputCloud):
         """Dictionary containing all data variables and their dimensions."""
         return self._superposition._data_vars
 
+    @property
+    def netcdf_subgroups(self):
+        """Dynamically create a netCDF subgroup for each cloud."""
+        return {f"cloud-{i}": cloud for i, cloud in enumerate( self._clouds)}
+
     def update_cloud_profile(self, *args, **kwargs):
         """Update every cloud in the cloud ensemble."""
         for cloud in self._clouds:
             cloud.update_cloud_profile(*args, **kwargs)
 
         self.superpose()
+
+    def get_combinations(self):
+        """Get all combinations of overlapping cloud layers."""
+        if not all([isinstance(c, ConceptualCloud) for c in self._clouds]):
+            raise TypeError(
+                'Only `ConceptualCloud`s can be combined.'
+            )
+
+        bool_index, combined_weights = utils.calculate_combined_weights(
+            weights=[cld.cloud_fraction for cld in self._clouds]
+        )
+
+        clouds = []
+        for (i, p) in zip(bool_index, combined_weights):
+            if not any(i):
+                clouds.append(DirectInputCloud(
+                    numlevels=self.coords['mid_levels'].size,
+                    cloud_fraction=0.,
+                    lw_optical_thickness=0.,
+                    sw_optical_thickness=0.,
+                ))
+            else:
+                composed_clouds = np.sum(self._clouds[i])
+                composed_clouds.overcast()
+
+                clouds.append(composed_clouds)
+
+        return combined_weights, clouds

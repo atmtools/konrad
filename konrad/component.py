@@ -80,6 +80,24 @@ class Component:
         """Dictionary containing all data variables and their dimensions."""
         return self._data_vars
 
+    @property
+    def netcdf_subgroups(self):
+        """Define subgroups used when storing to netCDF file.
+
+        Components that are used as wrappers for other components (e.g.
+        :class:`konrad.humidity.FixedRH`) can define names and object
+        references for the wrapped components.
+        Those will be used when storing to netCDF files.
+
+        Examples:
+            >>> FixedRH.netcdf_subgroups
+            {'rh_func': <CacheFromAtmosphere() object at ...>,
+             'stratosphere_coupling': <ColdPointCoupling() object at ...>}
+
+        Type: dict-like
+        """
+        raise AttributeError('No netCDF subgroups defined.')
+
     def __repr__(self):
         dims = ', '.join(f'{d}: {np.size(v)}' for d, v in self.coords.items())
         return f'<{self}({dims}) object at {id(self)}>'

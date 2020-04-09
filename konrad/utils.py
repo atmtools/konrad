@@ -1,5 +1,6 @@
 """Common utility functions. """
 import copy
+import itertools
 import logging
 from datetime import timedelta
 from numbers import Number
@@ -28,6 +29,7 @@ __all__ = [
     'standard_atmosphere',
     'prefix_dict_keys',
     'is_decreasing',
+    'calculate_combined_weights',
 ]
 
 logger = logging.getLogger(__name__)
@@ -416,3 +418,16 @@ def prefix_dict_keys(dictionary, prefix, delimiter='/'):
 def is_decreasing(a):
     """Check if a given array is monotonically decreasing."""
     return np.all(np.diff(a) < 0)
+
+
+def calculate_combined_weights(weights):
+    """Calculate combined probabilities for a set of single probabilities."""
+    binary_table = np.array(
+        list(itertools.product([False, True], repeat=len(weights)))
+    )
+
+    pij = np.zeros_like(binary_table, dtype=float)
+    for (i, j), is_cloudy in np.ndenumerate(binary_table):
+        pij[i, j] = 1 - is_cloudy + (2 * is_cloudy - 1) * weights[j]
+
+    return binary_table, np.prod(pij, axis=1)

@@ -8,7 +8,7 @@ import climt
 import logging
 
 from .radiation import Radiation
-from konrad.cloud import ClearSky
+from konrad.cloud import ClearSky, CloudEnsemble
 
 __all__ = [
     'RRTMG',
@@ -322,8 +322,30 @@ class RRTMG(Radiation):
             cloud (konrad.cloud): cloud model
         """
         if not self._is_mcica and not isinstance(cloud, ClearSky):
-            lw_fluxes, sw_fluxes = self.calc_cloudy_nomcica_radiation(
-                atmosphere, surface, cloud)
+            if isinstance(cloud, CloudEnsemble):
+                weights, cloud_combinations = cloud.get_combinations()
+
+                lw_fluxes = {}
+                sw_fluxes = {}
+                for weight, cloud_case in zip(weights, cloud_combinations):
+                    lw_temp, sw_temp = self.radiative_fluxes(
+                        atmosphere, surface, cloud_case)
+
+                    for key, value in lw_temp[1].items():
+                        if key not in lw_fluxes.keys():
+                            lw_fluxes[key] = weight * value.data
+                        else:
+                            lw_fluxes[key][:] += weight * value.data
+
+                    for key, value in sw_temp[1].items():
+                        if key not in sw_fluxes.keys():
+                            sw_fluxes[key] = weight * value.data
+                        else:
+                            sw_fluxes[key][:] += weight * value.data
+
+            else:
+                lw_fluxes, sw_fluxes = self.calc_cloudy_nomcica_radiation(
+                    atmosphere, surface, cloud)
         else:
             lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(
                 atmosphere, surface, cloud)
