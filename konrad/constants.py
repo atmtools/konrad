@@ -36,7 +36,7 @@ variable_description = {
     'time': {
         'standard_name': 'time',
         'units': 'hours since 0001-01-01 00:00:00.0',
-        'calender': 'gregorian',
+        'calendar': 'gregorian',
         },
     'T': {
         'units': 'K',

@@ -129,11 +129,16 @@ class NetcdfHandler:
 
                 group.variables[varname][tuple(s)] = data
 
-    def expand_unlimitied_dimension(self):
+    def expand_unlimited_dimension(self):
         with netCDF4.Dataset(self.filename, 'a') as root:
             self.udim_size = root.dimensions[self.udim].size
 
-            root[self.udim][self.udim_size] = self.rce.get_hours_passed()
+            desc = constants.variable_description.get(self.udim, {})
+            root[self.udim][self.udim_size] = netCDF4.date2num(
+                self.rce.time,
+                units=desc["units"],
+                calendar=desc["calendar"],
+            )
 
     def get_components(self):
         """Return a list of non-empty non-private model components."""
@@ -165,7 +170,7 @@ class NetcdfHandler:
             root.variables[self.udim][:] = 0
 
     def append_to_file(self):
-        self.expand_unlimitied_dimension()
+        self.expand_unlimited_dimension()
         for name, component in self.get_components().items():
             self.append_group(component, name)
 
