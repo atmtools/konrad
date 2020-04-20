@@ -55,6 +55,7 @@ class RCE:
         diurnal_cycle=False,
         co2_adjustment_timescale=np.nan,
         logevery=None,
+        timestep_adjuster=None,
     ):
         """Set-up a radiative-convective model.
 
@@ -129,6 +130,12 @@ class RCE:
                 log messages are generated. You have to enable the logging
                 by using the :module:`logging` standard library or
                 the `konrad.enable_logging()` convenience function.
+
+            timestep_adjuster (callable): A callable object, that takes the
+                current timestep and the temperature change as input
+                to calculate a new timestep (`f(timestep, deltaT)`).
+
+                Default (`None`) is keeping the given timestep fixed.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -184,6 +191,8 @@ class RCE:
                 "Runs with adjusting CO2 concentration "
                 "require a fixed surface temperature."
                 )
+
+        self.timestep_adjuster = timestep_adjuster
 
         logging.info('Created Konrad object:\n{}'.format(self))
 
@@ -253,6 +262,8 @@ class RCE:
             if self.logevery is not None and self.niter % self.logevery == 0:
                 # Write every 100th time step in loglevel INFO.
                 logger.info(f'Enter iteration {self.niter}.')
+                if self.timestep_adjuster is not None:
+                    logger.info(f'Model timestep: {self.timestep}.')
 
             if self.diurnal_cycle:
                 self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
@@ -340,6 +351,11 @@ class RCE:
             # Calculate temperature change for convergence check.
             self.deltaT = (self.atmosphere['T'] - T) / self.timestep_days
 
+            if self.timestep_adjuster is not None:
+                self.timestep = self.timestep_adjuster(
+                    self.timestep, self.deltaT * self.timestep_days
+                )
+
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
                 if self.nchandler is None:
@@ -359,3 +375,56 @@ class RCE:
                 self.time += self.timestep
         else:
             logger.info('Stop. Reached maximum runtime.')
+
+
+class TimestepAdjuster:
+    """Callable object to adjust the model timestep."""
+    def __init__(
+        self,
+        increment=None,
+        timestep_min=None,
+        timestep_max=None,
+        lower=0.05,
+        upper=0.5,
+    ):
+        """Initialize a timestep adjuster.
+
+        Parameters:
+            increment (datetime.timedelta): Timestep increment.
+            timestep_min (datetime.timedelta): Minimum timestep.
+            timestep_max (datetime.timedelta): Maximum timestep.
+            lower (float): Lower threshold for temperature change.
+                If the absolute temperature change on each level
+                deceeds this value, the timestep is increased.
+            upper (float): Upper threshold for temperature change.
+                If the absolute temperature change on each level
+                exceeds this value, the timestep is decreased.
+        """
+        if increment is None:
+            increment = datetime.timedelta(hours=1)
+
+        if timestep_min is None:
+            timestep_min = datetime.timedelta(hours=2)
+
+        if timestep_max is None:
+            timestep_max = datetime.timedelta(days=1, hours=12)
+
+        self.increment = increment
+        self.timestep_min = timestep_min
+        self.timestep_max = timestep_max
+        self.lower = lower
+        self.upper = upper
+
+    def __call__(self, timestep, deltaT):
+        # Calculate the maximum absolute temperature change per day.
+        absmax = np.abs(deltaT).max()
+
+        if absmax < self.lower and timestep < self.timestep_max:
+            timestep += self.increment
+        elif absmax > self.upper and timestep:
+            timestep -= 2 * self.increment
+
+        if timestep < self.timestep_min:
+            timestep = self.timestep_min
+
+        return timestep
