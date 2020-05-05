@@ -317,13 +317,45 @@ class Atmosphere(Component):
 
         return np.argmin(T[plev > self.pmin])
 
-    def get_cold_point_plev(self):
+    def get_cold_point_plev(self, interpolate=False):
         """Return the cold point pressure.
+
+        Paramteres:
+            interpolate (bool): If `False` return the pressure grid value of
+                the actual coldest point. If `True` perform a quadratic fit
+                to retrieve a smoother estimate of the cold point pressure.
 
         Returns:
             float: Pressure at the cold point [Pa].
         """
-        return self['plev'][self.get_cold_point_index()]
+        if interpolate:
+            # Use the single coldest level between troposphere and stratosphere
+            # as starting point.
+            plog = np.log(self["plev"])
+            idx = self.get_cold_point_index()
+
+            # Select a symmetric region [in ln(p)] around that level.
+            mask = np.logical_and(
+                plog > plog[idx] - 0.25,
+                plog <= plog[idx] + 0.25,
+            )
+
+            # Fit a quadratic polynomial to the temperature profile
+            # around the cold point: f(x) = a * x**2 + b*x + c
+            popt = np.polyfit(
+                plog[mask],
+                self["T"][-1, mask],
+                deg=2,
+            )
+
+            # Use a and b to determine the minmum of f(x) anayltically:
+            # f'(x) = 0
+            # 2 * a * x + b = 0
+            # x = -b / (2 * a)
+            return np.exp(-popt[1] / (2 * (popt[0])))
+        else:
+            # Return the single coldest point on the actual pressure grid.
+            return self['plev'][self.get_cold_point_index()]
 
     def get_triple_point_index(self):
         """Return the model level index at the triple point.
