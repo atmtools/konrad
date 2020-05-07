@@ -136,7 +136,7 @@ class OzoneNormedPressure(Ozone):
 
         atmosphere['O3'] = (
             ('time', 'plev'),
-            self._f(atmosphere['plev'] / norm_new).reshape(1, -1)
+            self._f(atmosphere['plev'] / norm_new).clip(min=0).reshape(1, -1)
         )
 
 
