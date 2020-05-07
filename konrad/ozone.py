@@ -96,22 +96,34 @@ class OzoneHeight(Ozone):
 
 
 class OzoneNormedPressure(Ozone):
-    """Ozone shifts with the normalisation level (chosen to be the convective
-    top)."""
-    def __init__(self, norm_level=None):
+    """Ozone shifts with the normalisation level."""
+    def __init__(self, norm_level=None, coupling="convective_top"):
         """
         Parameters:
             norm_level (float): pressure for the normalisation
                 normally chosen as the convective top pressure at the start of
                 the simulation [Pa]
+            coupling (str): Mechanism to determine the normalisation level:
+                    * "convective_top": Coupled to the convective top.
+                    * "cold_point": Coupled to the cold point tropopause.
         """
         self.norm_level = norm_level
         self._f = None
+        self.coupling = coupling
+
+
+    def get_norm_level(self, atmosphere, convection):
+        if self.coupling == 'convective_top':
+            # TODO: what if there is no convective top
+            return convection.get('convective_top_plev')[0]
+        elif self.coupling == 'cold_point':
+            return atmosphere.get_cold_point_plev(interpolate=True)
+        else:
+            raise ValueError("Invalid coupling mechanism.")
 
     def __call__(self, atmosphere, convection, **kwargs):
         if self.norm_level is None:
-            self.norm_level = convection.get('convective_top_plev')[0]
-            # TODO: what if there is no convective top
+            self.norm_level = self.get_norm_level(atmosphere, convection)
 
         if self._f is None:
             self._f = interp1d(
@@ -120,11 +132,11 @@ class OzoneNormedPressure(Ozone):
                 fill_value='extrapolate',
             )
 
-        norm_new = convection.get('convective_top_plev')[0]
+        norm_new = self.get_norm_level(atmosphere, convection)
 
         atmosphere['O3'] = (
             ('time', 'plev'),
-            self._f(atmosphere['plev'] / norm_new).reshape(1, -1)
+            self._f(atmosphere['plev'] / norm_new).clip(min=0).reshape(1, -1)
         )
 
 
