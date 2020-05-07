@@ -312,7 +312,7 @@ def parse_fraction_of_day(time):
     """Calculate the fraction of a day.
 
     Parameters:
-        time (str or float): Specified time delta (e.g. '6h').
+        time (str, float, or timedelta): Specified time delta (e.g. '6h').
             Valid units:
                 * 's' for seconds
                 * 'm' for minutes
@@ -322,11 +322,11 @@ def parse_fraction_of_day(time):
             If numeric, return value.
 
     Returns:
-        float: Fraction of a day.
+        datetime.timedelta: Object representing the time span.
 
     Example:
         >>> parse_fraction_of_day('12h')
-        0.5
+        datetime.timedelta(seconds=43200)
     """
     mapping = {
         's': 'seconds',
@@ -336,11 +336,13 @@ def parse_fraction_of_day(time):
         'w': 'weeks',
     }
 
+    if isinstance(time, timedelta):
+        return time
     if isinstance(time, str):
         value, period = float(time[:-1]), mapping[time[-1]]
-        return timedelta(**{period: value}).total_seconds() / 3600 / 24
+        return timedelta(**{period: value})
     elif isinstance(time, Number):
-        return time
+        return timedelta(days=time)
 
 
 # TODO: Replace with ``typhon.physics.standard_atmosphere`` after next

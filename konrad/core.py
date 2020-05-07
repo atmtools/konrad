@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
-"""Implementation of a radiative-convective equilibrium model (RCE).
-"""
+"""Implementation of a radiative-convective equilibrium model (RCE). """
+import datetime
 import logging
 
 import numpy as np
 
+from konrad import constants
 from konrad import utils
 from konrad import netcdf
 from konrad.radiation import RRTMG
@@ -55,6 +55,7 @@ class RCE:
         diurnal_cycle=False,
         co2_adjustment_timescale=np.nan,
         logevery=None,
+        timestep_adjuster=None,
     ):
         """Set-up a radiative-convective model.
 
@@ -62,26 +63,29 @@ class RCE:
 
             atmosphere: :py:class:`konrad.atmosphere.Atmosphere`.
 
-            timestep (float or str): Model time step (per iteration)
+            timestep (float, str or timedelta): Model time step
 
                 * If float, time step in days.
                 * If str, a timedelta string (see :func:`konrad.utils.parse_fraction_of_day`).
+                * A `timedelta` object is directly used as timestep.
 
-            max_duration (float or str): Maximum duration of the simulation
+            max_duration (float, str or timedelta): Maximum duration.
                 The duration is given in model time
 
                 * If float, maximum duration in days.
                 * If str, a timedelta string (see :func:`konrad.utils.parse_fraction_of_day`).
+                * A `timedelta` object is directly used as timestep.
 
             outfile (str): netCDF4 file to store output.
 
             experiment (str): Experiment description (stored in netCDF output).
 
-            writeevery (int, float or str): Set output frequency.
+            writeevery (float, str or timedelta): Set output frequency.
 
-                * int: Every nth iteration
                 * float: Every nth day in model time
                 * str: a timedelta string (see :func:`konrad.utils.parse_fraction_of_day`).
+                * A `timedelta` object is directly used as timestep.
+                * Note: Setting a value of `"0h"` will write after every iteration.
 
             delta (float): Stop criterion. If the heating rate is below this
                 threshold for all levels, skip further iterations. Values
@@ -126,6 +130,12 @@ class RCE:
                 log messages are generated. You have to enable the logging
                 by using the :module:`logging` standard library or
                 the `konrad.enable_logging()` convenience function.
+
+            timestep_adjuster (callable): A callable object, that takes the
+                current timestep and the temperature change as input
+                to calculate a new timestep (`f(timestep, deltaT)`).
+
+                Default (`None`) is keeping the given timestep fixed.
         """
         # Sub-models.
         self.atmosphere = atmosphere
@@ -155,12 +165,15 @@ class RCE:
                                               Upwelling, NoUpwelling())
 
         self.diurnal_cycle = diurnal_cycle
-        self.max_duration = utils.parse_fraction_of_day(max_duration)
-        self.timestep = utils.parse_fraction_of_day(timestep)
-        self.writeevery = utils.parse_fraction_of_day(writeevery)
 
-        self.max_iterations = np.ceil(self.max_duration / self.timestep)
+        self.timestep = utils.parse_fraction_of_day(timestep)
+        self.time = datetime.datetime(1, 1, 1)  # Start model run at 0001/1/1
+        self.max_duration = utils.parse_fraction_of_day(max_duration)
         self.niter = 0
+
+        self.writeevery = utils.parse_fraction_of_day(writeevery)
+        self.last_written = self.time
+
         self.logevery = logevery
 
         self.delta = delta
@@ -179,6 +192,8 @@ class RCE:
                 "require a fixed surface temperature."
                 )
 
+        self.timestep_adjuster = timestep_adjuster
+
         logging.info('Created Konrad object:\n{}'.format(self))
 
     def __repr__(self):
@@ -196,7 +211,16 @@ class RCE:
         Returns:
             float: Hours passed since model start.
         """
-        return self.niter * 24 * self.timestep
+        return self.runtime.total_seconds() / 3_600
+
+    @property
+    def runtime(self):
+        """Timedelta representing time since model start."""
+        return self.time - datetime.datetime(1, 1, 1)
+
+    @property
+    def timestep_days(self):
+        return self.timestep.total_seconds() / constants.seconds_in_a_day
 
     def is_converged(self):
         """Check if the atmosphere is in radiative-convective equilibrium.
@@ -218,13 +242,11 @@ class RCE:
         if self.outfile is None:
             return False
 
-        if isinstance(self.writeevery, int):
-            return self.niter % self.writeevery == 0
-        elif isinstance(self.writeevery, float):
-            # Add `0.5 * dt` to current timestep to make float comparison more
-            # robust. Otherwise `3.3 % 3 < 0.3` is True.
-            r = (((self.niter + 0.5) * self.timestep) % self.writeevery)
-            return r < self.timestep
+        if (self.time - self.last_written) >= self.writeevery:
+            self.last_written = self.time
+            return True
+        else:
+            return False
 
     def run(self):
         """Run the radiative-convective equilibrium model."""
@@ -236,10 +258,12 @@ class RCE:
 
         # Main loop to control all model iterations until maximum number is
         # reached or a given stop criterion is fulfilled.
-        while self.niter < self.max_iterations:
+        while self.runtime <= self.max_duration:
             if self.logevery is not None and self.niter % self.logevery == 0:
                 # Write every 100th time step in loglevel INFO.
                 logger.info(f'Enter iteration {self.niter}.')
+                if self.timestep_adjuster is not None:
+                    logger.info(f'Model timestep: {self.timestep}.')
 
             if self.diurnal_cycle:
                 self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
@@ -255,7 +279,7 @@ class RCE:
                 sw_up=self.radiation['sw_flxu'][0, 0],
                 lw_down=self.radiation['lw_flxd'][0, 0],
                 lw_up=self.radiation['lw_flxu'][0, 0],
-                timestep=self.timestep,
+                timestep=self.timestep_days,
             )
 
             if not np.isnan(self.co2_adjustment_timescale):
@@ -264,7 +288,7 @@ class RCE:
                 n0 = self.surface.heat_sink
                 A = 5.35
                 tau = self.co2_adjustment_timescale
-                self.atmosphere['CO2'] += self.timestep * (
+                self.atmosphere['CO2'] += self.timestep_days * (
                     n0 - self.radiation['toa'][0]) / (A * tau
                                                       ) * self.atmosphere['CO2']
 
@@ -277,13 +301,13 @@ class RCE:
 
             # Apply heatingrates to temperature profile.
             self.atmosphere['T'] += (self.radiation['net_htngrt'] *
-                                     self.timestep)
+                                     self.timestep_days)
 
             # Convective adjustment
             self.convection.stabilize(
                 atmosphere=self.atmosphere,
                 lapse=critical_lapserate,
-                timestep=self.timestep,
+                timestep=self.timestep_days,
                 surface=self.surface,
             )
 
@@ -291,7 +315,7 @@ class RCE:
             self.upwelling.cool(
                 atmosphere=self.atmosphere,
                 convection=self.convection,
-                timestep=self.timestep,
+                timestep=self.timestep_days,
             )
 
             # TODO: Consider implementing an Atmosphere.update_diagnostics()
@@ -306,7 +330,7 @@ class RCE:
             self.ozone(
                 atmosphere=self.atmosphere,
                 convection=self.convection,
-                timestep=self.timestep,
+                timestep=self.timestep_days,
                 upwelling=self.upwelling,
                 zenith=self.radiation.current_solar_angle
             )
@@ -325,7 +349,12 @@ class RCE:
             )
 
             # Calculate temperature change for convergence check.
-            self.deltaT = (self.atmosphere['T'] - T) / self.timestep
+            self.deltaT = (self.atmosphere['T'] - T) / self.timestep_days
+
+            if self.timestep_adjuster is not None:
+                self.timestep = self.timestep_adjuster(
+                    self.timestep, self.deltaT * self.timestep_days
+                )
 
             # Check, if the current iteration is scheduled to be written.
             if self.check_if_write():
@@ -340,8 +369,62 @@ class RCE:
                 # If the model is converged, skip further iterations. Success!
                 logger.info(f'Converged after {self.niter} iterations.')
                 break
-            # Otherweise increase the iteration count and go on.
+            # Otherwise increase the iteration count and go on.
             else:
                 self.niter += 1
+                self.time += self.timestep
         else:
-            logger.info('Stopped after maximum number of iterations.')
+            logger.info('Stop. Reached maximum runtime.')
+
+
+class TimestepAdjuster:
+    """Callable object to adjust the model timestep."""
+    def __init__(
+        self,
+        increment=None,
+        timestep_min=None,
+        timestep_max=None,
+        lower=0.05,
+        upper=0.5,
+    ):
+        """Initialize a timestep adjuster.
+
+        Parameters:
+            increment (datetime.timedelta): Timestep increment.
+            timestep_min (datetime.timedelta): Minimum timestep.
+            timestep_max (datetime.timedelta): Maximum timestep.
+            lower (float): Lower threshold for temperature change.
+                If the absolute temperature change on each level
+                deceeds this value, the timestep is increased.
+            upper (float): Upper threshold for temperature change.
+                If the absolute temperature change on each level
+                exceeds this value, the timestep is decreased.
+        """
+        if increment is None:
+            increment = datetime.timedelta(hours=1)
+
+        if timestep_min is None:
+            timestep_min = datetime.timedelta(hours=2)
+
+        if timestep_max is None:
+            timestep_max = datetime.timedelta(days=1, hours=12)
+
+        self.increment = increment
+        self.timestep_min = timestep_min
+        self.timestep_max = timestep_max
+        self.lower = lower
+        self.upper = upper
+
+    def __call__(self, timestep, deltaT):
+        # Calculate the maximum absolute temperature change per day.
+        absmax = np.abs(deltaT).max()
+
+        if absmax < self.lower and timestep < self.timestep_max:
+            timestep += self.increment
+        elif absmax > self.upper and timestep:
+            timestep -= 2 * self.increment
+
+        if timestep < self.timestep_min:
+            timestep = self.timestep_min
+
+        return timestep
