@@ -1,11 +1,13 @@
 import logging
-from os.path import join, dirname
+import os
+from os.path import join, dirname, isfile
 
 import numpy as np
 import typhon as ty
 from scipy.interpolate import PchipInterpolator
 
-from konrad.utils import get_pressure_grids
+from konrad.utils import get_quadratic_pgrid
+from konrad.atmosphere import Atmosphere
 from konrad.cloud import ClearSky
 from .rrtmg import RRTMG
 from .common import fluxes2heating
@@ -122,6 +124,96 @@ class _ARTS:
         # Set number of OMP threads
         if threads is not None:
             self.ws.SetNumberOfThreads(threads)
+
+    def calc_lookup_table(self, filename=None):
+        """Calculate an absorption lookup table.
+
+        The lookup table is constructed to cover surface temperatures
+        between 200 and 400 K, and water vapor mixing ratio up to 40%.
+
+        The frequency grid covers the whole outgoing longwave spectrum
+        from 10 to 3,250 cm^-1.
+
+        References:
+            An absorption lookup table can be found at
+                https://doi.org/10.5281/zenodo.3885410
+
+        Parameters:
+            filename (str): (Optional) path to an ARTS XML file
+                to store the lookup table.
+        """
+        # Create a frequency grid
+        wavenumber = np.linspace(10e2, 3_250e2, 2**15)  # 1 to 3000cm^-1
+        self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
+
+        # Read line catagloge and create absorption lines.
+        self.ws.ReadSplitARTSCAT(
+            abs_lines=self.ws.abs_lines,
+            abs_species=self.ws.abs_species,
+            basename="hitran_split_artscat5/",
+            fmin=0.0,
+            fmax=1e99,
+            globalquantumnumbers="",
+            localquantumnumbers="",
+            ignore_missing=0,
+        )
+
+        # Set line shape and cut off.
+        self.ws.abs_linesSetLineShapeType(self.ws.abs_lines, "VP")
+        self.ws.abs_linesSetNormalization(self.ws.abs_lines, "VVH")
+        self.ws.abs_linesSetCutoff(self.ws.abs_lines, "ByLine", 750e9)
+
+        self.ws.abs_lines_per_speciesCreateFromLines()
+        self.ws.abs_lines_per_speciesCompact()
+
+        # Create a standard atmosphere
+        p_grid = get_quadratic_pgrid(1_200e2, 0.5, 128)
+
+        atmosphere = Atmosphere(p_grid)
+        atmosphere["T"][:] = atmosphere["T"].clip(min=200)
+        atmosphere.tracegases_rcemip()
+        atmosphere["O2"][:] = 0.2095
+        atmosphere["CO2"][:] = 1.5 * 348e-6
+
+        h2o = 0.04 * (p_grid / p_grid[0])**0.2
+        atmosphere["H2O"][:] = h2o[:-1]
+
+        # Convert the konrad atmosphere into an ARTS atm_fields_compact.
+        atm_fields_compact = atmosphere.to_atm_fields_compact()
+        self.ws.atm_fields_compact = atm_fields_compact
+
+        self.ws.atm_fields_compactAddConstant(
+            atm_fields_compact=self.ws.atm_fields_compact,
+            name="abs_species-N2",
+            value=0.7808,
+            condensibles=["abs_species-H2O"],
+        )
+
+        # Setup the lookup table calculation
+        self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
+        self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
+        self.ws.atmfields_checkedCalc()
+        self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
+        self.ws.abs_t_pert = np.arange(-100, 101, 25)
+
+        nls_idx = [i for i, tag in enumerate(self.ws.abs_species.value)
+                   if "H2O" in tag[0]]
+        self.ws.abs_speciesSet(
+                abs_species=self.ws.abs_nls,
+                species=[", ".join(self.ws.abs_species.value[nls_idx[0]])],
+        )
+
+        self.ws.abs_nls_pert = np.array([10**n for n in range(-4, 2)])
+
+        # Run checks
+        self.ws.abs_xsec_agenda_checkedCalc()
+        self.ws.lbl_checkedCalc()
+
+        # Calculate actual lookup table.
+        self.ws.abs_lookupCalc()
+
+        if filename is not None:
+            self.ws.WriteXML("binary", self.ws.abs_lookup, filename)
 
     def calc_spectral_irradiance_field(self, atmosphere, t_surface):
         """Calculate the spectral irradiance field."""
