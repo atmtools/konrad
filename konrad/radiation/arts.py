@@ -331,10 +331,16 @@ class ARTS(RRTMG):
 
     def calc_radiation(self, atmosphere, surface, cloud):
         # Perform RRTMG simulation
+        # Add a virtual layer ontop of the atmosphere column to improve the
+        # accuracy of top-of-the-atmosphere fluxes.
+        # The fluxes/heating rates in this level are ignored afterwards.
+        ph_rrtmg = np.append(atmosphere["phlev"], 1e-2)
+        atmosphere_rrtmg = atmosphere.refine_plev(ph_rrtmg, kind="nearest")
+
         lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(
-            atmosphere,
+            atmosphere_rrtmg,
             surface,
-            ClearSky.from_atmosphere(atmosphere),
+            ClearSky.from_atmosphere(atmosphere_rrtmg),
         )
         sw_fluxes = sw_dT_fluxes[1]
 
@@ -342,17 +348,13 @@ class ARTS(RRTMG):
         Fd, Fu = self._arts.calc_radiative_fluxes(atmosphere, surface)
 
         # Interpolate RT results on fine original grid
-        def _reshape(x, padding=False):
-            if padding:
-                # Repeat last flux value to match half-level dimension.
-                return np.append(x, x[-1]).reshape(1, -1)
-            else:
-                return x.reshape(1, -1)
+        def _reshape(x, trim=-1):
+            return x[:trim].reshape(1, -1)
 
-        self['lw_flxu'] = _reshape(Fu, False)
-        self['lw_flxd'] = _reshape(Fd, False)
-        self['lw_flxu_clr'] = _reshape(Fu, False)
-        self['lw_flxd_clr'] = _reshape(Fd, False)
+        self['lw_flxu'] = _reshape(Fu, trim=None)
+        self['lw_flxd'] = _reshape(Fd, trim=None)
+        self['lw_flxu_clr'] = _reshape(Fu, trim=None)
+        self['lw_flxd_clr'] = _reshape(Fd, trim=None)
         self['sw_flxu'] = _reshape(
             sw_fluxes['upwelling_shortwave_flux_in_air'].data)
         self['sw_flxd'] = _reshape(
