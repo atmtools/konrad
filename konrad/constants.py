@@ -63,7 +63,7 @@ variable_description = {
         },
     'N2O': {
         'units': '1',
-        'standard_name': 'nitrogene_mixing_ratio',
+        'standard_name': 'nitrous_oxide_mixing_ratio',
         'arts_name': 'abs_species-N2O',
         'dims': ('plev',),
         'default_vmr': 306e-9,
