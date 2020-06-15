@@ -41,6 +41,9 @@ setup(
         'sympl>=0.4.0',
     ],
     extras_require={
+        'arts': [
+            'pyarts',
+        ],
         'docs': [
             'sphinx',
             'sphinx_rtd_theme',

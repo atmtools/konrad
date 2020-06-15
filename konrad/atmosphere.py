@@ -190,15 +190,23 @@ class Atmosphere(Component):
         # Set grids and their names.
         atmfield.gridnames = ['Species', 'Pressure', 'Longitude', 'Latitude']
         atmfield.grids = [
-            species, self['plev'], np.array([]), np.array([])
+            species, self['phlev'], np.array([]), np.array([])
         ]
 
         # The profiles have to be passed in "stacked" form, as an ndarray of
         # dimensions [species, pressure, lat, lon].
-        atmfield.data = np.vstack(
-            [self[var].reshape(1, self['plev'].size, 1, 1)
-             for var in variables]
-        )
+        profiles = []
+        for var in variables:
+            f = interp1d(
+                np.log(self["plev"]),
+                self[var],
+                kind="cubic",
+                fill_value="extrapolate",
+            )
+            profiles.append(
+                    f(np.log(self["phlev"])).reshape(1, self['phlev'].size, 1, 1)
+            )
+        atmfield.data = np.vstack(profiles)
         atmfield.dataname = 'Data'
 
         # Perform a consistency check of the passed grids and data tensor.

@@ -13,6 +13,7 @@ dependencies:
     - pip
     - pip:
         - climt==0.16.9
+        - pyarts
         - sympl>=0.4.0
 channels:
     - defaults
