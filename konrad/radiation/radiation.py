@@ -9,6 +9,8 @@ from scipy.interpolate import interp1d
 from konrad import constants
 from konrad.component import Component
 from konrad.radiation.common import fluxes2heating
+from konrad.surface import SlabOcean
+from konrad.cloud import ClearSky
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +76,19 @@ class Radiation(Component, metaclass=abc.ABCMeta):
     def calc_radiation(self, atmosphere, surface, cloud):
         pass
 
-    def update_heatingrates(self, atmosphere, surface, cloud):
+    def update_heatingrates(self, atmosphere, surface=None, cloud=None):
         """Returns `xr.Dataset` containing radiative transfer results."""
+        # If only the atmospheric state is given, assume clear-sky
+        # and extrapolate the surface temperatures.
+        # This allows the user to perform offline radiative trasnfer
+        # for e.g. radiosondes in an easier way.
+        if surface is None:
+            surface = SlabOcean.from_atmosphere(atmosphere)
+
+        if cloud is None:
+            cloud = ClearSky.from_atmosphere(atmosphere)
+
+        # Call the interal radiative transfer routines.
         self.calc_radiation(atmosphere, surface, cloud)
 
         # self.correct_bias(rad_dataset)

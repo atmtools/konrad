@@ -17,7 +17,7 @@ The radiation scheme can also be used outside of an RCE simulation, to calculate
 cloudy and clear-sky, longwave and shortwave radiative fluxes and heating rates.
     >>> import konrad
     >>> rad = konrad.radiation.RRTMG(...)
-    >>> rad.calc_radiation(atmosphere=..., surface=..., cloud=...)
+    >>> rad.calc_radiation(atmosphere=...)
     >>> longwave_heating_rate = rad['lw_htngrt'][-1]
 """
 from .arts import ARTS
