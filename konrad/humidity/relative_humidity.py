@@ -40,7 +40,7 @@ class CacheFromAtmosphere(RelativeHumidityModel):
 
 class HeightConstant(RelativeHumidityModel):
     """Fix the relative humidity to a single value throughout the atmosphere."""
-    def __init__(self, rh_surface=0.62):
+    def __init__(self, rh_surface=0.8):
         """
         Parameters:
             rh_surface (float): Relative humidity at first

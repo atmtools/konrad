@@ -18,15 +18,15 @@ __all__ = [
 class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
 
-    def __init__(self, *args, solar_constant=510, mcica=False,
+    def __init__(self, *args, solar_constant=551.58, mcica=False,
                  **kwargs):
         """
         Parameters:
             zenith_angle (float): angle of the Sun [degrees].
-            In konrad, with no diurnal cycle, this should represent a diurnal
-            mean zenith angle. With a diurnal cycle, this represents latitude.
-            For single radiation calculations, this is the angle to the Sun at
-            the time and location of interest.
+                In konrad, with no diurnal cycle, this should represent a
+                diurnal mean zenith angle. With a diurnal cycle, this
+                represents latitude.  For single radiation calculations, this
+                is the angle to the Sun at the time and location of interest.
 
             bias (dict-like): include bias corrections to the fluxes and/or
                 heating rates

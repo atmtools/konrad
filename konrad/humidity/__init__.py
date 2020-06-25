@@ -19,6 +19,7 @@ class FixedRH(Component):
         Parameters:
             rh_func (callable): Callable that describes the vertical
                 relative humidity distribution.
+                If `None`, assume a :class:`HeightConstant` relative humidity.
             stratosphere_coupling (callable): Callable that describes how the
                 humidity should be treated in the stratosphere.
         """
@@ -28,7 +29,7 @@ class FixedRH(Component):
             self._stratosphere_coupling = stratosphere_coupling
 
         if rh_func is None:
-            self._rh_func = CacheFromAtmosphere()
+            self._rh_func = HeightConstant()
         else:
             self._rh_func = rh_func
 

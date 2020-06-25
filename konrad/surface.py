@@ -116,14 +116,16 @@ class Surface(Component, metaclass=abc.ABCMeta):
 
 class SlabOcean(Surface):
     """Surface model with adjustable temperature."""
-    def __init__(self, *args, depth=50., heat_sink=0, **kwargs):
+    def __init__(self, *args, depth=1.0, heat_sink=66.0, **kwargs):
         """
         Parameters:
-            heat_sink(float): Flux of energy out of the surface [W m^-2]
-            depth (float): Ocean depth [m], default 50
-            albedo (float): Surface albedo, default 0.2
-            temperature (float): Surface temperature [K], default 288
-            height (float): Surface height [m], default 0
+            heat_sink(float): Flux of energy out of the surface [W m^-2].
+                The default value represents a surface enthalpy transport to
+                the extra-tropics.
+            depth (float): Ocean depth [m].
+            albedo (float): Surface albedo [1].
+            temperature (float): Surface temperature [K].
+            height (float): Surface height [m].
         """
         super().__init__(*args, **kwargs)
 
