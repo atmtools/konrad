@@ -35,8 +35,8 @@ jobs:
           git clone --branch=v.0.16.9 --depth=1 https://github.com/climt/climt
           cd climt
           python -m pip install --upgrade pip
-          pip install wheel Cython
-          TARGET=HASWELL python setup.py install
+          pip install wheel Cython sympl==0.4.0
+          CC=gcc-6 TARGET=HASWELL python setup.py develop --no-deps
 
       - name: Install
         run: |
