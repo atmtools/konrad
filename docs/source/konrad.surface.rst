@@ -7,6 +7,5 @@ Surface
    :toctree: _autosummary
 
    Surface
-   SurfaceFixedTemperature
-   SurfaceHeatCapacity
-   SurfaceHeatSink
+   FixedTemperature
+   SlabOcean

@@ -12,4 +12,3 @@ Ozone
    OzoneNormedPressure
    Cariolle
    Simotrostra
-   LowerStratosphericSimotrostra

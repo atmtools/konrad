@@ -45,4 +45,3 @@ Stratospheric coupling
    NonIncreasing
    FixedStratosphericVMR
    MinimumStratosphericVMR
-   NoCoupling
