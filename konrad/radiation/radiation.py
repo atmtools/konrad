@@ -9,6 +9,8 @@ from scipy.interpolate import interp1d
 from konrad import constants
 from konrad.component import Component
 from konrad.radiation.common import fluxes2heating
+from konrad.surface import SlabOcean
+from konrad.cloud import ClearSky
 
 
 logger = logging.getLogger(__name__)
@@ -30,13 +32,16 @@ REQUIRED_VARIABLES = [
 
 class Radiation(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
-    def __init__(self, zenith_angle=47.88, bias=None):
+    def __init__(self, zenith_angle=42.05, bias=None):
         """
         Parameters:
             zenith_angle (float): Zenith angle of the sun.
-                The default angle of 47.88 degree results in 342 W/m^2
+                The default angle of 42.05 degree results in 409.6 W/m^2
                 solar insolation at the top of the atmosphere when used
-                together with a solar constant of 510 W/m^2.
+                together with a solar constant of 551.58 W/m^2. This is a
+                reasonable insolation for tropical latitudes. In this case,
+                a surface enthalpy transport needs to included to prevent a
+                runaway greenhouse.
                 If a diurnal cycle is used in full konrad runs, this angle
                 represents latitude.
             bias (dict-like): A dict-like object that stores bias
@@ -71,8 +76,19 @@ class Radiation(Component, metaclass=abc.ABCMeta):
     def calc_radiation(self, atmosphere, surface, cloud):
         pass
 
-    def update_heatingrates(self, atmosphere, surface, cloud):
+    def update_heatingrates(self, atmosphere, surface=None, cloud=None):
         """Returns `xr.Dataset` containing radiative transfer results."""
+        # If only the atmospheric state is given, assume clear-sky
+        # and extrapolate the surface temperatures.
+        # This allows the user to perform offline radiative trasnfer
+        # for e.g. radiosondes in an easier way.
+        if surface is None:
+            surface = SlabOcean.from_atmosphere(atmosphere)
+
+        if cloud is None:
+            cloud = ClearSky.from_atmosphere(atmosphere)
+
+        # Call the interal radiative transfer routines.
         self.calc_radiation(atmosphere, surface, cloud)
 
         # self.correct_bias(rad_dataset)
