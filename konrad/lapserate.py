@@ -6,16 +6,19 @@ the troposphere.
 **Example**
 
 Calculate the moist adiabatic lapse rate, for a specified atmospheric
-temperature profile.
+temperature profile:
+
     >>> import konrad
     >>> lapse = konrad.lapserate.MoistLapseRate()
     >>> critical_lapserate = lapse(atmosphere=...)
 
 Apply convection to an unstable atmosphere, updating the atmospheric temperature
-profile and the surface temperature to follow the :code:`critical_lapserate`.
+profile and the surface temperature to follow the :code:`critical_lapserate`:
+
     >>> convection = konrad.convection.HardAdjustment()
     >>> convection.stabilize(
     >>>     atmosphere=..., surface=..., lapse=critical_lapserate)
+
 """
 import abc
 import numbers

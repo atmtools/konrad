@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""This module contains classes describing different surfaces. A surface is
-required by both the radiation and the convective models used inside the RCE
-simulations.
+"""This module contains classes describing different surfaces.
+
+A surface is required by both the radiation and the convective models used
+inside the RCE simulations.
 
 **Example**
 
 Create a surface model, *e.g.* :py:class:`SlabOcean`,
-and use it in an RCE simulation.
+and use it in an RCE simulation:
+
     >>> import konrad
     >>> surface_temperature_start = ...
     >>> surface = konrad.surface.SlabOcean(
@@ -14,6 +16,7 @@ and use it in an RCE simulation.
     >>> rce = konrad.RCE(atmosphere=..., surface=surface)
     >>> rce.run()
     >>> surface_temperature_end = surface['temperature'][-1]
+
 """
 import abc
 import logging
@@ -117,9 +120,10 @@ class Surface(Component, metaclass=abc.ABCMeta):
 class SlabOcean(Surface):
     """Surface model with adjustable temperature."""
     def __init__(self, *args, depth=1.0, heat_sink=66.0, **kwargs):
-        """
+        """Initialize a slab ocean.
+
         Parameters:
-            heat_sink(float): Flux of energy out of the surface [W m^-2].
+            heat_sink (float): Flux of energy out of the surface [W m^-2].
                 The default value represents a surface enthalpy transport to
                 the extra-tropics.
             depth (float): Ocean depth [m].

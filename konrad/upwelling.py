@@ -6,7 +6,8 @@ To include an upwelling, use :py:class:`StratosphericUpwelling`, otherwise use
 **Example**
 
 Create an instance of the upwelling class, set the upwelling velocity,
-and use the upwelling in an RCE simulation.
+and use the upwelling in an RCE simulation:
+
     >>> import konrad
     >>> stratospheric_upwelling = konrad.upwelling.StratosphericUpwelling(w=...)
     >>> rce = konrad.RCE(atmosphere=..., upwelling=stratospheric_upwelling)

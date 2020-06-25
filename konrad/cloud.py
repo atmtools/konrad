@@ -6,7 +6,8 @@ must be used.
 **In an RCE simulation**
 
 Create an instance of a cloud class, *e.g.* a :py:class:`DirectInputCloud`,
-create an appropriate radiation model, and run an RCE simulation.
+create an appropriate radiation model, and run an RCE simulation:
+
     >>> import konrad
     >>> cloudy_cloud = konrad.cloud.DirectInputCloud(
     >>>     numlevels=..., cloud_fraction=..., lw_optical_thickness=...,
@@ -19,7 +20,8 @@ create an appropriate radiation model, and run an RCE simulation.
 **Calculating radiative fluxes or heating rates**
 
 Create an instance of a cloud class, *e.g.* a :py:class:`PhysicalCloud`,
-create an appropriate radiation model and run radiative transfer.
+create an appropriate radiation model and run radiative transfer:
+
     >>> import konrad
     >>> another_cloud = konrad.cloud.PhysicalCloud(
     >>>     numlevels=..., cloud_fraction=..., mass_ice=..., mass_water=...,
@@ -309,7 +311,8 @@ class PhysicalCloud(Cloud):
     """
     def __init__(self, numlevels, cloud_fraction, mass_water, mass_ice,
                  ice_particle_size, droplet_radius):
-        """
+        """Initialize a cloud component.
+
         Parameters:
             numlevels (int): Number of atmospheric levels.
             cloud_fraction (float / ndarray / DataArray): cloud area fraction
@@ -361,11 +364,13 @@ class DirectInputCloud(Cloud):
             numlevels (int): Number of atmospheric levels.
             coupling (str): Mechanism with which the cloud is coupled to the
                 atmospheric profile:
+
                     * 'convective_top': Coupling to the convective top
                     * 'freezing_level': Coupling to the freezing level
                     * 'subsidence_divergence': Coupling to the level of
                       maximum subsidence divergence
                     * 'pressure': Fixed at pressure (no coupling)
+
             cloud_fraction (float / ndarray / DataArray): cloud area fraction
             lw_optical_thickness (float / DataArray): longwave optical
                 thickness of the cloud
@@ -571,11 +576,12 @@ class ConceptualCloud(DirectInputCloud):
             phase (str): Phase of cloud particles, either "ice" or "liquid".
             coupling (str): Mechanism with which the cloud top is coupled to
                 the atmosphere profile:
+
                     * "pressure": Fixed at given pressure.
                     * "convective_top": Coupled to the convectio top.
                     * "freezing_level": Coupled to the freezing level.
                     * "subsidence_divergence: Coupled to the maximum subsidence
-                        divergence.
+                      divergence.
 
         """
         super().__init__(

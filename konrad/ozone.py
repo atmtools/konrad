@@ -6,8 +6,9 @@ a fixed atmospheric temperature profile.
 
 **In an RCE simulation**
 
-Create an instance of an ozone class, *e.g.* :py:class:`OzoneHeight`, and use it
-in an RCE simulation.
+Create an instance of an ozone class, *e.g.* :py:class:`OzoneHeight`,
+and use it in an RCE simulation:
+
     >>> import konrad
     >>> ozone_fixed_with_height = konrad.ozone.OzoneHeight()
     >>> rce = konrad.RCE(atmosphere=..., ozone=ozone_fixed_with_height)
@@ -16,7 +17,8 @@ in an RCE simulation.
 **Run an ozone model**
 
 Create an ozone model, *e.g.* :py:class:`Cariolle`, and run the ozone model for
-a fixed temperature profile.
+a fixed temperature profile:
+
     >>> import konrad
     >>> ozone_model = konrad.ozone.Cariolle(w=...)
     >>> atmosphere = konrad.atmosphere.Atmosphere(plev=...)
@@ -25,6 +27,7 @@ a fixed temperature profile.
     >>> for iteration in range(0, ...):
     >>>     ozone_model(atmosphere=atmosphere, timestep=...)
     >>> final_ozone_profile = atmosphere['O3'][-1]
+
 """
 
 import os

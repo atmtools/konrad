@@ -5,7 +5,8 @@ in the RCE simulations.
 **Example**
 
 Create an instance of a convective adjustment class, *e.g.* the relaxed
-adjustment class, and use it in an RCE simulation.
+adjustment class, and use it in an RCE simulation:
+
     >>> import konrad
     >>> relaxed_convection=konrad.convection.RelaxedAdjustment()
     >>> rce = konrad.RCE(atmosphere=..., convection=relaxed_convection)
