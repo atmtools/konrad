@@ -38,6 +38,20 @@ jobs:
           pip install wheel Cython sympl==0.4.0
           CC=gcc-6 TARGET=HASWELL python setup.py develop --no-deps
 
+      - name: Install CliMT (Python >3.8)
+        if: matrix.name == 'ubuntu' && matrix.python-version > 3.7
+        run: |
+          sudo apt update
+          sudo apt install gcc-6 gfortran-6
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 20
+          sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-6 20
+
+          git clone --branch=v.0.16.9 --depth=1 https://github.com/climt/climt
+          cd climt
+          python -m pip install --upgrade pip
+          pip install wheel Cython sympl==0.4.0
+          python setup.py develop --no-deps
+
       - name: Install
         run: |
           python -m pip install --upgrade pip
