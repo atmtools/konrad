@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         name: [ubuntu, macos]
-        python-version: [3.6, 3.7]
+        python-version: [3.6, 3.7, 3.8]
 
         include:
           - name: ubuntu
