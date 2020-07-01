@@ -314,11 +314,13 @@ def parse_fraction_of_day(time):
     Parameters:
         time (str, float, or timedelta): Specified time delta (e.g. '6h').
             Valid units:
+
                 * 's' for seconds
                 * 'm' for minutes
                 * 'h' for hours
                 * 'd' for days
                 * 'w' for weeks
+
             If numeric, return value.
 
     Returns:

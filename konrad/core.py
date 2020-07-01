@@ -128,7 +128,7 @@ class RCE:
 
                 This keyword only affects the frequency with which the
                 log messages are generated. You have to enable the logging
-                by using the :module:`logging` standard library or
+                by using the :py:mod:`logging` standard library or
                 the `konrad.enable_logging()` convenience function.
 
             timestep_adjuster (callable): A callable object, that takes the

@@ -14,4 +14,5 @@ Clouds
    HighCloud
    MidLevelCloud
    LowCloud
+   ConceptualCloud
    CloudEnsemble
