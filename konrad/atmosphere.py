@@ -458,7 +458,18 @@ class Atmosphere(Component):
         omega = self.get_diabatic_subsidence(radiative_cooling)
         domega = np.gradient(omega, plev)
 
-        max_index = np.argmax(domega[plev > self.pmin])
+        # The subsidence divergence is the result of several consecutive
+        # numerical derivatives. Therefore, it can be noisy which makes it hard
+        # to define a distinct maximum. We use the center of mass in
+        # ln(p)-space to prevent this problem.
+        weights = domega.clip(min=0.0)
+        _m = plev > self.pmin
+        ctop = np.exp(
+            np.sum(weights[_m] * np.log(plev[_m])) / np.sum(weights[_m])
+        )
+
+        # Map the calculated pressure to the closest value in the p-grid.
+        max_index = np.abs(plev - ctop).argmin()
 
         self.create_variable('diabatic_convergence_max_index', [max_index])
 
