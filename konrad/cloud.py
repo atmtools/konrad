@@ -582,6 +582,8 @@ class ConceptualCloud(DirectInputCloud):
                     * "freezing_level": Coupled to the freezing level.
                     * "subsidence_divergence: Coupled to the maximum subsidence
                       divergence.
+                    * "temperature:TTT": Coupled to the level where the
+                      temperature falls below `TTT` K.
 
         """
         super().__init__(
@@ -632,6 +634,13 @@ class ConceptualCloud(DirectInputCloud):
 
             Qr = radiation['net_htngrt_clr'][-1]
             return atmosphere.get_subsidence_convergence_max_plev(Qr)
+        elif self.coupling.lower().startswith('temperature'):
+            # Retrieve target temperature from keyword.
+            threshold = float(self.coupling.split(":")[-1])
+            idx = utils.find_first_below(atmosphere["T"][-1], threshold)
+
+            return atmosphere["plev"][idx]
+
         else:
             raise ValueError(
                 'The cloud class has been initialized with an invalid '
