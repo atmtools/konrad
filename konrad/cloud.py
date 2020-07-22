@@ -571,7 +571,7 @@ class ConceptualCloud(DirectInputCloud):
             cloud_top (float): Pressure at cloud top [Pa].
             depth (float): Cloud depths in pressure units [Pa].
             cloud_fraction (float): Cloud fraction [0-1].
-            water_path (float): Integrated water path (kg m^-2).
+            water_path (float): Integrated water path [g m^-2].
             particle_size (float): Cloud particle size [microns].
             phase (str): Phase of cloud particles, either "ice" or "liquid".
             coupling (str): Mechanism with which the cloud top is coupled to
