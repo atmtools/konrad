@@ -32,6 +32,7 @@ __all__ = [
     'calculate_combined_weights',
     'gaussian',
     'dp_from_dz',
+    'find_first_below',
 ]
 
 logger = logging.getLogger(__name__)
@@ -462,3 +463,12 @@ def dp_from_dz(dz, p, T):
 
     dp = ty.physics.density(p, T) * ty.constants.g * dz
     return dp
+
+
+def find_first_below(arr, val):
+    """Find first index in `arr` that falls below given `val`."""
+    for n, x in np.ndenumerate(arr):
+        if x <= val:
+            return n
+
+    return n
