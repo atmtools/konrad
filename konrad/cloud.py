@@ -594,6 +594,7 @@ class ConceptualCloud(DirectInputCloud):
         )
 
         self.cloud_top = cloud_top
+        self.cloud_top_temperature = None
         self.depth = depth
         self.coupling = coupling
 
@@ -614,47 +615,47 @@ class ConceptualCloud(DirectInputCloud):
     def from_atmosphere(cls, atmosphere, **kwargs):
         return cls(atmosphere['plev'].size, **kwargs)
 
-    def get_cloud_top_plev(self, atmosphere, convection=None, radiation=None):
+    def update_cloud_top_plev(self, atmosphere, convection=None, radiation=None):
         """Determine cloud top pressure depending on coupling mechanism."""
         if self.coupling.lower() == 'pressure':
-            return self.cloud_top
+            return
         elif self.coupling.lower() == 'convective_top':
-            if convection is None:
-                # Initialisation
-                return self.cloud_top
-
-            return convection.get('convective_top_plev')[0]
+            if convection is not None:
+                self.cloud_top = convection.get('convective_top_plev')[0]
         elif self.coupling.lower() == 'freezing_level':
-            # Center around freezing level
-            return atmosphere.get_triple_point_plev() - self.depth / 2
+            self.cloud_top = atmosphere.get_triple_point_plev()
+            self.cloud_top -= self.depth / 2  # Center around freezing level
         elif self.coupling.lower() == 'subsidence_divergence':
-            if radiation is None:
-                # Initialisation
-                return self.cloud_top
-
-            Qr = radiation['net_htngrt_clr'][-1]
-            return atmosphere.get_subsidence_convergence_max_plev(Qr)
+            if radiation is not None:
+                Qr = radiation['net_htngrt_clr'][-1]
+                self.cloud_top = atmosphere.get_subsidence_convergence_max_plev(Qr)
         elif self.coupling.lower().startswith('temperature'):
             # Retrieve target temperature from keyword.
             threshold = float(self.coupling.split(":")[-1])
+
             idx = utils.find_first_below(atmosphere["T"][-1], threshold)
-
-            return atmosphere["plev"][idx]
-
+            self.cloud_top = atmosphere["plev"][idx]
         else:
             raise ValueError(
                 'The cloud class has been initialized with an invalid '
                 'cloud coupling mechanism.'
             )
 
-    def update_cloud_profile(self, atmosphere, convection=None, radiation=None,
-                             **kwargs):
-        cloud_top_plev = self.get_cloud_top_plev(
-            atmosphere, convection, radiation)
+    def update_cloud_top_temperature(self, atmosphere):
+        """Determine the cloud top temperature"""
+        T = atmosphere["T"][-1]
+        p = atmosphere["plev"]
+
+        self.cloud_top_temperature = T[np.abs(p - self.cloud_top).argmin()]
+
+    def update_cloud_profile(self, atmosphere, convection=None, radiation=None, **kwargs):
+        """Update the cloud profile depending on the atmospheric state."""
+        self.update_cloud_top_plev(atmosphere, convection, radiation)
+        self.update_cloud_top_temperature(atmosphere)
 
         is_cloud = np.logical_and(
-            atmosphere['plev'] > cloud_top_plev,
-            atmosphere['plev'] < cloud_top_plev + self.depth,
+            atmosphere['plev'] > self.cloud_top,
+            atmosphere['plev'] < self.cloud_top + self.depth,
         ).astype(bool)
 
         self['cloud_area_fraction_in_atmosphere_layer'][:] = (
