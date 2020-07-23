@@ -42,7 +42,7 @@ class NetcdfHandler:
     Usage:
         >>> rce = konrad.RCE(...)
         >>> nc = NetcdfHandler('output.nc', rce)  # create output file
-        >>> nc.write(rce)  # write (append) current RCE state to file
+        >>> nc.write()  # write (append) current RCE state to file
 
     """
     def __init__(self, filename, rce):
