@@ -633,7 +633,13 @@ class ConceptualCloud(DirectInputCloud):
             # Retrieve target temperature from keyword.
             threshold = float(self.coupling.split(":")[-1])
 
-            idx = utils.find_first_below(atmosphere["T"][-1], threshold)
+            # Because of the atmospheric temperature profile values around 220K
+            # are ambiguous. Therefore, we are limiting the possible search
+            # range to the troposphere
+            cold_point = atmosphere.get_cold_point_plev()
+            is_troposphere = atmosphere["plev"] > cold_point
+
+            idx = np.abs(atmosphere["T"][-1, is_troposphere] - threshold).argmin()
             self.cloud_top = atmosphere["plev"][idx]
         else:
             raise ValueError(
