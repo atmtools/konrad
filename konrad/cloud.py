@@ -593,8 +593,8 @@ class ConceptualCloud(DirectInputCloud):
             sw_optical_thickness=np.nan,
         )
 
-        self.cloud_top = cloud_top
-        self.cloud_top_temperature = None
+        self["cloud_top"] = ("time",), np.array([cloud_top])
+        self["cloud_top_temperature"] = ("time",), np.array([np.nan])
         self.depth = depth
         self.coupling = coupling
 
@@ -623,12 +623,12 @@ class ConceptualCloud(DirectInputCloud):
             if convection is not None:
                 self.cloud_top = convection.get('convective_top_plev')[0]
         elif self.coupling.lower() == 'freezing_level':
-            self.cloud_top = atmosphere.get_triple_point_plev()
-            self.cloud_top -= self.depth / 2  # Center around freezing level
+            self["cloud_top"][:] = atmosphere.get_triple_point_plev()
+            self["cloud_top"][:] -= self.depth / 2  # Center around freezing level
         elif self.coupling.lower() == 'subsidence_divergence':
             if radiation is not None:
                 Qr = radiation['net_htngrt_clr'][-1]
-                self.cloud_top = atmosphere.get_subsidence_convergence_max_plev(Qr)
+                self["cloud_top"][:] = atmosphere.get_subsidence_convergence_max_plev(Qr)
         elif self.coupling.lower().startswith('temperature'):
             # Retrieve target temperature from keyword.
             threshold = float(self.coupling.split(":")[-1])
@@ -640,7 +640,7 @@ class ConceptualCloud(DirectInputCloud):
             is_troposphere = atmosphere["plev"] > cold_point
 
             idx = np.abs(atmosphere["T"][-1, is_troposphere] - threshold).argmin()
-            self.cloud_top = atmosphere["plev"][idx]
+            self["cloud_top"][:] = atmosphere["plev"][idx]
         else:
             raise ValueError(
                 'The cloud class has been initialized with an invalid '
@@ -652,7 +652,7 @@ class ConceptualCloud(DirectInputCloud):
         T = atmosphere["T"][-1]
         p = atmosphere["plev"]
 
-        self.cloud_top_temperature = T[np.abs(p - self.cloud_top).argmin()]
+        self["cloud_top_temperature"][:] = T[np.abs(p - self["cloud_top"]).argmin()]
 
     def update_cloud_profile(self, atmosphere, convection=None, radiation=None, **kwargs):
         """Update the cloud profile depending on the atmospheric state."""
@@ -660,8 +660,8 @@ class ConceptualCloud(DirectInputCloud):
         self.update_cloud_top_temperature(atmosphere)
 
         is_cloud = np.logical_and(
-            atmosphere['plev'] > self.cloud_top,
-            atmosphere['plev'] < self.cloud_top + self.depth,
+            atmosphere['plev'] > self["cloud_top"],
+            atmosphere['plev'] < self["cloud_top"] + self.depth,
         ).astype(bool)
 
         self['cloud_area_fraction_in_atmosphere_layer'][:] = (
