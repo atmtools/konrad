@@ -10,7 +10,15 @@ submodels need to fulfill requirements to make interaction possible. These
 requirements are enforced by the use of abstract base classes.
 """
 import logging
+import warnings
 from os.path import (join, dirname)
+
+# Mute annoying `FutureWarning` within Sympl.
+warnings.filterwarnings(
+    action="ignore",
+    category=FutureWarning,
+    module="sympl",
+)
 
 __version__ = open(join(dirname(__file__), 'VERSION')).read().strip()
 
