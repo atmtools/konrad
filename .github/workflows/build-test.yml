@@ -31,12 +31,12 @@ jobs:
       - name: Install CliMT (MacOS)
         if: matrix.name == 'macos'
         run: |
-          brew install gcc@6
+          brew install gcc@10
           git clone --branch=v.0.16.9 --depth=1 https://github.com/climt/climt
           cd climt
           python -m pip install --upgrade pip
           pip install wheel Cython sympl==0.4.0
-          CC=gcc-6 TARGET=HASWELL python setup.py develop --no-deps
+          CC=gcc-10 FC=gfortran-10 TARGET=HASWELL python setup.py develop --no-deps
 
       - name: Install CliMT (Python >3.8)
         if: matrix.name == 'ubuntu' && matrix.python-version > 3.7
