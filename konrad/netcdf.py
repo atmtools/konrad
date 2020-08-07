@@ -76,9 +76,11 @@ class NetcdfHandler:
     def create_variable(self, group, name, value, dims=()):
         value = convert_unsupported_types(value)
 
+        dtype = np.asarray(value).dtype.name
         variable = group.createVariable(
             varname=name,
-            datatype=np.asarray(value).dtype,
+            # Store double variables in single precision to save disk space.
+            datatype="float32" if dtype == "float64" else dtype,
             dimensions=dims,
             zlib=True,
         )
