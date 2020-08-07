@@ -80,6 +80,7 @@ class NetcdfHandler:
             varname=name,
             datatype=np.asarray(value).dtype,
             dimensions=dims,
+            zlib=True,
         )
         variable[:] = value
 
