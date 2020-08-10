@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 
 from konrad.component import Component
 from konrad.physics import vmr2relative_humidity
+from konrad.utils import gaussian
 
 
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
@@ -268,3 +269,62 @@ class Romps14(RelativeHumidityModel):
             )
 
         return self._rh_func(atmosphere['T'][-1, :])
+
+class PerturbProfile(RelativeHumidityModel):
+    """ Wrapper to add a perturbation to a Relative Humidity profile. """
+    def __init__(self, base_profile = HeightConstant(), shape = "square", center_plev = 500e2, width = 50e2, intensity = 0.1) :
+        """
+        Parameters:
+            base_profile (konrad.relative_humidity model): initial profile on which we will add the perturbation.
+            shape (str): name of the shape of the perturbation. 
+                Implemented : "square", "gaussian". For a Dirac use a square with width 0.
+            center_plev (float): Pressure of the center of the square perturbation in [Pa].
+            width (float): width of the perturbation in [Pa].
+            intensity (float): Change in RH where the profile is perturbed, positive or negative.
+        """
+        
+        self._base_profile = base_profile
+        self._shape = shape
+        self.center_plev = center_plev
+        self.width = width
+        
+        if intensity > 1 : #If intensity given in percents
+            intensity /= 100
+        self.intensity = float(intensity)
+
+    def __call__(self, atmosphere, **kwargs) :
+        """
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): The atmosphere component.
+            
+        Returns:
+            ndarray: The relative humidity profile.
+        """
+            
+        plev = atmosphere["plev"]
+        
+        rh_profile = self._base_profile(atmosphere).copy()
+
+        if self._shape == "square" :
+            idx_low = np.abs(plev - (self.center_plev + self.width/2)).argmin()
+            idx_high = np.abs(plev - (self.center_plev - self.width/2)).argmin()
+            if idx_low != idx_high : 
+                rh_profile[idx_low:idx_high] += self.intensity
+            else :
+                rh_profile[idx_low] += self.intensity
+
+        if self._shape == "gaussian" :
+            G = gaussian(plev, self.center_plev, self.width /2) # Gaussian profile
+
+            # Compute boundary of the perturbation
+            p_low = self.center_plev + 1.5 * self.width
+            idx_low = np.abs(plev - p_low).argmin()
+            p_high = self.center_plev -  1.5 * self.width
+            idx_high = np.abs(plev - p_high).argmin()
+            if idx_low != idx_high :
+                rh_profile[idx_low:idx_high] = rh_profile[idx_low:idx_high] + G[idx_low:idx_high]/np.max(G) * self.intensity
+            else :
+                rh_profile[idx_low] += self.intensity
+
+        return rh_profile
+        

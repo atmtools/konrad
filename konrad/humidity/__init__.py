@@ -6,6 +6,7 @@ from konrad.utils import prefix_dict_keys
 from konrad.physics import (relative_humidity2vmr, vmr2relative_humidity)
 from .stratosphere import *
 from .relative_humidity import *
+from .perturb_humidity import *
 
 
 logger = logging.getLogger(__name__)
