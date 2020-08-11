@@ -76,7 +76,7 @@ class NetcdfHandler:
     def create_variable(self, group, name, value, dims=()):
         value = convert_unsupported_types(value)
 
-        dtype = np.asarray(value).dtype.name
+        dtype = np.asarray(value).dtype
         variable = group.createVariable(
             varname=name,
             # Store double variables in single precision to save disk space.
