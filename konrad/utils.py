@@ -31,6 +31,7 @@ __all__ = [
     'is_decreasing',
     'calculate_combined_weights',
     'gaussian',
+    'dp_from_dz',
 ]
 
 logger = logging.getLogger(__name__)
@@ -448,3 +449,16 @@ def gaussian(x, m, s) :
         """ 
         X = (x-m)**2 / (2*s**2)
         return np.exp(-X)
+
+def dp_from_dz(dz, p, T):
+    """
+    Obtain the pressure variation dp for an altitude variation dz around the pressure p.
+
+    Parameters:
+        dz (float): altitude variation in m.
+        p (float): pressure at the center of dz in Pa.
+        T (float): temperature at the center of dz in K.
+    """
+
+    dp = ty.physics.density(p, T) * ty.constants.g * dz
+    return dp
