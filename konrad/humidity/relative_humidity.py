@@ -336,7 +336,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
 
 class PerturbProfile(RelativeHumidityModel):
     """ Wrapper to add a perturbation to a Relative Humidity profile. """
-    def __init__(self, base_profile = HeightConstant(), shape = "square", center_plev = 500e2, width = 50e2, intensity = 0.1) :
+    def __init__(self, base_profile = HeightConstant(), shape = "square", center_plev = 500e2, width = 50e2, intensity = 0.1, fixed_T = False) :
         """
         Parameters:
             base_profile (konrad.relative_humidity model): initial profile on which we will add the perturbation.
@@ -345,12 +345,15 @@ class PerturbProfile(RelativeHumidityModel):
             center_plev (float): Pressure of the center of the square perturbation in [Pa].
             width (float): width of the perturbation in [Pa].
             intensity (float): Change in RH where the profile is perturbed, positive or negative.
+            Fixed_T (boolean): If set to true, the temperature at center_plev at the first step is kept as the central point for the perturbation throughout the simulation, and the pressure at the center of the perturbation is no longer constant.
         """
         
         self._base_profile = base_profile
         self._shape = shape
         self.center_plev = center_plev
         self.width = width
+        self.fixed_T = fixed_T
+        self.center_T = None
         
         if intensity > 1 : #If intensity given in percents
             intensity /= 100
@@ -366,6 +369,15 @@ class PerturbProfile(RelativeHumidityModel):
         """
             
         plev = atmosphere["plev"]
+        T = atmosphere["T"][-1]
+        
+        if self.center_T == None : # Initialize T at center_plev at the first step
+            idx_center = np.abs(plev - self.center_plev).argmin()
+            self.center_T = T[idx_center]
+
+        if self.fixed_T : # Compute center_plev to correspond to the fixed T
+            idx_center = np.abs(T - self.center_T).argmin()
+            self.center_plev = plev[idx_center]
         
         rh_profile = self._base_profile(atmosphere).copy()
 
