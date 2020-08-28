@@ -158,8 +158,7 @@ class Atmosphere(Component):
         """
 
         def _return_profile(ds, var, ts):
-            return (ds[var][ts, :] if 'time' in ds[var].dimensions
-                    else ds[var][:])
+            return ds[var][ts, :] if 'time' in ds[var].dimensions else ds[var][:]
 
         with netCDF4.Dataset(ncfile) as root:
             if 'atmosphere' in root.groups:
@@ -167,10 +166,10 @@ class Atmosphere(Component):
             else:
                 dataset = root
 
-            datadict = {var: np.array(_return_profile(dataset, var, timestep))
-                        for var in cls.atmosphere_variables
-                        if var in dataset.variables
-                        }
+            datadict = {
+                var: np.array(_return_profile(dataset, var, timestep), dtype="float64")
+                for var in cls.atmosphere_variables if var in dataset.variables
+            }
             datadict['phlev'] = np.array(root['phlev'][:])
 
         return cls.from_dict(datadict)

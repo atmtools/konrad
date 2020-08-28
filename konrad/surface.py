@@ -110,7 +110,7 @@ class Surface(Component, metaclass=abc.ABCMeta):
             else:
                 dataset = root
 
-            t = dataset['temperature'][timestep].data
+            t = dataset['temperature'][timestep].data.astype("float64")
             z = float(dataset['height'][:])
             alb = float(dataset['albedo'][:])
             le = float(dataset['longwave_emissivity'][:])
@@ -179,7 +179,7 @@ class SlabOcean(Surface):
             else:
                 dataset = root
 
-            t = dataset['temperature'][timestep].data
+            t = dataset['temperature'][timestep].data.astype("float64")
             z = float(dataset['height'][:])
             alb = float(dataset['albedo'][:])
             le = float(dataset['longwave_emissivity'][:])
