@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 
 from konrad.component import Component
 from konrad.physics import vmr2relative_humidity
+from konrad.utils import gaussian
 
 
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
@@ -268,3 +269,138 @@ class Romps14(RelativeHumidityModel):
             )
 
         return self._rh_func(atmosphere['T'][-1, :])
+
+    
+class PolynomialCshapedRH(RelativeHumidityModel):
+    def __init__(self, top_slope = 7.5e-5, top_peak_rh = 0.75, mid_p = 500e2, mid_rh = 0.4, low_peak_p = 940e2, low_peak_rh = 0.85, bl_slope = -2e-5):
+        """
+        Defines a C-shaped polynomial model. 
+        The RH increases linearly in the boundary layer and decreases linearly above the upper-tropospheric peak. 
+        The point above the upper-tropospheric peak where the RH is half the peak is coupled to the cold-point.
+        Between the two peaks, a quadratic function is defined by the point of the two peaks and one in the mid-troposphere.
+        Default values from RCEMIP large experiment statistics.
+
+        Parameters:
+            top_slope (float): slope of the linear function above the upper-tropospheric peak.
+            top_peak_rh (float in [0;1]): value of relative humidity at the upper-tropospheric peak.
+            mid_p (float): Pressure of the mid-tropospheric point.
+            mid_rh (float in [0;1]): value of relative humidity at the mid-tropospheric point.
+            low_peak_p (float): Pressure of the low-tropospheric peak.
+            low_peak_rh (float in [0;1]): value of the relative humidity at the low-tropospheric peak. 
+            bl_slope (float): slope of the relative humidity in the boudary layer.
+        """
+
+        ## Convert percent to dimensionless 
+        if top_peak_rh > 1 : top_peak_rh /= 100;
+        if mid_rh > 1 : mid_rh /= 100;
+        if low_peak_rh > 1 : low_peak_rh /= 100;
+
+        # Affect values to self
+        self.top_slope = top_slope
+        self.top_peak_rh = top_peak_rh
+        self.mid_p = mid_p
+        self.mid_rh = mid_rh
+        self.low_peak_p = low_peak_p
+        self.low_peak_rh = low_peak_rh
+        self.bl_slope = bl_slope
+
+    def __call__(self, atmosphere, **kwargs):
+        """
+        Parameters: 
+            atmosphere (konrad.atmosphere.Atmosphere): The atmosphere component.
+
+        Returns:
+            ndarray: The relative humidity profile.
+        """
+        
+        plev = atmosphere["plev"]
+
+        ## Top layer
+        cold_point_p = atmosphere.get_cold_point_plev()
+        tl_func = lambda p : self.top_peak_rh/2 + self.top_slope * (p - cold_point_p)
+        top_peak_p = cold_point_p + self.top_peak_rh / (2 * self.top_slope)
+
+        ## Mid-troposphere
+        coeffs = np.polyfit([top_peak_p, self.mid_p, self.low_peak_p], [self.top_peak_rh, self.mid_rh, self.low_peak_rh], deg = 2)
+        mid_func = lambda p : coeffs[0] * p ** 2 + coeffs[1] * p + coeffs[2]
+
+        ## Boundary layer
+        bl_func = lambda p : self.low_peak_rh + self.bl_slope*(p - self.low_peak_p)
+
+        ## Reconstructed function
+        rh_profile = np.piecewise(plev, [plev <= top_peak_p, plev > top_peak_p, plev > self.low_peak_p], [tl_func, mid_func, bl_func])
+
+        rh_profile[rh_profile < 0] = 0
+
+        return rh_profile
+
+class PerturbProfile(RelativeHumidityModel):
+    """ Wrapper to add a perturbation to a Relative Humidity profile. """
+    def __init__(self, base_profile = HeightConstant(), shape = "square", center_plev = 500e2, width = 50e2, intensity = 0.1, fixed_T = False) :
+        """
+        Parameters:
+            base_profile (konrad.relative_humidity model): initial profile on which we will add the perturbation.
+            shape (str): name of the shape of the perturbation. 
+                Implemented : "square", "gaussian". For a Dirac use a square with width 0.
+            center_plev (float): Pressure of the center of the square perturbation in [Pa].
+            width (float): width of the perturbation in [Pa].
+            intensity (float): Change in RH where the profile is perturbed, positive or negative.
+            Fixed_T (boolean): If set to true, the temperature at center_plev at the first step is kept as the central point for the perturbation throughout the simulation, and the pressure at the center of the perturbation is no longer constant.
+        """
+        
+        self._base_profile = base_profile
+        self._shape = shape
+        self.center_plev = center_plev
+        self.width = width
+        self.fixed_T = fixed_T
+        self.center_T = None
+        
+        if intensity > 1 : #If intensity given in percents
+            intensity /= 100
+        self.intensity = float(intensity)
+
+    def __call__(self, atmosphere, **kwargs) :
+        """
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): The atmosphere component.
+            
+        Returns:
+            ndarray: The relative humidity profile.
+        """
+            
+        plev = atmosphere["plev"]
+        T = atmosphere["T"][-1]
+        
+        if self.center_T == None : # Initialize T at center_plev at the first step
+            idx_center = np.abs(plev - self.center_plev).argmin()
+            self.center_T = T[idx_center]
+
+        if self.fixed_T : # Compute center_plev to correspond to the fixed T
+            idx_center = np.abs(T - self.center_T).argmin()
+            self.center_plev = plev[idx_center]
+        
+        rh_profile = self._base_profile(atmosphere).copy()
+
+        if self._shape == "square" :
+            idx_low = np.abs(plev - (self.center_plev + self.width/2)).argmin()
+            idx_high = np.abs(plev - (self.center_plev - self.width/2)).argmin()
+            if idx_low != idx_high : 
+                rh_profile[idx_low:idx_high] += self.intensity
+            else :
+                rh_profile[idx_low] += self.intensity
+
+        if self._shape == "gaussian" :
+            G = gaussian(plev, self.center_plev, self.width /2) # Gaussian profile
+
+            # Compute boundary of the perturbation
+            p_low = self.center_plev + 1.5 * self.width
+            idx_low = np.abs(plev - p_low).argmin()
+            p_high = self.center_plev -  1.5 * self.width
+            idx_high = np.abs(plev - p_high).argmin()
+            if idx_low != idx_high :
+                rh_profile[idx_low:idx_high] = rh_profile[idx_low:idx_high] + G[idx_low:idx_high]/np.max(G) * self.intensity
+            else :
+                rh_profile[idx_low] += self.intensity
+
+        return rh_profile
+        

@@ -30,6 +30,8 @@ __all__ = [
     'prefix_dict_keys',
     'is_decreasing',
     'calculate_combined_weights',
+    'gaussian',
+    'dp_from_dz',
 ]
 
 logger = logging.getLogger(__name__)
@@ -435,3 +437,28 @@ def calculate_combined_weights(weights):
         pij[i, j] = 1 - is_cloudy + (2 * is_cloudy - 1) * weights[j]
 
     return binary_table, np.prod(pij, axis=1)
+
+def gaussian(x, m, s) :
+        """
+        Parameters:
+            x (float): Abscissa
+            m (float): Mean of the gaussian
+            s (float): Standard deviation of the gaussian
+
+        Returns (float) the value of a gaussian distribution of mean m and std s at point x. 
+        """ 
+        X = (x-m)**2 / (2*s**2)
+        return np.exp(-X)
+
+def dp_from_dz(dz, p, T):
+    """
+    Obtain the pressure variation dp for an altitude variation dz around the pressure p.
+
+    Parameters:
+        dz (float): altitude variation in m.
+        p (float): pressure at the center of dz in Pa.
+        T (float): temperature at the center of dz in K.
+    """
+
+    dp = ty.physics.density(p, T) * ty.constants.g * dz
+    return dp
