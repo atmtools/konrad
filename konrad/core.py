@@ -101,7 +101,7 @@ class RCE:
                 Defaults to :class:`konrad.humidity.FixedRH`.
 
             surface (konrad.surface): Surface model.
-                Defaults to :class:`konrad.surface.SurfaceHeatCapacity`.
+                Defaults to :class:`konrad.surface.SlabOcean`.
 
             cloud (konrad.cloud): Cloud model.
                 Defaults to :class:`konrad.cloud.ClearSky`.

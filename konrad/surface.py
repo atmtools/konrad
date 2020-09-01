@@ -2,7 +2,7 @@
 """This module contains classes describing different surfaces.
 
 A surface is required by both the radiation and the convective models used
-inside the RCE simulations.
+inside the RCE simulations, and if you don't set it up default will be a `SlabOcean`.
 
 **Example**
 
@@ -46,10 +46,10 @@ class Surface(Component, metaclass=abc.ABCMeta):
         """Initialize a surface model.
 
         Parameters:
-            albedo (float): Surface albedo. The default value of 0.2 is a
+            albedo (float): Surface albedo [1]. The default value of 0.2 is a
                 decent choice for clear-sky simulation in the tropics.
             temperature (int / float): Surface temperature [K].
-            longwave_emissivity (float): Longwave emissivity.
+            longwave_emissivity (float): Longwave emissivity [1].
             height (int / float): Surface height [m].
         """
         self.albedo = albedo
@@ -128,7 +128,8 @@ class SlabOcean(Surface):
                 the extra-tropics.
             depth (float): Ocean depth [m].
             albedo (float): Surface albedo [1].
-            temperature (float): Surface temperature [K].
+            temperature (float): Initial surface temperature [K].
+            longwave_emissivity (float): Longwave emissivity [1].
             height (float): Surface height [m].
         """
         super().__init__(*args, **kwargs)
@@ -164,9 +165,18 @@ class SlabOcean(Surface):
         logger.debug("Surface temperature: {self['temperature'][0]:.4f} K")
 
 
-class FixedTemperature(SlabOcean):
+class FixedTemperature(Surface):
     """Surface model with fixed temperature."""
     def __init__(self, *args, **kwargs):
+        """Initialize a surface model with constant surface temperature.
+
+        Parameters:
+            albedo (float): Surface albedo. The default value of 0.2 is a
+                decent choice for clear-sky simulation in the tropics.
+            temperature (int / float): Surface temperature [K].
+            longwave_emissivity (float): Longwave emissivity.
+            height (int / float): Surface height [m].
+        """
         super().__init__(*args, **kwargs)
         self.heat_capacity = np.inf
 
