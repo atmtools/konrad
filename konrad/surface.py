@@ -112,9 +112,10 @@ class Surface(Component, metaclass=abc.ABCMeta):
 
             t = dataset['temperature'][timestep].data
             z = float(dataset['height'][:])
+            alb = float(dataset['albedo'][:])
+            le = float(dataset['longwave_emissivity'][:])
 
-        # TODO: Should other variables (e.g. albedo) also be read?
-        return cls(temperature=t, height=z, **kwargs)
+        return cls(temperature=t, height=z, albedo=alb, longwave_emissivity=le, **kwargs)
 
 
 class SlabOcean(Surface):
@@ -163,6 +164,29 @@ class SlabOcean(Surface):
                                 self.heat_capacity)
 
         logger.debug("Surface temperature: {self['temperature'][0]:.4f} K")
+
+    @classmethod  
+    def from_netcdf(cls, ncfile, timestep=-1, **kwargs):
+        """Create a surface model from a netCDF file.
+
+        Parameters:
+            ncfile (str): Path to netCDF file.
+            timestep (int): Timestep to read (default is last timestep).
+        """
+        with netCDF4.Dataset(ncfile) as root:
+            if 'surface' in root.groups:
+                dataset = root['surface']
+            else:
+                dataset = root
+
+            t = dataset['temperature'][timestep].data
+            z = float(dataset['height'][:])
+            alb = float(dataset['albedo'][:])
+            le = float(dataset['longwave_emissivity'][:])
+            hs = float(dataset['heat_sink'][:])
+            d = float(dataset['depth'][:])
+            
+        return cls(temperature=t, height=z, albedo=alb, longwave_emissivity=le, heat_sink=hs, depth=d, **kwargs)
 
 
 class FixedTemperature(Surface):
