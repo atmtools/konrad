@@ -231,7 +231,7 @@ class Atmosphere(Component):
               the original object is maintained!
 
         Parameters:
-              phlev (ndarray): New half-level-pressure grid [Pa].
+            phlev (ndarray): New half-level-pressure grid [Pa].
             **kwargs: Additional keyword arguments are collected
                 and passed to :func:`scipy.interpolate.interp1d`
 
