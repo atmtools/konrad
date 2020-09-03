@@ -170,7 +170,7 @@ class Atmosphere(Component):
                 var: np.array(_return_profile(dataset, var, timestep), dtype="float64")
                 for var in cls.atmosphere_variables if var in dataset.variables
             }
-            datadict['phlev'] = np.array(root['phlev'][:])
+            datadict['phlev'] = np.array(root['phlev'][:], dtype="float64")
 
         return cls.from_dict(datadict)
 
