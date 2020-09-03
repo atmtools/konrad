@@ -14,8 +14,17 @@ Core Model
 
    konrad.core
 
-Submodules
-----------
+Model components
+----------------
+
+Abstract base class for all model components.
+
+.. toctree::
+   :maxdepth: 1
+
+   konrad.component
+
+Model components to configure the configuration of `konrad`.
 
 .. toctree::
    :maxdepth: 1
@@ -38,7 +47,6 @@ Miscellaneous
 .. toctree::
    :maxdepth: 1
 
-   konrad.component
    konrad.netcdf
    konrad.physics
    konrad.utils
