@@ -28,6 +28,10 @@ a fixed temperature profile:
     >>>     ozone_model(atmosphere=atmosphere, timestep=...)
     >>> final_ozone_profile = atmosphere['O3'][-1]
 
+Note that to use :py:class:`Cariolle` and :py:class:`Simotrostra`, the
+simotrostra package needs to be installed. It can be found here:
+https://gitlab.com/simple-stratospheric-chemistry/simotrostra
+
 """
 
 import os
@@ -201,7 +205,15 @@ class Cariolle(Ozone):
 
     def __call__(self, atmosphere, timestep, upwelling, **kwargs):
 
-        from simotrostra.utils import overhead_molecules
+        try:
+            from simotrostra.utils import overhead_molecules
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                "No module named 'simotrostra'. You need to install it in order"
+                " to use this ozone class.\n"
+                "It can be found here:\n"
+                "https://gitlab.com/simple-stratospheric-chemistry/simotrostra"
+            )
 
         T = atmosphere['T'][0, :]
         p = atmosphere['plev']  # [Pa]
@@ -236,7 +248,15 @@ class Simotrostra(Cariolle):
         """
         super().__init__(w=w, is_coupled_upwelling=is_coupled_upwelling)
 
-        from simotrostra import Simotrostra
+        try:
+            from simotrostra import Simotrostra
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError(
+                "No module named 'simotrostra'. You need to install it in order"
+                " to use this ozone class.\n"
+                "It can be found here:\n"
+                "https://gitlab.com/simple-stratospheric-chemistry/simotrostra"
+            )
 
         self._ozone = Simotrostra()
 
