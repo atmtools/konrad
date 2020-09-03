@@ -39,6 +39,13 @@ def convert_unsupported_types(variable):
 class NetcdfHandler:
     """A netCDF file handler.
 
+    Note:
+        The netCDF handler typecasts variables from ``double`` into ``float``
+        in order to save disk space.
+        Developers need to convert variables back into ``double``
+        when implementing ``konrad.component.Component.from_netcdf()``
+        methods for model components.
+
     Usage:
         >>> rce = konrad.RCE(...)
         >>> nc = NetcdfHandler('output.nc', rce)  # create output file

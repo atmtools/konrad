@@ -39,6 +39,27 @@ class Component:
 
         return instance
 
+    @classmethod
+    def from_netcdf(cls, ncfile, timestep=-1, *args, **kwargs):
+        """Load a model component from a netCDF file.
+
+        Note:
+            The :class:`konrad.netcdf.NetcdfHandler` converts variables
+            of type `double` variables into `float` to reduce disk space.
+            However, the underlying `climt` library requires input
+            for :class:`konrad.radiation.RRTMG` to be of type `double`.
+            Make sure to perform the respective typecasting
+            when reading variables from netCDF files.
+
+        Parameters:
+            ncfile (str): Path to the netCDF file.
+            timestep (int): Index of timestep to read.
+
+        """
+        raise NotImplementedError(
+            f"{cls.__name__} does not support reading of netCDF files."
+        )
+
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
 
