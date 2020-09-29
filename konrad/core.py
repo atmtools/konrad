@@ -177,7 +177,9 @@ class RCE:
         self.logevery = logevery
 
         self.delta = delta
+        self.delta2 = None
         self.deltaT = None
+        self.deltaN = None
         self.converged = False
 
         self.outfile = outfile
@@ -229,7 +231,15 @@ class RCE:
             bool: ``True`` if converged, else ``False``.
         """
         # TODO: Implement proper convergence criterion (e.g. include TOA).
-        return np.all(np.abs(self.deltaT) < self.delta)
+        temp_test = np.all(np.abs(self.deltaT) < self.delta)
+        N_test = np.abs(self.deltaN) < self.delta2
+        if temp_test:
+            if N_test:
+                return True
+            else:
+                return False
+        else:
+            return False
 
     def check_if_write(self):
         """Check if current timestep should be appended to output netCDF.
@@ -264,7 +274,22 @@ class RCE:
                 logger.info(f'Enter iteration {self.niter}.')
                 if self.timestep_adjuster is not None:
                     logger.info(f'Model timestep: {self.timestep}.')
-
+            
+            # Save the old radiative imbalance at the TOA. It is compared with
+            # values after adjustment to check if the model has converged.
+            
+            if self.niter != 0:
+             N = (
+                  (self.radiation["sw_flxd"][0,-1] +
+                   self.radiation["lw_flxd"][0,-1]
+                  ) -
+                  (self.radiation["sw_flxu"][0,-1] +
+                   self.radiation["lw_flxu"][0,-1]
+                  )
+                 )
+            else:
+             N = 0
+            
             if self.diurnal_cycle:
                 self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
             self.radiation.update_heatingrates(
@@ -292,8 +317,8 @@ class RCE:
                     n0 - self.radiation['toa'][0]) / (A * tau
                                                       ) * self.atmosphere['CO2']
 
-            # Save the old temperature profile. They are compared with
-            # adjusted values to check if the model has converged.
+            # Save the old temperature profile. It is compared with adjusted
+            # values to check if the model has converged.
             T = self.atmosphere['T'].copy()
 
             # Caculate critical lapse rate.
@@ -350,6 +375,32 @@ class RCE:
 
             # Calculate temperature change for convergence check.
             self.deltaT = (self.atmosphere['T'] - T) / self.timestep_days
+            
+            # Calculate the delta for the radiative flux at the TOA.
+            self.delta2 = (4*constants.stefan_boltzmann*
+                           (self.atmosphere['T'][0,-1]**3)*
+                           self.delta
+                          )
+            
+            # Calculate the radiative flux change at the TOA to check
+            # convergence.
+            self.deltaN = (
+                           (
+                            (self.radiation["sw_flxd"][0,-1] +
+                             self.radiation["lw_flxd"][0,-1]
+                            ) -
+                            (self.radiation["sw_flxu"][0,-1] +
+                             self.radiation["lw_flxu"][0,-1]
+                            )
+                           ) - N
+                          ) / self.timestep_days
+            if self.logevery is not None and self.niter % self.logevery == 0:
+                text1="Delta T (threshold): {0:2.1e} ({1:2.1e})"
+                text2="Delta N (threshold): {0:2.1e} ({1:2.1e})"
+                logger.info(text1.format(np.max(np.abs(self.deltaT)),
+                                         self.delta))
+                logger.info(text2.format(np.abs(self.deltaN),
+                                         self.delta2))
 
             if self.timestep_adjuster is not None:
                 self.timestep = self.timestep_adjuster(

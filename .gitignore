@@ -8,3 +8,4 @@ dist/
 *so.1
 .idea
 .ipynb_checkpoints
+konrad.egg-info/*
