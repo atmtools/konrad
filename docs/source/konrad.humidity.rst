@@ -21,6 +21,7 @@ Relative humidity
    :toctree: _autosummary
 
    RelativeHumidityModel
+   CacheFromAtmosphere
    HeightConstant
    VerticallyUniform
    ConstantFreezingLevel
@@ -31,6 +32,8 @@ Relative humidity
    Manabe67
    Cess76
    Romps14
+   PolynomialCshapedRH
+   PerturbProfile
 
 Stratospheric coupling
 ----------------------
