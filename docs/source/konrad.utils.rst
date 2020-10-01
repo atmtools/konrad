@@ -20,3 +20,4 @@ Utilities
    parse_fraction_of_day
    standard_atmosphere
    prefix_dict_keys
+   find_first_below
