@@ -242,7 +242,8 @@ class RCE:
         if self.outfile is None:
             return False
 
-        if (self.time - self.last_written) >= self.writeevery:
+        if ((self.time - self.last_written) >= self.writeevery
+           or self.time == datetime.datetime(1, 1, 1)):
             self.last_written = self.time
             return True
         else:
