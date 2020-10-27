@@ -1,12 +1,12 @@
-docs/build/
-docs/source/_autosummary
-dist/
 *.log
 *.nc
 *.pdf
 *.pyc
-*so.1
 *.xml
 *.xml.bin
+*so.1
 .idea
 .ipynb_checkpoints
+dist/
+docs/build/
+docs/source/_autosummary
