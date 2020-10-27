@@ -6,5 +6,7 @@ dist/
 *.pdf
 *.pyc
 *so.1
+*.xml
+*.xml.bin
 .idea
 .ipynb_checkpoints
