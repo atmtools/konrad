@@ -177,9 +177,17 @@ class RCE:
         self.logevery = logevery
 
         self.delta = delta
-        self.delta2 = None
-        self.deltaT = None
-        self.deltaN = None
+        self.oldT = 0
+        self.oldN = 0
+        self.newT = 0
+        self.newN = 0
+        self.oldDN = 0
+        self.newDN = 0
+        self.oldDDN = 0
+        self.newDDN = 0
+        self.counteq = 0
+        self.post_count = 2000
+        self.deltaT = 0
         self.converged = False
 
         self.outfile = outfile
@@ -230,14 +238,26 @@ class RCE:
         Returns:
             bool: ``True`` if converged, else ``False``.
         """
-        # TODO: Implement proper convergence criterion (e.g. include TOA).
-        temp_test = np.all(np.abs(self.deltaT) < self.delta)
-        N_test = np.abs(self.deltaN) < self.delta2
-        if temp_test:
-            if N_test:
-                return True
+        
+        self.newDN = self.newN - self.oldN
+        self.newDDN = np.abs(self.newDN) - np.abs(self.oldDN)
+        
+        test1 = np.abs(self.newDN) <= self.delta
+        test2 = np.abs(self.newDDN) <= (self.delta / 100)
+        
+        self.oldDN = self.newDN
+        self.oldDDN = self.newDDN
+        
+        if ( test1 and test2 ):
+            self.counteq += 1
+        else:
+            if self.counteq > 0:
+                self.counteq -= 1
             else:
-                return False
+                self.counteq = 0
+        
+        if self.counteq > self.post_count:
+            return True
         else:
             return False
 
@@ -280,16 +300,7 @@ class RCE:
             # values after adjustment to check if the model has converged.
             
             if self.niter != 0:
-             N = (
-                  (self.radiation["sw_flxd"][0,-1] +
-                   self.radiation["lw_flxd"][0,-1]
-                  ) -
-                  (self.radiation["sw_flxu"][0,-1] +
-                   self.radiation["lw_flxu"][0,-1]
-                  )
-                 )
-            else:
-             N = 0
+             self.oldN = self.radiation["toa"][-1]
             
             if self.diurnal_cycle:
                 self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
@@ -320,9 +331,9 @@ class RCE:
 
             # Save the old temperature profile. It is compared with adjusted
             # values to check if the model has converged.
-            T = self.atmosphere['T'].copy()
+            self.oldT = self.atmosphere['T'][0].copy()
 
-            # Caculate critical lapse rate.
+            # Calculate critical lapse rate.
             critical_lapserate = self.lapserate(self.atmosphere)
 
             # Apply heatingrates to temperature profile.
@@ -375,33 +386,17 @@ class RCE:
             )
 
             # Calculate temperature change for convergence check.
-            self.deltaT = (self.atmosphere['T'] - T) / self.timestep_days
-            
-            # Calculate the delta for the radiative flux at the TOA.
-            self.delta2 = (4*constants.stefan_boltzmann*
-                           (self.atmosphere['T'][0,-1]**3)*
-                           self.delta
-                          )
+            self.newT = self.atmosphere['T'][0].copy()
+            self.deltaT = self.newT - self.oldT
             
             # Calculate the radiative flux change at the TOA to check
             # convergence.
-            self.deltaN = (
-                           (
-                            (self.radiation["sw_flxd"][0,-1] +
-                             self.radiation["lw_flxd"][0,-1]
-                            ) -
-                            (self.radiation["sw_flxu"][0,-1] +
-                             self.radiation["lw_flxu"][0,-1]
-                            )
-                           ) - N
-                          ) / self.timestep_days
+            self.newN = self.radiation["toa"][-1]
+            
             if self.logevery is not None and self.niter % self.logevery == 0:
-                text1="Delta T (threshold): {0:2.1e} ({1:2.1e})"
-                text2="Delta N (threshold): {0:2.1e} ({1:2.1e})"
-                logger.info(text1.format(np.max(np.abs(self.deltaT)),
-                                         self.delta))
-                logger.info(text2.format(np.abs(self.deltaN),
-                                         self.delta2))
+                logger.info("counteq: {0:d}".format(self.counteq))
+                logger.info("N_TOA change: {0:2.2e} (Threshold: {1:2.2e})".format(self.newDN,self.delta))
+                logger.info("DN_TOA change: {0:2.2e} (Threshold: {1:2.2e})".format(self.newDDN,self.delta / 100))
 
             if self.timestep_adjuster is not None:
                 self.timestep = self.timestep_adjuster(
