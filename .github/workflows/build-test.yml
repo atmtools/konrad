@@ -32,8 +32,8 @@ jobs:
         if: matrix.name == 'macos'
         run: |
           brew install gcc@10
-          echo "::set-env name=CC::gcc-10"
-          echo "::set-env name=FC::gfortran-10"
+          echo "CC=gcc-10" >> $GITHUB_ENV
+          echo "FC=gfortran-10" >> $GITHUB_ENV
 
       - name: Install
         run: |
