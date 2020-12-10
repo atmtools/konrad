@@ -98,7 +98,7 @@ class _ARTS:
         # Read lookup table
         abs_lookup = os.getenv(
             "KONRAD_LOOKUP_TABLE",
-            join(dirname(__file__), "aux/abs_lookup.xml")
+            join(dirname(__file__), "data/abs_lookup.xml")
         )
 
         if not isfile(abs_lookup):
