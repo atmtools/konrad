@@ -404,3 +404,30 @@ class PerturbProfile(RelativeHumidityModel):
 
         return rh_profile
         
+class ProfileFromData(RelativeHumidityModel):
+    def __init__(self, p_data, rh_data):
+        """
+        Defines a relative humidity from data.
+        
+        Parameters:
+            p_data (np.ndarray): pressure coordinates corresponding to rh_data, in Pa
+            rh_data (np.ndarray): the rh profile on p_data, in unit of RH
+        """
+        
+        self._rh_func = interp1d(p_data, rh_data, fill_value = "extrapolate")
+
+        
+    def __call__(self, atmosphere, **kwargs):
+        """Return the vertical distribution of relative humidity.
+
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere: Atmosphere component.
+            **kwargs: Arbitrary number of additional arguments,
+                depending on the actual implementation.
+
+        Returns:
+            ndarray: Relative humidity profile.
+        """
+
+        plev = atmosphere["plev"]
+        return self._rh_func(plev)
