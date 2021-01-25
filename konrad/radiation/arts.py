@@ -167,15 +167,15 @@ class _ARTS:
         self.ws.abs_lines_per_speciesCompact()
 
         # Create a standard atmosphere
-        p_grid = get_quadratic_pgrid(1_200e2, 0.5, 128)
+        p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
 
         atmosphere = Atmosphere(p_grid)
-        atmosphere["T"][:] = atmosphere["T"].clip(min=200)
+        atmosphere["T"][-1, :] = 300.0 + 5.0 * np.log(atmosphere["plev"] / 1000e2)
         atmosphere.tracegases_rcemip()
         atmosphere["O2"][:] = 0.2095
         atmosphere["CO2"][:] = 1.5 * 348e-6
 
-        h2o = 0.04 * (p_grid / p_grid[0])**0.2
+        h2o = 0.03 * (p_grid / 1000e2)**0.2
         atmosphere["H2O"][:] = h2o[:-1]
 
         # Convert the konrad atmosphere into an ARTS atm_fields_compact.
@@ -192,9 +192,9 @@ class _ARTS:
         # Setup the lookup table calculation
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
         self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
-        self.ws.atmfields_checkedCalc()
+        self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
         self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
-        self.ws.abs_t_pert = np.arange(-100, 101, 25)
+        self.ws.abs_t_pert = np.arange(-160, 41, 20)
 
         nls_idx = [i for i, tag in enumerate(self.ws.abs_species.value)
                    if "H2O" in tag[0]]
@@ -203,7 +203,7 @@ class _ARTS:
                 species=[", ".join(self.ws.abs_species.value[nls_idx[0]])],
         )
 
-        self.ws.abs_nls_pert = np.array([10**n for n in range(-4, 2)])
+        self.ws.abs_nls_pert = np.array([10**n for n in range(-7, 2)])
 
         # Run checks
         self.ws.abs_xsec_agenda_checkedCalc()
