@@ -386,17 +386,13 @@ class RCE():
             # Saves the old temperature (time step adjustment)
             self.oldT = self.atmosphere['T'][0].copy()
 
-            # Calculates the critical lapse rate with the present state
-            critical_lapserate = self.lapserate(self.atmosphere)
-
             # Applies radiative heating rates to the temperature profile
-            self.atmosphere['T'] += (self.radiation['net_htngrt'] *
-                                     self.timestep_days)
+            self.atmosphere['T'] += (self.radiation['net_htngrt'] * self.timestep_days)
 
             # Performs the convective adjustment of the temperature profile
             self.convection.stabilize(
                 atmosphere=self.atmosphere,
-                lapse=critical_lapserate,
+                lapse=self.lapserate,
                 timestep=self.timestep_days,
                 surface=self.surface,
             )
