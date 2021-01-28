@@ -155,7 +155,7 @@ class OzoneRedistributed(Ozone):
     
     def get_tropopause_index(self, atmosphere):
         """Get thermal and ozone tropopause indexes"""
-        z = atmosphere["z"][0, :]/1000
+        z = atmosphere["z"][0, :] / 1000
         T = atmosphere["T"][0, :]
         lapse_rate_K_per_km = np.gradient(T, z)
         
@@ -182,10 +182,11 @@ class OzoneRedistributed(Ozone):
     def redistribute_ozone(self, atmosphere):
         """Redistribute ozone according to Hardiman"""
         from typhon.physics import density as rhopT
+        import copy
        
         tropopause = self.get_tropopause_index(atmosphere)
-        ozone = atmosphere["O3"][0, :]
-        ozone_val = 1.32e-13 * (28.9644 / 47.9982)
+        ozone = copy.deepcopy(atmosphere["O3"][0, :])
+        ozone_val = 1.32e-7 * (28.9644 / 47.9982)
         ozone_n = ozone[:]
         if ozone[tropopause[2]] > ozone_val:
             mask1 = ozone - ozone_val > 0
@@ -197,14 +198,14 @@ class OzoneRedistributed(Ozone):
             plevs = atmosphere["plev"][tropopause[1]:tropopause[2] + 1]
             logO30 = np.log(ozone[tropopause[1]])
             logO31 = np.log(ozone_val)
-            m = (logO31 - logO30)/(plevs[-1] - plevs[0])
+            m = (logO31 - logO30) / (plevs[-1] - plevs[0])
             O3 = np.exp((m * (plevs - plevs[0])) + logO30)
             ozone_n[tropopause[1]:tropopause[2] + 1] = O3
             
         plevs = atmosphere["plev"][tropopause[2] + 1:tropopause[3] + 1]
         logO30 = np.log(ozone_val)
         logO31 = np.log(ozone[tropopause[3]])
-        m = (logO31 - logO30)/(plevs[-1] - plevs[0])
+        m = (logO31 - logO30) / (plevs[-1] - plevs[0])
         O3 = np.exp((m * (plevs - plevs[0])) + logO30)
         ozone_n[tropopause[2] + 1:tropopause[3] + 1] = O3
         
@@ -214,9 +215,9 @@ class OzoneRedistributed(Ozone):
                         np.diff(atmosphere["plev"])))
         odiff = ozone_n[:] - ozone[:]
         total_odiff = - rho * odiff * dp
-        total_odiff = np.sum(total_odiff)
+        total_odiff = np.sum(total_odiff[0:tropopause[0]+1])
         total_ozone_strato = - rho * ozone[:] * dp
-        total_ozone_strato = np.sum(total_ozone_strato[0:tropopause[0]])
+        total_ozone_strato = np.sum(total_ozone_strato[tropopause[0]+1:])
         factor_ozone_strato = 1 + (total_odiff / total_ozone_strato)
         ozone_n[tropopause[0]:] *= factor_ozone_strato
 
