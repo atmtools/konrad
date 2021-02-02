@@ -113,6 +113,13 @@ class StratosphericUpwelling(Upwelling):
             convection (konrad.convection): Convection model.
             timestep (float): Timestep width [day].
         """
+        # Ensure that the variable is initialized even if the upwelling is not
+        # applied. A proper initaliziation is needed to write netCDF output.
+        self.create_variable(
+            'cooling_rates',
+            dims=('time', 'plev'),
+            data=np.zeros_like(atmosphere["plev"]).reshape(1, -1),
+        )
 
         T = atmosphere['T'][0, :]
         z = atmosphere['z'][0, :]
