@@ -298,7 +298,17 @@ class RCE():
                 self.counteq -= self.timestep
             else:
                 self.counteq = datetime.timedelta(microseconds=0)
-        
+
+        # Displays information about convergence
+        if self.logevery is not None and self.niter % self.logevery == 0:
+            d_txt = "Days within equilibrium conditions: {0:3.2f}"
+            logger.debug(d_txt.format(self.counteq.total_seconds() /
+                                      (60 * 60 * 24)))
+            d_txt = "Delta N (TOA): {0:2.2e} (Threshold: {1:2.2e})"
+            logger.debug(d_txt.format(self.newDN / self.timestep_days, self.delta))
+            d_txt = "Delta (Delta N (TOA)): {0:2.2e} (Threshold: {1:2.2e})"
+            logger.debug(d_txt.format(self.newDDN / self.timestep_days**2, self.delta2))
+
         # If the equilibrium is larger than the threshold count, it declares
         #     convergence
         return self.counteq > self.post_count
@@ -433,16 +443,6 @@ class RCE():
             # Calculates temperature change (time step adjustment)
             self.deltaT = self.atmosphere['T'][0].copy() - self.oldT
             
-            # Displays information about convergence
-            if self.logevery is not None and self.niter % self.logevery == 0:
-                d_txt = "Days within equilibrium conditions: {0:3.2f}"
-                logger.info(d_txt.format(self.counteq.total_seconds() / 
-                                         (60 * 60 * 24)))
-                d_txt = "Delta N (TOA): {0:2.2e} (Threshold: {1:2.2e})"
-                logger.info(d_txt.format(self.newDN,self.delta))
-                d_txt = "Delta (Delta N (TOA)): {0:2.2e} (Threshold: {1:2.2e})"
-                logger.info(d_txt.format(self.newDDN,self.delta2))
-
             # Adjusts the time step
             if self.timestep_adjuster is not None:
                 self.timestep = self.timestep_adjuster(
