@@ -148,45 +148,45 @@ class RCE():
         """
         # Sub-model initialisation
         
-        ## Atmosphere
+        # Atmosphere
         self.atmosphere = atmosphere
         
-        ## Radiation
+        # Radiation
         if radiation is None:
             self.radiation = RRTMG()
         else:
             self.radiation = radiation
         
-        ## Ozone
+        # Ozone
         self.ozone = utils.return_if_type(ozone, 'ozone',
                                           Ozone, OzonePressure())
         
-        ## Humidity
+        # Humidity
         self.humidity = FixedRH() if humidity is None else humidity
         
-        ## Surface
+        # Surface
         self.surface = utils.return_if_type(surface, 'surface',
                                             Surface, SlabOcean())
         
-        ## Cloud
+        # Cloud
         self.cloud = utils.return_if_type(cloud, 'cloud',
                                           Cloud,
                                           ClearSky(self.atmosphere['plev'].size)
                                           )
         
-        ## Convection
+        # Convection
         self.convection = utils.return_if_type(convection, 'convection',
                                                Convection, HardAdjustment())
         
-        ## Critical lapse-rate
+        # Critical lapse-rate
         self.lapserate = utils.return_if_type(lapserate, 'lapserate',
                                               LapseRate, MoistLapseRate())
         
-        ## Stratospheric upwelling
+        # Stratospheric upwelling
         self.upwelling = utils.return_if_type(upwelling, 'upwelling',
                                               Upwelling, NoUpwelling())
         
-        ## Diurnal cycle
+        # Diurnal cycle
         self.diurnal_cycle = diurnal_cycle
         
         # Time, timestepping and duration attributes
