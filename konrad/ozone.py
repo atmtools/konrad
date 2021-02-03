@@ -48,6 +48,7 @@ __all__ = [
     'OzonePressure',
     'OzoneHeight',
     'OzoneNormedPressure',
+    'OzoneRedistributed',
     'Cariolle',
     'Simotrostra',
 ]
@@ -145,6 +146,87 @@ class OzoneNormedPressure(Ozone):
             ('time', 'plev'),
             self._f(atmosphere['plev'] / norm_new).clip(min=0).reshape(1, -1)
         )
+
+
+class OzoneRedistributed(Ozone):
+    """Ozone redistribution following method by Hardiman et al. (2019)"""
+    def __init__(self):
+        self._f = None
+    
+    def get_tropopause_index(self, atmosphere):
+        """Get thermal and ozone tropopause indexes"""
+        z = atmosphere["z"][0, :] / 1000
+        T = atmosphere["T"][0, :]
+        lapse_rate_K_per_km = np.gradient(T, z)
+        
+        mask1 = np.where(lapse_rate_K_per_km > -2)[0]
+        thermal_tropopause = False
+        i=0
+        while not thermal_tropopause:
+            index = mask1[i]
+            limit_test = np.where(z-z[index] >= 2)[0][0]
+            region = lapse_rate_K_per_km[index:limit_test + 1]
+            if np.all(region >= -2):
+                thermal_tropopause = index
+            i += 1
+        
+        ozone_tropopause = np.where(z-z[thermal_tropopause] > -1)[0][0]
+        ozone_tropopause_sub = np.where(z-z[ozone_tropopause] > -2)[0][0]
+        ozone_tropopause_super = np.where(z-z[thermal_tropopause] > 2)[0][0]
+        
+        return [thermal_tropopause, 
+                ozone_tropopause_sub, 
+                ozone_tropopause, 
+                ozone_tropopause_super]
+        
+    def redistribute_ozone(self, atmosphere):
+        """Redistribute ozone according to Hardiman"""
+        from typhon.physics import density as rhopT
+        import copy
+       
+        tropopause = self.get_tropopause_index(atmosphere)
+        ozone = copy.deepcopy(atmosphere["O3"][0, :])
+        ozone_val = 1.32e-7 * (28.9644 / 47.9982)
+        ozone_n = ozone[:]
+        if ozone[tropopause[2]] > ozone_val:
+            mask1 = ozone - ozone_val > 0
+            mask2 = np.where(ozone)[0] <= tropopause[2]
+            mask1 = np.logical_and(mask1,mask2)
+            ozone_n[mask1] = ozone_val
+            
+        elif ozone[tropopause[2]] < ozone_val:
+            plevs = atmosphere["plev"][tropopause[1]:tropopause[2] + 1]
+            logO30 = np.log(ozone[tropopause[1]])
+            logO31 = np.log(ozone_val)
+            m = (logO31 - logO30) / (plevs[-1] - plevs[0])
+            O3 = np.exp((m * (plevs - plevs[0])) + logO30)
+            ozone_n[tropopause[1]:tropopause[2] + 1] = O3
+            
+        plevs = atmosphere["plev"][tropopause[2] + 1:tropopause[3] + 1]
+        logO30 = np.log(ozone_val)
+        logO31 = np.log(ozone[tropopause[3]])
+        m = (logO31 - logO30) / (plevs[-1] - plevs[0])
+        O3 = np.exp((m * (plevs - plevs[0])) + logO30)
+        ozone_n[tropopause[2] + 1:tropopause[3] + 1] = O3
+        
+        rho = rhopT(atmosphere["plev"],atmosphere["T"][0, :])
+        dp = np.hstack((np.array([atmosphere["plev"][0] - 
+                                  atmosphere["phlev"][0]]), 
+                        np.diff(atmosphere["plev"])))
+        odiff = ozone_n[:] - ozone[:]
+        total_odiff = - rho * odiff * dp
+        total_odiff = np.sum(total_odiff[0:tropopause[0]+1])
+        total_ozone_strato = - rho * ozone[:] * dp
+        total_ozone_strato = np.sum(total_ozone_strato[tropopause[0]+1:])
+        factor_ozone_strato = 1 + (total_odiff / total_ozone_strato)
+        ozone_n[tropopause[0]:] *= factor_ozone_strato
+
+        return ozone_n
+
+    def __call__(self, atmosphere, **kwargs):
+        ozone_new = self.redistribute_ozone(atmosphere)
+
+        atmosphere['O3'] = (('time', 'plev'), ozone_new.reshape(1, -1))
 
 
 class Cariolle(Ozone):
