@@ -45,6 +45,7 @@ class RCE():
         experiment='RCE',
         writeevery='24h',
         delta=0.0,
+        delta2=0.0,
         radiation=None,
         ozone=None,
         humidity=None,
@@ -201,6 +202,10 @@ class RCE():
         
         # Attributes used by the is_converged() method
         self.delta = delta
+        if delta != 0.0 and delta2 == 0.0:
+            self.delta2 = delta / 100
+        else:
+            self.delta2 = delta2
         self.oldN = 0
         self.oldDN = 0
         self.newDN = 0
@@ -271,7 +276,7 @@ class RCE():
         # Checks whether the difference is below the threshold
         test1 = np.abs(self.newDN) <= self.delta
         # Checks whether the second order difference is below the threshold
-        test2 = np.abs(self.newDDN) <= (self.delta / 100)
+        test2 = np.abs(self.newDDN) <= self.delta2
         
         # Stores the above-calculated value for the next iteration
         self.oldDN = self.newDN
@@ -290,10 +295,7 @@ class RCE():
         
         # If the equilibrium is larger than the threshold count, it declares
         #     convergence
-        if self.counteq > self.post_count:
-            return True
-        else:
-            return False
+        return self.counteq > self.post_count
 
     def check_if_write(self):
         """Check if current timestep should be appended to output netCDF.
@@ -433,7 +435,7 @@ class RCE():
                 d_txt = "Delta N (TOA): {0:2.2e} (Threshold: {1:2.2e})"
                 logger.info(d_txt.format(self.newDN,self.delta))
                 d_txt = "Delta (Delta N (TOA)): {0:2.2e} (Threshold: {1:2.2e})"
-                logger.info(d_txt.format(self.newDDN,self.delta / 100))
+                logger.info(d_txt.format(self.newDDN,self.delta2))
 
             # Adjusts the time step
             if self.timestep_adjuster is not None:
