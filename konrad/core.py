@@ -2,7 +2,6 @@
 import datetime
 import logging
 
-import copy
 import numpy as np
 
 from konrad import constants
