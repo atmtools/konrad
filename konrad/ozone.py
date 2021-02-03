@@ -48,7 +48,7 @@ __all__ = [
     'OzonePressure',
     'OzoneHeight',
     'OzoneNormedPressure',
-    'OzoneRedistributed'
+    'OzoneRedistributed',
     'Cariolle',
     'Simotrostra',
 ]
