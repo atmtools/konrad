@@ -280,13 +280,13 @@ class RCE():
         self.newDDN = np.abs(self.newDN) - np.abs(self.oldDN)
         
         # Checks whether the difference is below the threshold
-        test1 = np.abs(self.newDN) <= self.delta
+        test1 = (np.abs(self.newDN) / self.timestep_days) <= self.delta
         # Checks whether the second order difference is below the threshold
-        test2 = np.abs(self.newDDN) <= self.delta2
-        
+        test2 = (np.abs(self.newDDN) / self.timestep_days**2) <= self.delta2
+
         # Stores the above-calculated value for the next iteration
         self.oldDN = self.newDN
-        
+
         # If both test1 and test2 are true, increments the count in equilibrium
         #     in one timestep
         # In any other case it reduces the count in one timestep or maintains
