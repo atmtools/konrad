@@ -45,6 +45,7 @@ class RCE():
         writeevery='24h',
         delta=0.0,
         delta2=0.0,
+        post_count=365,
         radiation=None,
         ozone=None,
         humidity=None,
@@ -57,7 +58,6 @@ class RCE():
         co2_adjustment_timescale=np.nan,
         logevery=None,
         timestep_adjuster=None,
-        post_count=365,
     ):
         """Set-up a radiative-convective model.
 
@@ -89,9 +89,16 @@ class RCE():
                 * A `timedelta` object is directly used as timestep.
                 * Note: Setting a value of `"0h"` will write after every iteration.
 
-            delta (float): Stop criterion. If the heating rate is below this
-                threshold for all levels, skip further iterations. Values
-                are given in K/day.
+            delta (float): First stop criterion. If the change in top-of-the-atmosphere
+                radiative balance is smaller than this threshold,
+                skip further iterations. Values are given in W/m^2/day.
+
+            delta2 (float): Second stop criterion. If the second-derivative of the
+                top-of-the-atmosphere radiative balance is smaller than this threshold,
+                skip further iterations. Values are given in W/m^2/day^2.
+
+            post_count (float): Numbers of days that the convergence criterion
+                (see `delta` and `delta2`) has to be fulfilled to stop the simulation.
 
             radiation (konrad.radiation): Radiation model.
                 Defaults to :class:`konrad.radiation.RRTMG`.
