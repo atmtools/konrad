@@ -252,7 +252,7 @@ class HardAdjustment(Convection):
         # would not warm the atmosphere, so we do not change the atmospheric
         # temperature profile and calculate the energy change simply from the
         # surface temperature change.
-        surfaceTneg = np.array([np.min(atmosphere["T"])])
+        surfaceTneg = atmosphere["T"][0, 0]
         eff_Cp_s = surface.heat_capacity
         diff_neg = eff_Cp_s * (surfaceTneg - surface['temperature'])
         if np.abs(diff_neg) < near_zero:
