@@ -168,6 +168,17 @@ class NonConvective(Convection):
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
+    def __init__(self, etol=1e-3):
+        """Initialize the convective adjustment.
+
+        Parameters:
+            etol (float): Threshold for the allowed energy difference between
+                the input temperature and the stabilized temperature profile.
+                The threshold is internally scaled using the surface heat capacity,
+                therefore its unit is more relative than physical.
+        """
+        self.etol = etol
+
     def stabilize(self, atmosphere, lapse, surface, timestep):
         T_rad = atmosphere['T'][0, :]
         p = atmosphere['plev']
@@ -217,7 +228,7 @@ class HardAdjustment(Convection):
         # less than the threshold 'near_zero'.
         # The threshold is scaled with the effective heat capacity of the
         # surface, ensuring that very thick surfaces reach the target.
-        near_zero = float(surface.heat_capacity / 1e10)
+        near_zero = float(surface.heat_capacity) * self.etol
 
         # Find the energy difference if there is no change to surface temp due
         # to convective adjustment. In this case the new profile should be
@@ -424,11 +435,12 @@ class RelaxedAdjustment(HardAdjustment):
     This convection scheme allows for a transition regime between a
     convectively driven troposphere and the radiatively balanced stratosphere.
     """
-    def __init__(self, tau=None):
+    def __init__(self, tau=None, *args, **kwargs):
         """
         Parameters:
             tau (ndarray): Array of convective timescale values [days]
         """
+        super().__init__(*args, **kwargs)
         self.convective_tau = tau
 
     def get_convective_tau(self, p):
