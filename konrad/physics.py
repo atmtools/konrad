@@ -1,4 +1,5 @@
 """This module contains functions related to physics."""
+from functools import singledispatch
 from numbers import Number
 
 import numpy as np
@@ -7,7 +8,7 @@ import typhon.physics as typ
 from konrad import constants
 
 
-# TODO: Replace with typhon version after next release (>0.7.0)
+@singledispatch
 def saturation_pressure(temperature):
     r"""Return equilibrium pressure of water with respect to the mixed-phase.
 
@@ -44,26 +45,41 @@ def saturation_pressure(temperature):
     Returns:
         float or ndarray: Equilibrium pressure [Pa].
     """
-    # Keep track of input type to match the return type.
-    is_float_input = isinstance(temperature, Number)
-    if is_float_input:
-        # Convert float input to ndarray to allow indexing.
-        temperature = np.asarray([temperature])
+    if np.size(temperature) == 1:
+        # Explicitly call float implementation for single-value arrays.
+        return saturation_pressure(float(temperature))
 
     e_eq_water = typ.e_eq_water_mk(temperature)
     e_eq_ice = typ.e_eq_ice_mk(temperature)
 
     is_water = temperature > constants.triple_point_water
 
-    is_ice = temperature < (constants.triple_point_water - 23.)
+    is_ice = temperature < (constants.triple_point_water - 23.0)
 
-    e_eq = (e_eq_ice + (e_eq_water - e_eq_ice)
-            * ((temperature - constants.triple_point_water + 23) / 23)**2
-            )
+    e_eq = (
+        e_eq_ice
+        + (e_eq_water - e_eq_ice)
+        * ((temperature - constants.triple_point_water + 23) / 23) ** 2
+    )
     e_eq[is_ice] = e_eq_ice[is_ice]
     e_eq[is_water] = e_eq_water[is_water]
 
-    return float(e_eq) if is_float_input else e_eq
+    return e_eq
+
+
+@saturation_pressure.register(Number)
+def _(temperature):
+    if temperature > constants.triple_point_water:
+        return typ.e_eq_water_mk(temperature)
+    elif temperature < (constants.triple_point_water - 23.0):
+        return typ.e_eq_ice_mk(temperature)
+    else:
+        e_eq_ice = typ.e_eq_ice_mk(temperature)
+        return (
+            e_eq_ice
+            + (typ.e_eq_water_mk(temperature) - typ.e_eq_ice_mk(temperature))
+            * ((temperature - constants.triple_point_water + 23) / 23) ** 2
+        )
 
 
 def relative_humidity2vmr(relative_humidity, pressure, temperature):
