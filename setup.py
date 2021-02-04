@@ -38,7 +38,7 @@ setup(
         'scipy>=0.19.0',
         'typhon>=0.7.0',
         'xarray>=0.9.1',
-        'climt==0.16.9',
+        'climt @ https://api.github.com/repos/atmtools/climt/tarball/allow-latest-numpy',
         'sympl>=0.4.0',
     ],
     extras_require={
