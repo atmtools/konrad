@@ -27,6 +27,7 @@ from . import cloud
 from . import component
 from . import constants
 from . import convection
+from . import entrainment
 from . import humidity
 from . import lapserate
 from . import netcdf

@@ -25,6 +25,7 @@ from scipy.integrate import ode
 
 from konrad import constants
 from konrad.component import Component
+from konrad.entrainment import NoEntrainment
 from konrad.surface import FixedTemperature
 
 
@@ -168,16 +169,27 @@ class NonConvective(Convection):
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
-    def __init__(self, etol=1e-3):
+    def __init__(self, entrainment=None, etol=1e-3):
         """Initialize the convective adjustment.
 
         Parameters:
+            entrainment (:py:class:`konrad.entrainment.Entrainment`):
+                Optional entrainment component.
             etol (float): Threshold for the allowed energy difference between
                 the input temperature and the stabilized temperature profile.
                 The threshold is internally scaled using the surface heat capacity,
                 therefore its unit is more relative than physical.
         """
+        if entrainment is None:
+            self._entrainment = NoEntrainment()
+        else:
+            self._entrainment = entrainment
+
         self.etol = etol
+
+    @property
+    def netcdf_subgroups(self):
+        return {"entrainment": self._entrainment}
 
     def stabilize(self, atmosphere, lapse, surface, timestep):
         T_rad = atmosphere['T'][0, :]
@@ -331,6 +343,10 @@ class HardAdjustment(Convection):
         T_rad = atmosphere["T"][-1]
         T_con = self.get_moist_adiabat(atmosphere, surfaceT, lapse)
 
+        # Entrain dry air into the convective atmosphere column.
+        T_con = self._entrainment.entrain(T_con, atmosphere)
+
+        # Combine radiative and convective temperature profiles.
         if np.any(T_con > T_rad):
             contop = np.max(np.where(T_con > T_rad))
             T_con[contop+1:] = T_rad[contop+1:]
