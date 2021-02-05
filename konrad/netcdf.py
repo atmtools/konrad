@@ -165,8 +165,8 @@ class NetcdfHandler:
                 if hasattr(attr, "netcdf_subgroups"):
                     for sname, sgroup in attr.netcdf_subgroups.items():
                         self._component_cache[f"{attr_name}/{sname}"] = sgroup
-                else:
-                    self._component_cache[attr_name] = attr
+
+                self._component_cache[attr_name] = attr
 
         logger.debug(f'Components for netCDF file: "{self._component_cache}".')
 
