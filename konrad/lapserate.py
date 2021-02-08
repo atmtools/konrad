@@ -21,10 +21,7 @@ profile and the surface temperature to follow the :code:`critical_lapserate`:
 
 """
 import abc
-import numbers
 
-import numpy as np
-from scipy.interpolate import interp1d
 from typhon.physics import vmr2mixing_ratio
 
 from konrad import constants
@@ -35,12 +32,12 @@ from konrad.physics import saturation_pressure
 class LapseRate(Component, metaclass=abc.ABCMeta):
     """Base class for all lapse rate handlers."""
     @abc.abstractmethod
-    def __call__(self, atmosphere):
+    def __call__(self, p, T):
         """Return the atmospheric lapse rate.
 
         Parameters:
-              T (ndarray): Atmospheric temperature [K].
               p (ndarray): Atmospheric pressure [Pa].
+              T (ndarray): Atmospheric temperature [K].
 
         Returns:
               ndarray: Temperature lapse rate [K/m].
@@ -57,16 +54,19 @@ class MoistLapseRate(LapseRate):
                 afterwards.
         """
         self.fixed = fixed
-        self._lapse_cache = None
+        self._lapse_cache = {}
 
-    def __call__(self, atmosphere):
-        if self._lapse_cache is not None:
-            return self._lapse_cache
+    def __call__(self, p, T):
+        # Use cached lapse rate if present, otherwise calculate it.
+        lapse_rate = self._lapse_cache.get(p, self.calc_lapse_rate(p, T))
 
-        T = atmosphere['T'][0, :]
-        p = atmosphere['plev'][:]
-        phlev = atmosphere['phlev'][:]
+        # Build lapse-rate cache.
+        if self.fixed and p not in self._lapse_cache:
+            self._lapse_cache[p] = lapse_rate
 
+        return lapse_rate
+
+    def calc_lapse_rate(self, p, T):
         # Use short formula symbols for physical constants.
         g = constants.earth_standard_gravity
         L = constants.heat_of_vaporization
@@ -82,13 +82,8 @@ class MoistLapseRate(LapseRate):
                               (1 + (L**2 * w_saturated) / (Cp * Rv * T**2))
                               )
                    )
-        lapse = interp1d(np.log(p), gamma_m, fill_value='extrapolate')(
-            np.log(phlev[:-1]))
 
-        if self.fixed:
-            self._lapse_cache = lapse
-
-        return lapse
+        return gamma_m
 
 
 class FixedLapseRate(LapseRate):
@@ -101,9 +96,5 @@ class FixedLapseRate(LapseRate):
         """
         self.lapserate = lapserate
 
-    def __call__(self, atmosphere):
-        if isinstance(self.lapserate, numbers.Number):
-            T = atmosphere['T'][0, :]
-            return self.lapserate * np.ones(T.size)
-        elif isinstance(self.lapserate, np.ndarray):
-            return self.lapserate
+    def __call__(self, p, T):
+        return self.lapserate

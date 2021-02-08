@@ -33,6 +33,7 @@ Model components to configure the configuration of `konrad`.
    konrad.cloud
    konrad.constants
    konrad.convection
+   konrad.entrainment
    konrad.humidity
    konrad.lapserate
    konrad.ozone
