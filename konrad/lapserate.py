@@ -23,12 +23,20 @@ profile and the surface temperature to follow the :code:`critical_lapserate`:
 import abc
 
 import numpy as np
-from typhon.physics import vmr2mixing_ratio
+from typhon.physics import vmr2mixing_ratio, density
 from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.component import Component
 from konrad.physics import saturation_pressure
+
+
+def _to_p_coordinates(gamma, p, T):
+    """Convert dT/dz(p, T) to dT/dP(p, T)."""
+    g = constants.earth_standard_gravity
+    rho = density(p, T)
+
+    return gamma / (g * rho)
 
 
 class LapseRate(Component, metaclass=abc.ABCMeta):
@@ -42,7 +50,7 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
               T (ndarray): Atmospheric temperature [K].
 
         Returns:
-              ndarray: Temperature lapse rate [K/m].
+              ndarray: Temperature lapse rate [K/hPa].
         """
 
 
@@ -93,7 +101,7 @@ class MoistLapseRate(LapseRate):
                               )
                    )
 
-        return gamma_m
+        return _to_p_coordinates(gamma_m, p, T)
 
 
 class FixedLapseRate(LapseRate):
@@ -107,4 +115,4 @@ class FixedLapseRate(LapseRate):
         self.lapserate = lapserate
 
     def __call__(self, p, T):
-        return self.lapserate
+        return _to_p_coordinates(self.lapserate, p, T)

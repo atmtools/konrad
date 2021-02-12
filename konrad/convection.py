@@ -135,17 +135,6 @@ def pressure_lapse_rate(p, phlev, T, lapse):
     return lp
 
 
-def pressure_lapse(func):
-    """Decorator to convert dTdz(p, T) into dTdP(p, T)."""
-
-    def _wrapper(p, T):
-        g = constants.earth_standard_gravity
-        rho = typhon.physics.density(p, T)
-        return func(p, T) / (g * rho)
-
-    return _wrapper
-
-
 class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
     @abc.abstractmethod
@@ -324,7 +313,7 @@ class HardAdjustment(Convection):
         ph = atmosphere["phlev"]
         Ts = surfaceT
 
-        r = ode(pressure_lapse(lapse)).set_integrator('lsoda', atol=1e-4)
+        r = ode(lapse).set_integrator('lsoda', atol=1e-4)
         r.set_initial_value(Ts, ph[0])
 
         T = np.zeros_like(p)
