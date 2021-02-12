@@ -22,7 +22,9 @@ profile and the surface temperature to follow the :code:`critical_lapserate`:
 """
 import abc
 
+import numpy as np
 from typhon.physics import vmr2mixing_ratio
+from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.component import Component
@@ -47,24 +49,32 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
     def __init__(self, fixed=False):
-        """
-        Parameters:
-            fixed (bool): If `True` the moist adiabatic lapse rate is only
-                calculated for the first time step and kept constant
-                afterwards.
-        """
-        self.fixed = fixed
-        self._lapse_cache = {}
+        self._lapse_cache = None
+
+        if fixed:
+            raise ValueError(
+                "The `fixed` keyword is no longer supported.\n"
+                "Use `konrad.lapserate.MoistLapseRate.build_cache()` instead."
+            )
 
     def __call__(self, p, T):
         # Use cached lapse rate if present, otherwise calculate it.
-        lapse_rate = self._lapse_cache.get(p, self.calc_lapse_rate(p, T))
+        if self._lapse_cache is not None:
+            return self._lapse_cache(np.log(p))
+        else:
+            return self.calc_lapse_rate(p, T)
 
-        # Build lapse-rate cache.
-        if self.fixed and p not in self._lapse_cache:
-            self._lapse_cache[p] = lapse_rate
+    def build_cache(self, atmosphere):
+        """Build a lapse-rate cache from a given atmospheric state."""
+        p = atmosphere["plev"]
+        T = atmosphere["T"][-1]
 
-        return lapse_rate
+        self._lapse_cache = interp1d(
+            np.log(p),
+            self.calc_lapse_rate(p, T),
+            kind="linear",
+            fill_value="extrapolate",
+        )
 
     def calc_lapse_rate(self, p, T):
         # Use short formula symbols for physical constants.
