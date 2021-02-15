@@ -41,6 +41,7 @@ def _to_p_coordinates(gamma, p, T):
 
 class LapseRate(Component, metaclass=abc.ABCMeta):
     """Base class for all lapse rate handlers."""
+
     @abc.abstractmethod
     def __call__(self, p, T):
         """Return the atmospheric lapse rate.
@@ -56,6 +57,7 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
 
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
+
     def __init__(self, fixed=False):
         self._lapse_cache = None
 
@@ -96,10 +98,10 @@ class MoistLapseRate(LapseRate):
 
         w_saturated = vmr2mixing_ratio(saturation_pressure(T) / p)
 
-        gamma_m = (gamma_d * ((1 + (L * w_saturated) / (Rd * T)) /
-                              (1 + (L**2 * w_saturated) / (Cp * Rv * T**2))
-                              )
-                   )
+        gamma_m = gamma_d * (
+            (1 + (L * w_saturated) / (Rd * T))
+            / (1 + (L ** 2 * w_saturated) / (Cp * Rv * T ** 2))
+        )
 
         return _to_p_coordinates(gamma_m, p, T)
 
@@ -107,6 +109,7 @@ class MoistLapseRate(LapseRate):
 class FixedLapseRate(LapseRate):
     """Fixed constant lapse rate through the whole atmosphere. Linear decrease
     in temperature with height."""
+
     def __init__(self, lapserate=0.0065):
         """
         Parameters:
@@ -120,6 +123,7 @@ class FixedLapseRate(LapseRate):
 
 class DryLapseRate(FixedLapseRate):
     """Fixed dry-adiabatic lapse rate through the whole atmosphere."""
+
     def __init__(self):
         g = constants.earth_standard_gravity
         c_p = constants.isobaric_mass_heat_capacity_dry_air
