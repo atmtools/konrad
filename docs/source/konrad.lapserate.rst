@@ -9,3 +9,4 @@ Lapse Rate
    LapseRate
    MoistLapseRate
    FixedLapseRate
+   DryLapseRate

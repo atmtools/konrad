@@ -22,15 +22,26 @@ profile and the surface temperature to follow the :code:`critical_lapserate`:
 """
 import abc
 
-from typhon.physics import vmr2mixing_ratio
+import numpy as np
+from typhon.physics import vmr2mixing_ratio, density
+from scipy.interpolate import interp1d
 
 from konrad import constants
 from konrad.component import Component
 from konrad.physics import saturation_pressure
 
 
+def _to_p_coordinates(gamma, p, T):
+    """Convert dT/dz(p, T) to dT/dP(p, T)."""
+    g = constants.earth_standard_gravity
+    rho = density(p, T)
+
+    return gamma / (g * rho)
+
+
 class LapseRate(Component, metaclass=abc.ABCMeta):
     """Base class for all lapse rate handlers."""
+
     @abc.abstractmethod
     def __call__(self, p, T):
         """Return the atmospheric lapse rate.
@@ -40,31 +51,40 @@ class LapseRate(Component, metaclass=abc.ABCMeta):
               T (ndarray): Atmospheric temperature [K].
 
         Returns:
-              ndarray: Temperature lapse rate [K/m].
+              ndarray: Temperature lapse rate [K/hPa].
         """
 
 
 class MoistLapseRate(LapseRate):
     """Moist adiabatic temperature lapse rate."""
+
     def __init__(self, fixed=False):
-        """
-        Parameters:
-            fixed (bool): If `True` the moist adiabatic lapse rate is only
-                calculated for the first time step and kept constant
-                afterwards.
-        """
-        self.fixed = fixed
-        self._lapse_cache = {}
+        self._lapse_cache = None
+
+        if fixed:
+            raise ValueError(
+                "The `fixed` keyword is no longer supported.\n"
+                "Use `konrad.lapserate.MoistLapseRate.build_cache()` instead."
+            )
 
     def __call__(self, p, T):
         # Use cached lapse rate if present, otherwise calculate it.
-        lapse_rate = self._lapse_cache.get(p, self.calc_lapse_rate(p, T))
+        if self._lapse_cache is not None:
+            return self._lapse_cache(np.log(p))
+        else:
+            return self.calc_lapse_rate(p, T)
 
-        # Build lapse-rate cache.
-        if self.fixed and p not in self._lapse_cache:
-            self._lapse_cache[p] = lapse_rate
+    def build_cache(self, atmosphere):
+        """Build a lapse-rate cache from a given atmospheric state."""
+        p = atmosphere["plev"]
+        T = atmosphere["T"][-1]
 
-        return lapse_rate
+        self._lapse_cache = interp1d(
+            np.log(p),
+            self.calc_lapse_rate(p, T),
+            kind="linear",
+            fill_value="extrapolate",
+        )
 
     def calc_lapse_rate(self, p, T):
         # Use short formula symbols for physical constants.
@@ -78,17 +98,18 @@ class MoistLapseRate(LapseRate):
 
         w_saturated = vmr2mixing_ratio(saturation_pressure(T) / p)
 
-        gamma_m = (gamma_d * ((1 + (L * w_saturated) / (Rd * T)) /
-                              (1 + (L**2 * w_saturated) / (Cp * Rv * T**2))
-                              )
-                   )
+        gamma_m = gamma_d * (
+            (1 + (L * w_saturated) / (Rd * T))
+            / (1 + (L ** 2 * w_saturated) / (Cp * Rv * T ** 2))
+        )
 
-        return gamma_m
+        return _to_p_coordinates(gamma_m, p, T)
 
 
 class FixedLapseRate(LapseRate):
     """Fixed constant lapse rate through the whole atmosphere. Linear decrease
     in temperature with height."""
+
     def __init__(self, lapserate=0.0065):
         """
         Parameters:
@@ -97,4 +118,15 @@ class FixedLapseRate(LapseRate):
         self.lapserate = lapserate
 
     def __call__(self, p, T):
-        return self.lapserate
+        return _to_p_coordinates(self.lapserate, p, T)
+
+
+class DryLapseRate(FixedLapseRate):
+    """Fixed dry-adiabatic lapse rate through the whole atmosphere."""
+
+    def __init__(self):
+        g = constants.earth_standard_gravity
+        c_p = constants.isobaric_mass_heat_capacity_dry_air
+        gamma_d = g / c_p
+
+        super().__init__(lapserate=gamma_d)
