@@ -33,7 +33,6 @@ __all__ = [
     'energy_difference',
     'latent_heat_difference',
     'interp_variable',
-    'pressure_lapse_rate',
     'Convection',
     'NonConvective',
     'HardAdjustment',
@@ -111,28 +110,6 @@ def interp_variable(variable, convective_heating, lim):
 
     # Interpolate the values to where the convective heating rate equals `lim`.
     return interp1d(heat_array, var_array)(lim)
-
-
-def pressure_lapse_rate(p, phlev, T, lapse):
-    """
-    Calculate the pressure lapse rate (change in temperature with pressure)
-    from the height lapse rate (change in temperature with height).
-
-    Parameters:
-        p (ndarray): pressure levels
-        phlev (ndarray): pressure half-levels
-        T (ndarray): temperature profile
-        lapse (ndarray): lapse rate [K/m] defined on pressure half-levels
-    Returns:
-        ndarray: pressure lapse rate [K/Pa]
-    """
-    density_p = typhon.physics.density(p, T)
-    # Interpolate density onto pressure half-levels
-    density = interp1d(p, density_p, fill_value='extrapolate')(phlev[:-1])
-
-    g = constants.earth_standard_gravity
-    lp = -lapse / (g * density)
-    return lp
 
 
 class Convection(Component, metaclass=abc.ABCMeta):
