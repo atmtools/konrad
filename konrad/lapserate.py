@@ -116,3 +116,13 @@ class FixedLapseRate(LapseRate):
 
     def __call__(self, p, T):
         return _to_p_coordinates(self.lapserate, p, T)
+
+
+class DryLapseRate(FixedLapseRate):
+    """Fixed dry-adiabatic lapse rate through the whole atmosphere."""
+    def __init__(self):
+        g = constants.earth_standard_gravity
+        c_p = constants.isobaric_mass_heat_capacity_dry_air
+        gamma_d = g / c_p
+
+        super().__init__(lapserate=gamma_d)
