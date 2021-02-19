@@ -334,6 +334,73 @@ class PolynomialCshapedRH(RelativeHumidityModel):
 
         return rh_profile
 
+
+class BetterCshapedRH(RelativeHumidityModel):
+    def __init__(self, top_peak_rh=0.75, freezing_pt_rh=0.4, bl_top_p=940e2, bl_top_rh=0.85,
+                 surface_rh = 0.75):
+        """
+        Defines a C-shaped polynomial model.
+        The RH increases linearly in the boundary layer and decreases linearly above the upper-tropospheric peak.
+        The point above the upper-tropospheric peak where the RH is half the peak is coupled to the cold-point.
+        Between the two peaks, a quadratic function is defined by the point of the two peaks and one in the mid-troposphere.
+        Default values from RCEMIP large experiment statistics.
+
+        Parameters:
+            top_slope (float): slope of the linear function above the upper-tropospheric peak.
+            top_peak_rh (float in [0;1]): value of relative humidity at the upper-tropospheric peak.
+            freezing_pt_rh (float in [0;1]): value of relative humidity at the freezing point.
+            bl_top_p (float): Pressure of the top of the boundary layer (bl) where the humidity peak is.
+            bl_top_rh (float in [0;1]): value of the relative humidity at the top of the boundary layer.
+            surface_rh (float in [0;1]): value of the relative humidity at the surface.
+        """
+
+        ## Convert percent to dimensionless
+        if top_peak_rh > 1: top_peak_rh /= 100;
+        if freezing_pt_rh > 1: freezing_pt_rh /= 100;
+        if bl_top_rh > 1: bl_top_rh /= 100;
+        if surface_rh > 1: surface_rh /= 100;
+
+        # Affect values to self
+        self.top_peak_rh = top_peak_rh
+        self.freezing_pt_rh = freezing_pt_rh
+        self.bl_top_p = bl_top_p
+        self.bl_top_rh = bl_top_rh
+        self.surface_rh = surface_rh
+
+    def __call__(self, atmosphere, **kwargs):
+        """
+        Parameters:
+            atmosphere (konrad.atmosphere.Atmosphere): The atmosphere component.
+
+        Returns:
+            ndarray: The relative humidity profile.
+        """
+
+        plev = atmosphere["plev"]
+        T = atmosphere['T'][-1,:]
+
+        ## Boundary layer
+        bl_slope = (self.bl_top_rh - self.surface_rh) / (self.bl_top_p - 1000e2)
+        bl_func = lambda p: self.bl_top_rh + bl_slope * (p - self.bl_top_p)
+        bl_rh = bl_func(plev[plev > self.bl_top_p])
+
+        ## Between the top of the b.l. and the freezing point (fp)
+        fp_p = atmosphere.get_freezing_point_plev()
+        # Quadratic function of p going through both point with a zero slope at freezing level:
+        bottom_func = lambda p: (self.bl_top_rh - self.freezing_pt_rh)/(self.bl_top_p - fp_p)**2 * (p-fp_p)**2 \
+                         + self.freezing_pt_rh
+        bottom_rh = bottom_func(plev[(plev <= self.bl_top_p) & (plev > fp_p)])
+
+        ## Between the freezing point and the cold-point
+        fp_T = atmosphere["T"][-1, atmosphere.get_triple_point_index()]
+        cold_point_T = atmosphere["T"][-1, atmosphere.get_cold_point_index()]
+        # Quadratic function of T going through both point with a zero slope at freezing level:
+        top_func = lambda T: (self.top_peak_rh - self.freezing_pt_rh) / (cold_point_T - fp_T)**2 * (T-fp_T)**2 \
+                         + self.freezing_pt_rh
+        top_rh = top_func(T[T<=fp_T])
+
+        return np.concatenate([bl_rh, bottom_rh, top_rh])
+
 class PerturbProfile(RelativeHumidityModel):
     """ Wrapper to add a perturbation to a Relative Humidity profile. """
     def __init__(self, base_profile = HeightConstant(), shape = "square", center_plev = 500e2, width = 50e2, intensity = 0.1, fixed_T = False) :
