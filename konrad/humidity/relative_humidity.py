@@ -467,7 +467,8 @@ class PerturbProfile(RelativeHumidityModel):
             self.center_T = T[idx_center]
 
         if self.fixed_T:  # Compute center_plev to correspond to the fixed T
-            idx_center = np.abs(T - self.center_T).argmin()
+            T_ma = np.ma.masked_array(T, plev < atmosphere.pmin)
+            idx_center = np.abs(T_ma - self.center_T).argmin()
             self.center_plev = plev[idx_center]
 
         rh_profile = self._base_profile(atmosphere).copy()
