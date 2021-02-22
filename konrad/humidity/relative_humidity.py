@@ -336,7 +336,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
 
 
 class BetterCshapedRH(RelativeHumidityModel):
-    def __init__(self, top_peak_rh=0.75, freezing_pt_rh=0.4, bl_top_p=940e2, bl_top_rh=0.85,
+    def __init__(self, top_peak_T = None, top_peak_rh=0.75, freezing_pt_rh=0.4, bl_top_p=940e2, bl_top_rh=0.85,
                  surface_rh = 0.75):
         """
         Defines a C-shaped polynomial model.
@@ -346,6 +346,7 @@ class BetterCshapedRH(RelativeHumidityModel):
         Default values from RCEMIP large experiment statistics.
 
         Parameters:
+            top_peak_T (float): Temperature of the upper tropospheric peak. If None, coupled to the cold-point.
             top_slope (float): slope of the linear function above the upper-tropospheric peak.
             top_peak_rh (float in [0;1]): value of relative humidity at the upper-tropospheric peak.
             freezing_pt_rh (float in [0;1]): value of relative humidity at the freezing point.
@@ -361,6 +362,7 @@ class BetterCshapedRH(RelativeHumidityModel):
         if surface_rh > 1: surface_rh /= 100;
 
         # Affect values to self
+        self.top_peak_T = top_peak_T
         self.top_peak_rh = top_peak_rh
         self.freezing_pt_rh = freezing_pt_rh
         self.bl_top_p = bl_top_p
@@ -392,10 +394,13 @@ class BetterCshapedRH(RelativeHumidityModel):
         bottom_rh = bottom_func(plev[(plev <= self.bl_top_p) & (plev > fp_p)])
 
         ## Between the freezing point and the cold-point
-        fp_T = atmosphere["T"][-1, atmosphere.get_triple_point_index()]
-        cold_point_T = atmosphere["T"][-1, atmosphere.get_cold_point_index()]
+        fp_T = atmosphere["T"][-1, atmosphere.get_freezing_point_index()]
+        if self.top_peak_T == None :
+            top_peak_T = atmosphere["T"][-1, atmosphere.get_cold_point_index()]
+        else :
+            top_peak_T = self.top_peak_T
         # Quadratic function of T going through both point with a zero slope at freezing level:
-        top_func = lambda T: (self.top_peak_rh - self.freezing_pt_rh) / (cold_point_T - fp_T)**2 * (T-fp_T)**2 \
+        top_func = lambda T: (self.top_peak_rh - self.freezing_pt_rh) / (top_peak_T - fp_T)**2 * (T-fp_T)**2 \
                          + self.freezing_pt_rh
         top_rh = top_func(T[T<=fp_T])
 
