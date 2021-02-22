@@ -26,6 +26,7 @@ class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
 
 class CacheFromAtmosphere(RelativeHumidityModel):
     """Calculate and cache relative humidity from initial atmosphere."""
+
     def __init__(self):
         self._rh_profile = None
 
@@ -41,6 +42,7 @@ class CacheFromAtmosphere(RelativeHumidityModel):
 
 class HeightConstant(RelativeHumidityModel):
     """Fix the relative humidity to a single value throughout the atmosphere."""
+
     def __init__(self, rh_surface=0.8):
         """
         Parameters:
@@ -61,6 +63,7 @@ class HeightConstant(RelativeHumidityModel):
 class VerticallyUniform(RelativeHumidityModel):
     """Use a single value of relative humidity up to the convective top and
     then a linearly decreasing value towards the cold point."""
+
     def __init__(self, rh_surface=0.5, rh_tropopause=0.3):
         """
         Parameters:
@@ -79,9 +82,9 @@ class VerticallyUniform(RelativeHumidityModel):
         self.cold_point = atmosphere.get_cold_point_plev()
 
         rh = (
-            (self.rh_tropopause - self.rh_surface)
-            / (self.cold_point - self.convective_top)
-            * (p - self.convective_top) + self.rh_surface
+                (self.rh_tropopause - self.rh_surface)
+                / (self.cold_point - self.convective_top)
+                * (p - self.convective_top) + self.rh_surface
         )
         rh[p > self.convective_top] = self.rh_surface
 
@@ -91,6 +94,7 @@ class VerticallyUniform(RelativeHumidityModel):
 class ConstantFreezingLevel(RelativeHumidityModel):
     """Constant relative humidity up to the freezing level and then
     decreasing."""
+
     def __init__(self, rh_surface=0.77):
         """
         Parameters:
@@ -105,7 +109,7 @@ class ConstantFreezingLevel(RelativeHumidityModel):
 
         fl = atmosphere.get_triple_point_index()
         rh_profile[fl:] = (
-            self.rh_surface * (plev[fl:] / plev[fl])**1.3
+                self.rh_surface * (plev[fl:] / plev[fl]) ** 1.3
         )
 
         return rh_profile
@@ -113,6 +117,7 @@ class ConstantFreezingLevel(RelativeHumidityModel):
 
 class FixedUTH(RelativeHumidityModel):
     """Idealised model of a fixed C-shaped relative humidity distribution."""
+
     def __init__(self, rh_surface=0.77, uth=0.75, uth_plev=170e2,
                  uth_offset=0):
         """Couple the upper-tropospheric humidity peak to the convective top.
@@ -141,7 +146,7 @@ class FixedUTH(RelativeHumidityModel):
 
         # Gaussian upper-tropospheric UTH peak in ln(p) coordinates
         x = p / (self.uth_plev + self.uth_offset)
-        uth = self.uth * np.exp(-np.log(x)**2 * np.pi)
+        uth = self.uth * np.exp(-np.log(x) ** 2 * np.pi)
 
         return np.maximum(self._rh_base_profile, uth)
 
@@ -155,6 +160,7 @@ class CoupledUTH(FixedUTH):
     This relative humidity works in the same way as ``FixedUTH`` but the
     ``uth_plev`` is updated automatically depending on the convective top.
     """
+
     def __call__(self, atmosphere, convection, **kwargs):
         self.uth_plev = convection.get('convective_top_plev')[0]
 
@@ -163,6 +169,7 @@ class CoupledUTH(FixedUTH):
 
 class CshapeConstant(RelativeHumidityModel):
     """Idealized model of a C-shaped RH profile using a quadratic equation."""
+
     def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
         self.uth_plev = uth_plev
         self.rh_min = rh_min
@@ -176,15 +183,16 @@ class CshapeConstant(RelativeHumidityModel):
         xmin = np.log10(self.uth_plev)
         xmax = x[0]
 
-        a = (self.uth - self.rh_min) * 4 / (xmin - xmax)**2
+        a = (self.uth - self.rh_min) * 4 / (xmin - xmax) ** 2
         b = (xmin + xmax) / 2
         c = self.rh_min
 
-        return np.clip(a * (x - b)**2 + c, a_min=0, a_max=1)
+        return np.clip(a * (x - b) ** 2 + c, a_min=0, a_max=1)
 
 
 class CshapeDecrease(RelativeHumidityModel):
     """Idealized model of a C-shaped RH profile using a quadratic equation."""
+
     def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
         self.uth_plev = uth_plev
         self.rh_min = rh_min
@@ -198,19 +206,20 @@ class CshapeDecrease(RelativeHumidityModel):
         xmin = np.log10(self.uth_plev)
         xmax = x[0]
 
-        a = (self.uth - self.rh_min) * 4 / (xmin - xmax)**2
+        a = (self.uth - self.rh_min) * 4 / (xmin - xmax) ** 2
         b = (xmin + xmax) / 2
         c = self.rh_min
 
-        rh = np.clip(a * (x - b)**2 + c, a_min=0, a_max=1)
+        rh = np.clip(a * (x - b) ** 2 + c, a_min=0, a_max=1)
 
-        rh[x < xmin] *= (10**x / 10**xmin)[x < xmin]
+        rh[x < xmin] *= (10 ** x / 10 ** xmin)[x < xmin]
 
         return rh
 
 
 class Manabe67(RelativeHumidityModel):
     """Relative humidity model following Manabe and Wetherald (1967)."""
+
     def __init__(self, rh_surface=0.77):
         """Initialize a humidity model.
 
@@ -231,6 +240,7 @@ class Cess76(RelativeHumidityModel):
     The relative humidity profile depends on the surface temperature.
     This results in moister atmospheres at warmer temperatures.
     """
+
     def __init__(self, rh_surface=0.8, T_surface=288):
         """Initialize a humidity model.
 
@@ -250,11 +260,12 @@ class Cess76(RelativeHumidityModel):
         p = atmosphere['plev']
         self.T_surface = surface['temperature'][-1]
 
-        return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02))**self.omega
+        return self.rh_surface * ((p / p[0] - 0.02) / (1 - 0.02)) ** self.omega
 
 
 class Romps14(RelativeHumidityModel):
     """Relative humidity following an invariant RH-T relation."""
+
     def __init__(self):
         self._rh_func = None
 
@@ -270,9 +281,10 @@ class Romps14(RelativeHumidityModel):
 
         return self._rh_func(atmosphere['T'][-1, :])
 
-    
+
 class PolynomialCshapedRH(RelativeHumidityModel):
-    def __init__(self, top_slope = 7.5e-5, top_peak_rh = 0.75, mid_p = 500e2, mid_rh = 0.4, low_peak_p = 940e2, low_peak_rh = 0.85, bl_slope = -2e-5):
+    def __init__(self, top_slope=7.5e-5, top_peak_rh=0.75, mid_p=500e2, mid_rh=0.4, low_peak_p=940e2, low_peak_rh=0.85,
+                 bl_slope=-2e-5):
         """
         Defines a C-shaped polynomial model. 
         The RH increases linearly in the boundary layer and decreases linearly above the upper-tropospheric peak. 
@@ -291,9 +303,9 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         """
 
         ## Convert percent to dimensionless 
-        if top_peak_rh > 1 : top_peak_rh /= 100;
-        if mid_rh > 1 : mid_rh /= 100;
-        if low_peak_rh > 1 : low_peak_rh /= 100;
+        if top_peak_rh > 1: top_peak_rh /= 100;
+        if mid_rh > 1: mid_rh /= 100;
+        if low_peak_rh > 1: low_peak_rh /= 100;
 
         # Affect values to self
         self.top_slope = top_slope
@@ -312,23 +324,25 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         Returns:
             ndarray: The relative humidity profile.
         """
-        
+
         plev = atmosphere["plev"]
 
         ## Top layer
         cold_point_p = atmosphere.get_cold_point_plev()
-        tl_func = lambda p : self.top_peak_rh/2 + self.top_slope * (p - cold_point_p)
+        tl_func = lambda p: self.top_peak_rh / 2 + self.top_slope * (p - cold_point_p)
         top_peak_p = cold_point_p + self.top_peak_rh / (2 * self.top_slope)
 
         ## Mid-troposphere
-        coeffs = np.polyfit([top_peak_p, self.mid_p, self.low_peak_p], [self.top_peak_rh, self.mid_rh, self.low_peak_rh], deg = 2)
-        mid_func = lambda p : coeffs[0] * p ** 2 + coeffs[1] * p + coeffs[2]
+        coeffs = np.polyfit([top_peak_p, self.mid_p, self.low_peak_p],
+                            [self.top_peak_rh, self.mid_rh, self.low_peak_rh], deg=2)
+        mid_func = lambda p: coeffs[0] * p ** 2 + coeffs[1] * p + coeffs[2]
 
         ## Boundary layer
-        bl_func = lambda p : self.low_peak_rh + self.bl_slope*(p - self.low_peak_p)
+        bl_func = lambda p: self.low_peak_rh + self.bl_slope * (p - self.low_peak_p)
 
         ## Reconstructed function
-        rh_profile = np.piecewise(plev, [plev <= top_peak_p, plev > top_peak_p, plev > self.low_peak_p], [tl_func, mid_func, bl_func])
+        rh_profile = np.piecewise(plev, [plev <= top_peak_p, plev > top_peak_p, plev > self.low_peak_p],
+                                  [tl_func, mid_func, bl_func])
 
         rh_profile[rh_profile < 0] = 0
 
@@ -336,8 +350,8 @@ class PolynomialCshapedRH(RelativeHumidityModel):
 
 
 class BetterCshapedRH(RelativeHumidityModel):
-    def __init__(self, top_peak_T = None, top_peak_rh=0.75, freezing_pt_rh=0.4, bl_top_p=940e2, bl_top_rh=0.85,
-                 surface_rh = 0.75):
+    def __init__(self, top_peak_T=None, top_peak_rh=0.75, freezing_pt_rh=0.4, bl_top_p=940e2, bl_top_rh=0.85,
+                 surface_rh=0.75):
         """
         Defines a C-shaped polynomial model.
         The RH increases linearly in the boundary layer and decreases linearly above the upper-tropospheric peak.
@@ -379,7 +393,7 @@ class BetterCshapedRH(RelativeHumidityModel):
         """
 
         plev = atmosphere["plev"]
-        T = atmosphere['T'][-1,:]
+        T = atmosphere['T'][-1, :]
 
         ## Boundary layer
         bl_slope = (self.bl_top_rh - self.surface_rh) / (self.bl_top_p - 1000e2)
@@ -389,26 +403,29 @@ class BetterCshapedRH(RelativeHumidityModel):
         ## Between the top of the b.l. and the freezing point (fp)
         fp_p = atmosphere.get_freezing_point_plev()
         # Quadratic function of p going through both point with a zero slope at freezing level:
-        bottom_func = lambda p: (self.bl_top_rh - self.freezing_pt_rh)/(self.bl_top_p - fp_p)**2 * (p-fp_p)**2 \
-                         + self.freezing_pt_rh
+        bottom_func = lambda p: (self.bl_top_rh - self.freezing_pt_rh) / (self.bl_top_p - fp_p) ** 2 * (p - fp_p) ** 2 \
+                                + self.freezing_pt_rh
         bottom_rh = bottom_func(plev[(plev <= self.bl_top_p) & (plev > fp_p)])
 
         ## Between the freezing point and the cold-point
         fp_T = atmosphere["T"][-1, atmosphere.get_freezing_point_index()]
-        if self.top_peak_T == None :
+        if self.top_peak_T == None:
             top_peak_T = atmosphere["T"][-1, atmosphere.get_cold_point_index()]
-        else :
+        else:
             top_peak_T = self.top_peak_T
         # Quadratic function of T going through both point with a zero slope at freezing level:
-        top_func = lambda T: (self.top_peak_rh - self.freezing_pt_rh) / (top_peak_T - fp_T)**2 * (T-fp_T)**2 \
-                         + self.freezing_pt_rh
-        top_rh = top_func(T[T<=fp_T])
+        top_func = lambda T: (self.top_peak_rh - self.freezing_pt_rh) / (top_peak_T - fp_T) ** 2 * (T - fp_T) ** 2 \
+                             + self.freezing_pt_rh
+        top_rh = top_func(T[T <= fp_T])
 
         return np.concatenate([bl_rh, bottom_rh, top_rh])
 
+
 class PerturbProfile(RelativeHumidityModel):
     """ Wrapper to add a perturbation to a Relative Humidity profile. """
-    def __init__(self, base_profile = HeightConstant(), shape = "square", center_plev = 500e2, width = 50e2, intensity = 0.1, fixed_T = False) :
+
+    def __init__(self, base_profile=HeightConstant(), shape="square", center_plev=500e2, width=50e2, intensity=0.1,
+                 fixed_T=False):
         """
         Parameters:
             base_profile (konrad.relative_humidity model): initial profile on which we will add the perturbation.
@@ -417,21 +434,23 @@ class PerturbProfile(RelativeHumidityModel):
             center_plev (float): Pressure of the center of the square perturbation in [Pa].
             width (float): width of the perturbation in [Pa].
             intensity (float): Change in RH where the profile is perturbed, positive or negative.
-            Fixed_T (boolean): If set to true, the temperature at center_plev at the first step is kept as the central point for the perturbation throughout the simulation, and the pressure at the center of the perturbation is no longer constant.
+            Fixed_T (boolean): If set to true, the temperature at center_plev at the first step is kept as the central
+                point for the perturbation throughout the simulation, and the pressure at the center of the perturbation
+                is no longer constant.
         """
-        
+
         self._base_profile = base_profile
         self._shape = shape
         self.center_plev = center_plev
         self.width = width
         self.fixed_T = fixed_T
         self.center_T = None
-        
-        if intensity > 1 : #If intensity given in percents
+
+        if intensity > 1:  # If intensity given in percents
             intensity /= 100
         self.intensity = float(intensity)
 
-    def __call__(self, atmosphere, **kwargs) :
+    def __call__(self, atmosphere, **kwargs):
         """
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): The atmosphere component.
@@ -439,43 +458,45 @@ class PerturbProfile(RelativeHumidityModel):
         Returns:
             ndarray: The relative humidity profile.
         """
-            
+
         plev = atmosphere["plev"]
         T = atmosphere["T"][-1]
-        
-        if self.center_T == None : # Initialize T at center_plev at the first step
+
+        if self.center_T == None:  # Initialize T at center_plev at the first step
             idx_center = np.abs(plev - self.center_plev).argmin()
             self.center_T = T[idx_center]
 
-        if self.fixed_T : # Compute center_plev to correspond to the fixed T
+        if self.fixed_T:  # Compute center_plev to correspond to the fixed T
             idx_center = np.abs(T - self.center_T).argmin()
             self.center_plev = plev[idx_center]
-        
+
         rh_profile = self._base_profile(atmosphere).copy()
 
-        if self._shape == "square" :
-            idx_low = np.abs(plev - (self.center_plev + self.width/2)).argmin()
-            idx_high = np.abs(plev - (self.center_plev - self.width/2)).argmin()
-            if idx_low != idx_high : 
+        if self._shape == "square":
+            idx_low = np.abs(plev - (self.center_plev + self.width / 2)).argmin()
+            idx_high = np.abs(plev - (self.center_plev - self.width / 2)).argmin()
+            if idx_low != idx_high:
                 rh_profile[idx_low:idx_high] += self.intensity
-            else :
+            else:
                 rh_profile[idx_low] += self.intensity
 
-        if self._shape == "gaussian" :
-            G = gaussian(plev, self.center_plev, self.width /2) # Gaussian profile
+        if self._shape == "gaussian":
+            G = gaussian(plev, self.center_plev, self.width / 2)  # Gaussian profile
 
             # Compute boundary of the perturbation
             p_low = self.center_plev + 1.5 * self.width
             idx_low = np.abs(plev - p_low).argmin()
-            p_high = self.center_plev -  1.5 * self.width
+            p_high = self.center_plev - 1.5 * self.width
             idx_high = np.abs(plev - p_high).argmin()
-            if idx_low != idx_high :
-                rh_profile[idx_low:idx_high] = rh_profile[idx_low:idx_high] + G[idx_low:idx_high]/np.max(G) * self.intensity
-            else :
+            if idx_low != idx_high:
+                rh_profile[idx_low:idx_high] = rh_profile[idx_low:idx_high] + G[idx_low:idx_high] / np.max(
+                    G) * self.intensity
+            else:
                 rh_profile[idx_low] += self.intensity
 
         return rh_profile
-        
+
+
 class ProfileFromData(RelativeHumidityModel):
     def __init__(self, p_data, rh_data):
         """
@@ -485,10 +506,9 @@ class ProfileFromData(RelativeHumidityModel):
             p_data (np.ndarray): pressure coordinates corresponding to rh_data, in Pa
             rh_data (np.ndarray): the rh profile on p_data, in unit of RH
         """
-        
-        self._rh_func = interp1d(p_data, rh_data, fill_value = "extrapolate")
 
-        
+        self._rh_func = interp1d(p_data, rh_data, fill_value="extrapolate")
+
     def __call__(self, atmosphere, **kwargs):
         """Return the vertical distribution of relative humidity.
 
