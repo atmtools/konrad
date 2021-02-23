@@ -215,8 +215,8 @@ class _ARTS:
         if filename is not None:
             self.ws.WriteXML("binary", self.ws.abs_lookup, filename)
 
-    def calc_spectral_irradiance_field(self, atmosphere, t_surface):
-        """Calculate the spectral irradiance field."""
+    def set_atmospheric_state(self, atmosphere, t_surface):
+        """Set and check the atmospheric fields."""
         atm_fields_compact = atmosphere.to_atm_fields_compact()
 
         # Scale dry air VMRs with water content
@@ -249,11 +249,15 @@ class _ARTS:
         self.ws.z_surface = np.array([[0.0]])
         self.ws.z_field.value[0, 0, 0] = 0.0
 
-        # Perform RT calculations
+        # Perform configuration and atmosphere checks
         self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
         self.ws.propmat_clearsky_agenda_checkedCalc()
         self.ws.atmgeom_checkedCalc()
         self.ws.cloudbox_checkedCalc()
+
+    def calc_spectral_irradiance_field(self, atmosphere, t_surface):
+        """Calculate the spectral irradiance field."""
+        self.set_atmospheric_state(atmosphere, t_surface)
 
         # get the zenith angle grid and the integrations weights
         self.ws.AngularGridsSetFluxCalc(
@@ -265,7 +269,7 @@ class _ARTS:
         # calculate intensity field
         self.ws.Tensor3Create("trans_field")
         self.ws.spectral_radiance_fieldClearskyPlaneParallel(
-            trans_field=self.ws.trans_field, use_parallel_iy=1
+            trans_field=self.ws.trans_field,
         )
         self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
 
@@ -275,6 +279,20 @@ class _ARTS:
             self.ws.spectral_irradiance_field.value.copy(),
             self.ws.trans_field.value[:, 1:, 0].copy().prod(axis=1),
         )
+
+    def calc_optical_thickness(self, atmosphere, t_surface):
+        """Calculate the spectral irradiance field."""
+        self.set_atmospheric_state(atmosphere, t_surface)
+
+        self.ws.propmat_clearsky_fieldCalc()
+
+        tau = np.trapz(
+            y=self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0],
+            x=self.ws.z_field.value[:, 0, 0],
+            axis=-1,
+        )
+
+        return self.ws.f_grid.value.copy(), tau
 
     def calc_radiative_fluxes(self, atmosphere, surface):
         """Calculate radiative fluxes.
