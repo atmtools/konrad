@@ -449,7 +449,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
                 top_peak_T - fp_T
             ) ** 2 * (T - fp_T) ** 2 + self.freezing_pt_rh
 
-        top_rh = top_func(T[T <= fp_T])
+        top_rh = top_func(T[plev <= fp_p])
 
         return np.concatenate([bl_rh, bottom_rh, top_rh])
 
@@ -510,6 +510,7 @@ class PerturbProfile(RelativeHumidityModel):
             T_ma = np.ma.masked_array(T, plev < atmosphere.pmin)
             idx_center = np.abs(T_ma - self.center_T).argmin()
             self.center_plev = plev[idx_center]
+            self.width = konrad.utils.dp_from_dz()
 
         rh_profile = self._base_profile(atmosphere).copy()
 
