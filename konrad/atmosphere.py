@@ -334,17 +334,6 @@ class Atmosphere(Component):
 
         return np.argmin(T)
 
-    def get_freezing_point_index(self):
-        """Return the model level index at the freezing point.
-
-        Returns:
-            int: Model level index at the freezing point.
-        """
-        plev = self["plev"][:]
-        T = np.ma.masked_array(self["T"][-1, :], plev < self.pmin)
-
-        return np.argmin(np.abs(T - 273.15))
-
     def get_cold_point_plev(self, interpolate=False):
         """Return the cold point pressure.
 
@@ -385,23 +374,33 @@ class Atmosphere(Component):
             # Return the single coldest point on the actual pressure grid.
             return self["plev"][self.get_cold_point_index()]
 
-    def get_freezing_point_plev(self, interpolate=False):
-        """Return the cold point pressure.
+    def get_triple_point_index(self):
+        """Return the model level index at the triple point.
 
-        Paramteres:
-            interpolate (bool): If `False` return the pressure grid value of
-                the closest point to T=0°C. If `True` perform a quadratic fit
-                to retrieve a smoother estimate of the freezing point pressure.
+        The triple point is taken at the temperature closest to 0 C.
 
         Returns:
-            float: Pressure at the freezing point [Pa].
+            int: Model level index at the triple point.
         """
+        plev = self["plev"]
+        T = self["T"][0, :]
 
+        return np.argmin(np.abs(T[np.where(plev > self.pmin)] - 273.15))
+
+    def get_triple_point_plev(self, interpolate=False):
+        """
+        Return the pressure at the triple point.
+
+        The triple point is taken at the temperature closest to 0 C.
+
+        Returns:
+            float: Pressure at the triple point [Pa].
+        """
         if interpolate:
             # Use the single coldest level between troposphere and stratosphere
             # as starting point.
             plog = np.log(self["plev"])
-            idx = self.get_freezing_point_index()
+            idx = self.get_triple_point_index()
 
             # Select a symmetric region [in ln(p)] around that level.
             mask = np.logical_and(
@@ -417,38 +416,14 @@ class Atmosphere(Component):
                 deg=1,
             )
 
-            # Use a and b to determine the minmum of f(x) anayltically:
+            # Use a and b to determine the minimum of f(x) anayltically:
             # f'(x) = 0
             # 2 * a * x + b = 0
             # x = -b / (2 * a)
             return np.exp(273.15 / popt[0] - popt[1] / (popt[0]))
         else:
-            # Return the single coldest point on the actual pressure grid.
-            return self["plev"][self.get_freezing_point_index()]
-
-    def get_triple_point_index(self):
-        """Return the model level index at the triple point.
-
-        The triple point is taken at the temperature closest to 0 C.
-
-        Returns:
-            int: Model level index at the triple point.
-        """
-        plev = self["plev"]
-        T = self["T"][0, :]
-
-        return np.argmin(np.abs(T[np.where(plev > self.pmin)] - 273.15))
-
-    def get_triple_point_plev(self):
-        """
-        Return the pressure at the triple point.
-
-        The triple point is taken at the temperature closest to 0 C.
-
-        Returns:
-            float: Pressure at the triple point [Pa].
-        """
-        return self["plev"][self.get_triple_point_index()]
+            # Return the triple point on the actual pressure grid.
+            return self["plev"][self.get_triple_point_index()]
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
