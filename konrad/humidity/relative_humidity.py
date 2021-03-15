@@ -281,7 +281,7 @@ class Romps14(RelativeHumidityModel):
 class PolynomialCshapedRH(RelativeHumidityModel):
     def __init__(
         self,
-        top_peak_T=None,
+        top_peak_T=200.0,
         top_peak_rh=0.75,
         freezing_pt_rh=0.4,
         bl_top_p=940e2,
