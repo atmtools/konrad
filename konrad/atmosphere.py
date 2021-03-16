@@ -416,11 +416,11 @@ class Atmosphere(Component):
                 deg=1,
             )
 
-            # Use a and b to determine the minimum of f(x) anayltically:
-            # f'(x) = 0
-            # 2 * a * x + b = 0
-            # x = -b / (2 * a)
-            return np.exp(273.15 / popt[0] - popt[1] / (popt[0]))
+            # Use a and b to determine the of f(x) = 273.15 anayltically:
+            # f(x) = 273.15
+            # a * x + b = 273.15
+            # x = 273.15 / a - b / a
+            return np.exp(273.15 / popt[0] - popt[1] / popt[0])
         else:
             # Return the triple point on the actual pressure grid.
             return self["plev"][self.get_triple_point_index()]
