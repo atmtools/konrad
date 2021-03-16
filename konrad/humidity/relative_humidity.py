@@ -308,8 +308,10 @@ class PolynomialCshapedRH(RelativeHumidityModel):
 
         ## Convert percent to dimensionless
         if any(np.array([top_peak_rh, freezing_pt_rh, bl_top_rh, surface_rh]) > 1) :
-            print("Some RH values are given above 1, make sure RH is not in %. If this was done on purpose, ignore this warning")
-            # TODO : Make this a warning ?
+            raise ValueError(
+                "Some RH values are given above 1, make sure RH is not in %. "
+                "If this was done on purpose, ignore this warning"
+            )
 
         # Affect values to self
         self.top_peak_T = top_peak_T
