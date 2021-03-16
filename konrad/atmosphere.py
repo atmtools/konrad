@@ -11,7 +11,7 @@ from konrad import utils
 from konrad.component import Component
 
 __all__ = [
-    'Atmosphere',
+    "Atmosphere",
 ]
 
 logger = logging.getLogger(__name__)
@@ -28,21 +28,23 @@ class Atmosphere(Component):
             ``get_triple_point_index`` are looking for levels with higher
             pressure (closer to the surface) only.
     """
+
     atmosphere_variables = [
-        'T',
-        'H2O',
-        'N2O',
-        'O3',
-        'O2',
-        'CO2',
-        'CO',
-        'CH4',
-        'CFC11',
-        'CFC12',
-        'CFC22',
-        'CCl4',
+        "T",
+        "H2O",
+        "N2O",
+        "O3",
+        "O2",
+        "CO2",
+        "CO",
+        "CH4",
+        "CFC11",
+        "CFC12",
+        "CFC22",
+        "CCl4",
     ]
-    pmin = 10e2
+
+    pmin = 10e2  # Minimum pressure used as threshold between upper and lower atmosphere [Pa].
 
     def __init__(self, phlev):
         """Initialise atmosphere component.
@@ -61,9 +63,9 @@ class Atmosphere(Component):
         plev = utils.plev_from_phlev(phlev)
 
         self.coords = {
-            'time': np.array([]),  # time dimension
-            'plev': plev,  # pressure at full-levels
-            'phlev': phlev,  # pressure at half-levels
+            "time": np.array([]),  # time dimension
+            "plev": plev,  # pressure at full-levels
+            "phlev": phlev,  # pressure at half-levels
         }
 
         for varname in self.atmosphere_variables:
@@ -71,8 +73,8 @@ class Atmosphere(Component):
 
         # TODO: Combine with ``tracegases_rcemip``?
         self.create_variable(
-            name='T',
-            data=utils.standard_atmosphere(plev, coordinates='pressure'),
+            name="T",
+            data=utils.standard_atmosphere(plev, coordinates="pressure"),
         )
         self.update_height()
 
@@ -91,15 +93,17 @@ class Atmosphere(Component):
 
         def _extract_profile(atmfield, species):
             try:
-                arts_key = constants.variable_description[species]['arts_name']
+                arts_key = constants.variable_description[species]["arts_name"]
             except KeyError:
                 logger.warning(f'No variabel description for "{species}".')
             else:
                 return atmfield.get(arts_key, keep_dims=False)
 
-        datadict = {var: _extract_profile(atm_fields_compact, var)
-                    for var in cls.atmosphere_variables}
-        datadict['plev'] = atm_fields_compact.grids[1]
+        datadict = {
+            var: _extract_profile(atm_fields_compact, var)
+            for var in cls.atmosphere_variables
+        }
+        datadict["plev"] = atm_fields_compact.grids[1]
 
         return cls.from_dict(datadict)
 
@@ -115,10 +119,9 @@ class Atmosphere(Component):
 
         # Check if the XML file contains an atm_fields_compact (GriddedField4).
         arts_type = typhon.arts.utils.get_arts_typename(griddedfield)
-        if arts_type != 'GriddedField4':
+        if arts_type != "GriddedField4":
             raise TypeError(
-                'XML file contains "{}". Expected "GriddedField4".'.format(
-                    arts_type)
+                'XML file contains "{}". Expected "GriddedField4".'.format(arts_type)
             )
 
         return cls.from_atm_fields_compact(griddedfield, **kwargs)
@@ -134,7 +137,7 @@ class Atmosphere(Component):
         #  Consider a more flexible user interface.
 
         # Create a Dataset with time and pressure dimension.
-        d = cls(phlev=dictionary['phlev'])
+        d = cls(phlev=dictionary["phlev"])
 
         for var in cls.atmosphere_variables:
             val = dictionary.get(var)
@@ -158,39 +161,39 @@ class Atmosphere(Component):
         """
 
         def _return_profile(ds, var, ts):
-            return ds[var][ts, :] if 'time' in ds[var].dimensions else ds[var][:]
+            return ds[var][ts, :] if "time" in ds[var].dimensions else ds[var][:]
 
         with netCDF4.Dataset(ncfile) as root:
-            if 'atmosphere' in root.groups:
-                dataset = root['atmosphere']
+            if "atmosphere" in root.groups:
+                dataset = root["atmosphere"]
             else:
                 dataset = root
 
             datadict = {
                 var: np.array(_return_profile(dataset, var, timestep), dtype="float64")
-                for var in cls.atmosphere_variables if var in dataset.variables
+                for var in cls.atmosphere_variables
+                if var in dataset.variables
             }
-            datadict['phlev'] = np.array(root['phlev'][:], dtype="float64")
+            datadict["phlev"] = np.array(root["phlev"][:], dtype="float64")
 
         return cls.from_dict(datadict)
 
     def to_atm_fields_compact(self):
         """Convert an atmosphere into an ARTS atm_fields_compact."""
         # Store all atmosphere variables including geopotential height.
-        variables = self.atmosphere_variables + ['z']
+        variables = self.atmosphere_variables + ["z"]
 
         # Get ARTS variable name from variable description.
-        species = [constants.variable_description[var].get('arts_name')
-                   for var in variables]
+        species = [
+            constants.variable_description[var].get("arts_name") for var in variables
+        ]
 
         # Create a GriddedField4.
         atmfield = typhon.arts.types.GriddedField4()
 
         # Set grids and their names.
-        atmfield.gridnames = ['Species', 'Pressure', 'Longitude', 'Latitude']
-        atmfield.grids = [
-            species, self['phlev'], np.array([]), np.array([])
-        ]
+        atmfield.gridnames = ["Species", "Pressure", "Longitude", "Latitude"]
+        atmfield.grids = [species, self["phlev"], np.array([]), np.array([])]
 
         # The profiles have to be passed in "stacked" form, as an ndarray of
         # dimensions [species, pressure, lat, lon].
@@ -203,10 +206,10 @@ class Atmosphere(Component):
                 fill_value="extrapolate",
             )
             profiles.append(
-                    f(np.log(self["phlev"])).reshape(1, self['phlev'].size, 1, 1)
+                f(np.log(self["phlev"])).reshape(1, self["phlev"].size, 1, 1)
             )
         atmfield.data = np.vstack(profiles)
-        atmfield.dataname = 'Data'
+        atmfield.dataname = "Data"
 
         # Perform a consistency check of the passed grids and data tensor.
         atmfield.check_dimension()
@@ -215,13 +218,15 @@ class Atmosphere(Component):
 
     def hash_attributes(self):
         """Create hash based on some basic characteristics"""
-        return hash((
-            self['plev'].min(),  # Pressure at top of the atmosphere
-            self['plev'].max(),  # Surface pressure
-            self['plev'].size,  # Number of pressure layers
-            np.round(self['CO2'][0] / 1e-6),  # CO2 ppmv
-            np.round(self['T'][-1, 0], 3),  # Surface temperature
-        ))
+        return hash(
+            (
+                self["plev"].min(),  # Pressure at top of the atmosphere
+                self["plev"].max(),  # Surface pressure
+                self["plev"].size,  # Number of pressure layers
+                np.round(self["CO2"][0] / 1e-6),  # CO2 ppmv
+                np.round(self["T"][-1, 0], 3),  # Surface temperature
+            )
+        )
 
     def refine_plev(self, phlev, **kwargs):
         """Refine the pressure grid of an atmosphere object.
@@ -245,14 +250,19 @@ class Atmosphere(Component):
         datadict = dict()
 
         # Store new pressure grid.
-        datadict['phlev'] = phlev
+        datadict["phlev"] = phlev
         plev = utils.plev_from_phlev(phlev)
 
         # Loop over all atmospheric variables...
         for variable in self.atmosphere_variables:
             # and create an interpolation function using the original data.
-            f = interp1d(self['plev'], self[variable],
-                         axis=-1, fill_value='extrapolate', **kwargs)
+            f = interp1d(
+                self["plev"],
+                self[variable],
+                axis=-1,
+                fill_value="extrapolate",
+                **kwargs,
+            )
 
             # Store the interpolated new data in the data directory.
             datadict[variable] = f(plev).ravel()
@@ -277,7 +287,7 @@ class Atmosphere(Component):
             konrad.atmosphere: copy of the atmosphere
         """
         datadict = dict()
-        datadict['phlev'] = copy(self['phlev'])  # Copy pressure grid.
+        datadict["phlev"] = copy(self["phlev"])  # Copy pressure grid.
 
         # Create copies (and not references) of all atmospheric variables.
         for variable in self.atmosphere_variables:
@@ -292,9 +302,9 @@ class Atmosphere(Component):
         """Calculate the geopotential height."""
         g = constants.earth_standard_gravity
 
-        plev = self['plev']  # Air pressure at full-levels.
-        phlev = self['phlev']  # Air pressure at half-levels.
-        T = self['T']  # Air temperature at full-levels.
+        plev = self["plev"]  # Air pressure at full-levels.
+        phlev = self["phlev"]  # Air pressure at half-levels.
+        T = self["T"]  # Air temperature at full-levels.
 
         rho = typhon.physics.density(plev, T)
         dp = np.hstack((np.array([plev[0] - phlev[0]]), np.diff(plev)))
@@ -307,11 +317,11 @@ class Atmosphere(Component):
         """Update the value for height."""
         z = self.calculate_height()
         # If height is already in Dataset, update its values.
-        if 'z' in self.data_vars:
-            self.set('z', z)
+        if "z" in self.data_vars:
+            self.set("z", z)
         # Otherwise create the DataArray.
         else:
-            self.create_variable('z', z)
+            self.create_variable("z", z)
 
     def get_cold_point_index(self):
         """Return the model level index at the cold point.
@@ -319,10 +329,10 @@ class Atmosphere(Component):
         Returns:
             int: Model level index at the cold point.
         """
-        plev = self['plev'][:]
-        T = self['T'][-1, :]
+        plev = self["plev"][:]
+        T = np.ma.masked_array(self["T"][-1, :], plev < self.pmin)
 
-        return np.argmin(T[plev > self.pmin])
+        return np.argmin(T)
 
     def get_cold_point_plev(self, interpolate=False):
         """Return the cold point pressure.
@@ -362,7 +372,7 @@ class Atmosphere(Component):
             return np.exp(-popt[1] / (2 * (popt[0])))
         else:
             # Return the single coldest point on the actual pressure grid.
-            return self['plev'][self.get_cold_point_index()]
+            return self["plev"][self.get_cold_point_index()]
 
     def get_triple_point_index(self):
         """Return the model level index at the triple point.
@@ -372,12 +382,12 @@ class Atmosphere(Component):
         Returns:
             int: Model level index at the triple point.
         """
-        plev = self['plev']
-        T = self['T'][0, :]
+        plev = self["plev"]
+        T = self["T"][0, :]
 
         return np.argmin(np.abs(T[np.where(plev > self.pmin)] - 273.15))
 
-    def get_triple_point_plev(self):
+    def get_triple_point_plev(self, interpolate=False):
         """
         Return the pressure at the triple point.
 
@@ -386,11 +396,38 @@ class Atmosphere(Component):
         Returns:
             float: Pressure at the triple point [Pa].
         """
-        return self['plev'][self.get_triple_point_index()]
+        if interpolate:
+            # Use the single coldest level between troposphere and stratosphere
+            # as starting point.
+            plog = np.log(self["plev"])
+            idx = self.get_triple_point_index()
+
+            # Select a symmetric region [in ln(p)] around that level.
+            mask = np.logical_and(
+                plog > plog[idx] - 0.25,
+                plog <= plog[idx] + 0.25,
+            )
+
+            # Fit a linear polynomial to the temperature profile
+            # around the freezing point: f(x) = a*x + b
+            popt = np.polyfit(
+                plog[mask],
+                self["T"][-1, mask],
+                deg=1,
+            )
+
+            # Use a and b to determine the of f(x) = 273.15 anayltically:
+            # f(x) = 273.15
+            # a * x + b = 273.15
+            # x = 273.15 / a - b / a
+            return np.exp(273.15 / popt[0] - popt[1] / popt[0])
+        else:
+            # Return the triple point on the actual pressure grid.
+            return self["plev"][self.get_triple_point_index()]
 
     def get_lapse_rates(self):
         """Calculate the temperature lapse rate at each level."""
-        return np.gradient(self['T'][0, :], self['z'][0, :])
+        return np.gradient(self["T"][0, :], self["z"][0, :])
 
     def get_potential_temperature(self, p0=1000e2):
         r"""Calculate the potential temperature.
@@ -405,8 +442,8 @@ class Atmosphere(Component):
               ndarray: Potential temperature [K].
         """
         # Get view on temperature and pressure arrays.
-        T = self['T'][0, :]
-        p = self['plev']
+        T = self["T"][0, :]
+        p = self["plev"]
 
         # Calculate the potential temperature.
         return T * (p0 / p) ** (2 / 7)
@@ -421,8 +458,8 @@ class Atmosphere(Component):
               ndarray: Static stability [K/Pa].
         """
         # Get view on temperature and pressure arrays.
-        t = self['T'][0, :]
-        p = self['plev']
+        t = self["T"][0, :]
+        p = self["plev"]
 
         # Calculate potential temperature and its vertical derivative.
         theta = self.get_potential_temperature()
@@ -454,7 +491,7 @@ class Atmosphere(Component):
         Returns:
               int: Level index of maximum subsidence divergence.
         """
-        plev = self['plev']
+        plev = self["plev"]
         omega = self.get_diabatic_subsidence(radiative_cooling)
         domega = np.gradient(omega, plev)
 
@@ -464,14 +501,12 @@ class Atmosphere(Component):
         # ln(p)-space to prevent this problem.
         weights = domega.clip(min=0.0)
         _m = plev > self.pmin
-        ctop = np.exp(
-            np.sum(weights[_m] * np.log(plev[_m])) / np.sum(weights[_m])
-        )
+        ctop = np.exp(np.sum(weights[_m] * np.log(plev[_m])) / np.sum(weights[_m]))
 
         # Map the calculated pressure to the closest value in the p-grid.
         max_index = np.abs(plev - ctop).argmin()
 
-        self.create_variable('diabatic_convergence_max_index', [max_index])
+        self.create_variable("diabatic_convergence_max_index", [max_index])
 
         return max_index
 
@@ -486,9 +521,9 @@ class Atmosphere(Component):
               float: Pressure of maximum subsidence divergence [Pa].
         """
         max_idx = self.get_subsidence_convergence_max_index(radiative_cooling)
-        max_plev = self['plev'][max_idx]
+        max_plev = self["plev"][max_idx]
 
-        self.create_variable('diabatic_convergence_max_plev', [max_plev])
+        self.create_variable("diabatic_convergence_max_plev", [max_plev])
 
         return max_plev
 
@@ -503,7 +538,7 @@ class Atmosphere(Component):
         """
         cpd = constants.isobaric_mass_heat_capacity_dry_air
         cpv = constants.isobaric_mass_heat_capacity_water_vapor
-        x = self['H2O'][-1]
+        x = self["H2O"][-1]
 
         return x * (cpv - cpd) + cpd
 
@@ -516,16 +551,16 @@ class Atmosphere(Component):
         self.update_height()
 
         concentrations = {
-            'H2O': utils.humidity_profile_rcemip(self.get('z')),
-            'CO2': 348e-6,
-            'CH4': 1650e-9,
-            'N2O': 306e-9,
-            'CO': 0,
-            'O3': utils.ozone_profile_rcemip(self.get('plev')),
-            'CFC11': 0,
-            'CFC12': 0,
-            'CFC22': 0,
-            'CCl4': 0,
+            "H2O": utils.humidity_profile_rcemip(self.get("z")),
+            "CO2": 348e-6,
+            "CH4": 1650e-9,
+            "N2O": 306e-9,
+            "CO": 0,
+            "O3": utils.ozone_profile_rcemip(self.get("plev")),
+            "CFC11": 0,
+            "CFC12": 0,
+            "CFC22": 0,
+            "CCl4": 0,
         }
 
         for gas, vmr in concentrations.items():
