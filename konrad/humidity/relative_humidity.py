@@ -340,7 +340,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         bl_rh = bl_func(plev[plev > self.bl_top_p])
 
         ## Between the top of the b.l. and the freezing point (fp)
-        fp_p = atmosphere.get_triple_plot_plev()
+        fp_p = atmosphere.get_triple_point_plev(interpolate=True)
         # Quadratic function of p going through both point with a zero slope at freezing level:
         def bottom_func(p):
             return (self.bl_top_rh - self.freezing_pt_rh) / (
@@ -350,7 +350,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         bottom_rh = bottom_func(plev[(plev <= self.bl_top_p) & (plev > fp_p)])
 
         ## Between the freezing point and the cold-point
-        fp_T = atmosphere["T"][-1, atmosphere.get_triple_plot_index()]
+        fp_T = 273.15
         if self.top_peak_T == None:
             top_peak_T = atmosphere["T"][-1, atmosphere.get_cold_point_index()]
         else:
