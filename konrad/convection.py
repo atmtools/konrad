@@ -135,7 +135,7 @@ class NonConvective(Convection):
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
-    def __init__(self, entrainment=None, etol=1e-3):
+    def __init__(self, entrainment=None, etol=1e-4):
         """Initialize the convective adjustment.
 
         Parameters:

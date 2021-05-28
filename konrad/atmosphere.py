@@ -553,6 +553,7 @@ class Atmosphere(Component):
         concentrations = {
             "H2O": utils.humidity_profile_rcemip(self.get("z")),
             "CO2": 348e-6,
+            "O2": 0.2095,
             "CH4": 1650e-9,
             "N2O": 306e-9,
             "CO": 0,

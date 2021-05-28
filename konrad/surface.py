@@ -120,7 +120,7 @@ class Surface(Component, metaclass=abc.ABCMeta):
 
 class SlabOcean(Surface):
     """Surface model with adjustable temperature."""
-    def __init__(self, *args, depth=1.0, heat_sink=66.0, **kwargs):
+    def __init__(self, *args, depth=50.0, heat_sink=66.0, **kwargs):
         """Initialize a slab ocean.
 
         Parameters:
