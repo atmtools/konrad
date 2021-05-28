@@ -37,6 +37,7 @@ __all__ = [
     'NonConvective',
     'HardAdjustment',
     'RelaxedAdjustment',
+    'FixedDynamicalHeating',
 ]
 
 
@@ -465,3 +466,23 @@ class RelaxedAdjustment(HardAdjustment):
         tf = 1 - np.exp(-timestep / tau)
 
         return atmosphere["T"][0] * (1 - tf) + tf * T_con
+
+class FixedDynamicalHeating(HardAdjustment):
+    """Adjustment with a fixed convective (dynamical) heating rate.
+    """
+    def __init__(self, heating=None, *args, **kwargs):
+        """
+        Parameters:
+            heating (ndarray): Array of convective heating values [K/day]
+        """
+        super().__init__(*args, **kwargs)
+        self._heating = heating
+
+    def stabilize(self, atmosphere, lapse, surface, timestep):
+        p = atmosphere["plev"]
+        T_rad = atmosphere["T"][-1]
+        T_new = T_rad + timestep * self._heating
+
+        self.update_convective_top(T_rad, T_new, p, timestep=timestep)
+        
+        atmosphere["T"][-1] = T_new
