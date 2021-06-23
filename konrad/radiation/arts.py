@@ -394,7 +394,7 @@ class ARTS(RRTMG):
             'plev': atmosphere['plev'],
         }
 
-    def update_heatingrates(self, atmosphere, surface, cloud):
+    def update_heatingrates(self, atmosphere, surface, cloud=None):
         """Returns `xr.Dataset` containing radiative transfer results."""
         self.calc_radiation(atmosphere, surface, cloud)
 
