@@ -125,7 +125,7 @@ class _ARTS:
         if threads is not None:
             self.ws.SetNumberOfThreads(threads)
 
-    def calc_lookup_table(self, filename=None):
+    def calc_lookup_table(self, filename=None, fnum=2**15, wavenumber=None):
         """Calculate an absorption lookup table.
 
         The lookup table is constructed to cover surface temperatures
@@ -141,9 +141,13 @@ class _ARTS:
         Parameters:
             filename (str): (Optional) path to an ARTS XML file
                 to store the lookup table.
+            fnum (int): Number of frequencies in frequency grid.
+                Ignored if `wavenumber` is set.
+            wavenumber (ndarray): Wavenumber grid [m-1].
         """
         # Create a frequency grid
-        wavenumber = np.linspace(10e2, 3_250e2, 2**15)  # 1 to 3000cm^-1
+        if wavenumber is None:
+            wavenumber = np.linspace(10e2, 3_250e2, fnum)
         self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
 
         # Read line catagloge and create absorption lines.
