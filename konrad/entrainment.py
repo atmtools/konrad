@@ -35,13 +35,15 @@ class NoEntrainment(Entrainment):
 
 
 class ZeroBuoyancyEtrainingPlume(Entrainment):
-    """Zero-buoyancy entraining plume.
+    """Zero-buoyancy entraining plume with a height-dependent weighting coefficient.
 
-    Adjustment with a lapse rate affected by entrainment below the freezing level.
-    Following moist-adiabat at the upper (T_con=T_rad)  and lower boundaries (surface).
-    Reduced temperature in between, minimum at freezing level (273.15 kelvin).
-    Temperature reduction from entrainment following the zero-buoyancy entraining plume
-    model as described by Singh&O'Gorman (2013).
+    Adjustment with a lapse rate affected by entrainment between the cloud base
+    (960hPa to convective top). Following moist-adiabat at the upper (T_con=T_rad)
+    and lower boundaries (surface). Deviating from moist-adiabat in between.
+    Initial temperature reduction from entrainment following the zero-buoyancy
+    entraining plume model as described by Singh&O'Gorman (2013). Applying a
+    height-dependent coefficient to the initial ttemperature reduction to mimick
+    the buoyancy-sorting effect of convection as described in Bao et al. (submitted).
     """
 
     def __init__(self, entr=0.5):
@@ -79,15 +81,19 @@ class ZeroBuoyancyEtrainingPlume(Entrainment):
 
         RH = vmr2relative_humidity(atmosphere["H2O"][0, :], p, atmosphere["T"][0, :])
         RH = np.where(RH > 1, 1, RH)
+
         RH_hlev = interp1d(np.log(p), RH, fill_value="extrapolate")(np.log(phlev[:-1]))
 
+        entr = self.entr
         deltaT = np.ones_like(p) * 0.0
         k_cb = np.max(np.where(p >= 96000.0))
+
+        # First calculate temperature deviation based on Eq. (4) in Singh&O'Gorman (2013)
         deltaT[k_cb:] = (
             1
             / (1 + L / (Rv * T_con_adiabat[k_cb:] ** 2) * L * q_saturated[k_cb:] / Cp)
             * np.cumsum(
-                self.entr
+                entr
                 / zhlev[k_cb:]
                 * (1 - RH_hlev[k_cb:])
                 * L
@@ -96,15 +102,17 @@ class ZeroBuoyancyEtrainingPlume(Entrainment):
                 * dz_lapse[k_cb:]
             )
         )
+        # Second weight deltaT obtained from above by a height-dependent coefficient,
+        # as described in Eq. (4) in Bao et al. (submitted).
+        if np.any(T_con_adiabat > T_rad):
+            k_ttl = np.max(np.where(T_con_adiabat > T_rad))
+            z_ttl = z[k_ttl]
+            z_cb = z[k_cb]
 
-        k_fl = np.max(np.where(T_con_adiabat - deltaT >= 273.15))
-        p_fl = p[k_fl]
-        p_ttl = p[k_ttl]
-
-        f = lambda x: x ** (1.0 / 1.5)
-        weight = f((p[k_fl : k_ttl + 1] - p_ttl) / (p_fl - p_ttl))
-        deltaT[k_fl : k_ttl + 1] = deltaT[k_fl : k_ttl + 1] * weight
-        deltaT[k_ttl + 1 :] = 0
+            f = lambda x: x ** (2.0 / 3.0)
+            weight = f((z[k_cb : k_ttl + 1] - z_ttl) / (z_cb - z_ttl))
+            deltaT[k_cb : k_ttl + 1] = deltaT[k_cb : k_ttl + 1] * weight
+            deltaT[k_ttl + 1 :] = 0
 
         self.create_variable(
             name="entrainment_cooling",
