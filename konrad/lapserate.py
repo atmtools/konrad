@@ -24,6 +24,7 @@ import abc
 
 import numpy as np
 from typhon.physics import vmr2mixing_ratio, density
+from scipy.integrate import ode
 from scipy.interpolate import interp1d
 
 from konrad import constants
@@ -130,3 +131,37 @@ class DryLapseRate(FixedLapseRate):
         gamma_d = g / c_p
 
         super().__init__(lapserate=gamma_d)
+
+
+def get_moist_adiabat(p, T_s=300.0, T_min=155.0):
+    """Create a moist-adiabat from a given surface T up to the cold point.
+
+    Warning:
+        For very high surface temperatures (>320 K) the pressure grid needs a
+        high resolution, otherwise the integration becomes unstable due to the
+        large lapse-rate at low pressures.
+
+    Parameters:
+        p (ndarray): Pressure levels [Pa].
+        T_s (float): Surface temperautre [K].
+        T_min (float): Cold-point temperature (constant temperature above).
+
+    Returns:
+        ndarray: Moist-adiabativ temperature profile.
+
+    """
+    dTdp = MoistLapseRate().calc_lapse_rate
+
+    r = ode(dTdp).set_integrator("lsoda", atol=1e-4)
+    r.set_initial_value(T_s, p[0])
+
+    T = np.zeros_like(p)
+    i = 0
+    dp = np.gradient(p)
+    while r.successful() and (r.t > p.min() and r.y[0] > T_min):
+        r.integrate(r.t + dp[i])
+        T[i] = r.y[0]
+        i += 1
+
+    return T.clip(min=T_min)
+

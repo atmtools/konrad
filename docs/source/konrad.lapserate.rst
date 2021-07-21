@@ -10,3 +10,4 @@ Lapse Rate
    MoistLapseRate
    FixedLapseRate
    DryLapseRate
+   get_moist_adiabat
