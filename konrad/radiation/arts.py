@@ -299,20 +299,18 @@ class _ARTS:
 
         return self.ws.f_grid.value.copy(), tau
 
-    def calc_radiative_fluxes(self, atmosphere, surface):
-        """Calculate radiative fluxes.
+    @staticmethod
+    def integrate_spectral_irradiance(frequency, irradiance):
+        """Integrate the spectral irradiance field over the frequency.
 
         Parameters:
-            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
-            surface (konrad.surface.Surface): Surface model.
+            frequency (ndarray): Frequency [Hz].
+            irradiance (ndarray): Spectral irradiance [W m^-2 / Hz].
 
         Returns:
             ndarray, ndarray: Downward flux, upward, flux [W m^-2]
         """
-        f, plev, irradiance_field, _ = self.calc_spectral_irradiance_field(
-            atmosphere=atmosphere, t_surface=surface["temperature"][0]
-        )
-        F = np.trapz(irradiance_field, f, axis=0)[:, 0, 0, :]
+        F = np.trapz(irradiance, frequency, axis=0)[:, 0, 0, :]
 
         # Fluxes
         lw_down = -F[:, 0]
@@ -337,10 +335,12 @@ class _ARTS:
 
 
 class ARTS(RRTMG):
-    def __init__(self, *args, arts_kwargs={}, **kwargs):
+    def __init__(self, store_spectral_olr=False, *args, arts_kwargs={}, **kwargs):
         """Radiation class to provide line-by-line longwave fluxes.
 
         Parameters:
+            store_spectral_olr (bool): Store spectral OLR in netCDF file.
+                This will significantly increase the output size.
             args: Positional arguments are used to initialize
                 `konrad.radiation.RRTMG`.
             arts_kwargs (dict): Keyword arguments that are used to initialize
@@ -350,6 +350,7 @@ class ARTS(RRTMG):
         """
         super().__init__(*args, **kwargs)
 
+        self.store_spectral_olr = store_spectral_olr
         self._arts = _ARTS(**arts_kwargs)
 
     def calc_radiation(self, atmosphere, surface, cloud):
@@ -368,7 +369,10 @@ class ARTS(RRTMG):
         sw_fluxes = sw_dT_fluxes[1]
 
         # Perform ARTS simulation
-        Fd, Fu = self._arts.calc_radiative_fluxes(atmosphere, surface)
+        f, _, irradiance_field, _ = self._arts.calc_spectral_irradiance_field(
+            atmosphere=atmosphere, t_surface=surface["temperature"][0]
+        )
+        Fd, Fu = self._arts.integrate_spectral_irradiance(f, irradiance_field)
 
         # Interpolate RT results on fine original grid
         def _reshape(x, trim=-1):
@@ -397,6 +401,14 @@ class ARTS(RRTMG):
             'phlev': atmosphere['phlev'],
             'plev': atmosphere['plev'],
         }
+
+        if self.store_spectral_olr:
+            self.coords.update({'frequency': f})
+            self.create_variable(
+                name="outgoing_longwave_radiation",
+                data=irradiance_field[:, -1, 0, 0, 1].reshape(1, -1),
+                dims=("time", "frequency"),
+            )
 
     def update_heatingrates(self, atmosphere, surface, cloud=None):
         """Returns `xr.Dataset` containing radiative transfer results."""

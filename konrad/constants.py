@@ -224,14 +224,23 @@ variable_description = {
         'standard_name':
             'tendency_of_air_temperature_due_to_radiative_heating',
         },
+    'deltaT': {
+        'units': 'K / day',
+        'standard_name': 'tendency_of_air_temperature',
+        },
+    # Radiation
     'toa': {
         'units': 'W / m**2',
         'standard_name':
             'radiation_budget_at_top_of_the_atmosphere',
     },
-    'deltaT': {
-        'units': 'K / day',
-        'standard_name': 'tendency_of_air_temperature',
+    'frequency': {
+        'units': 'Hz',
+        'standard_name': 'frequency',
+        },
+    'outgoing_longwave_radiation': {
+        'units': 'W / m**2 / Hz',
+        'standard_name': 'spectral_outgoing_longwave_radiation_at_top_of_the_atmospher',
         },
     # Surface parameters
     'albedo': {
