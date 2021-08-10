@@ -179,7 +179,7 @@ class _ARTS:
         atmosphere["O2"][:] = 0.2095
         atmosphere["CO2"][:] = 1.5 * 348e-6
 
-        h2o = 0.03 * (p_grid / 1000e2)**0.2
+        h2o = 0.01 * (p_grid / 1000e2)**0.2
         atmosphere["H2O"][:] = h2o[:-1]
 
         # Convert the konrad atmosphere into an ARTS atm_fields_compact.
@@ -198,7 +198,7 @@ class _ARTS:
         self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
         self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
         self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
-        self.ws.abs_t_pert = np.arange(-160, 41, 20)
+        self.ws.abs_t_pert = np.arange(-160, 61, 20)
 
         nls_idx = [i for i, tag in enumerate(self.ws.abs_species.value)
                    if "H2O" in tag[0]]
@@ -207,7 +207,7 @@ class _ARTS:
                 species=[", ".join(self.ws.abs_species.value[nls_idx[0]])],
         )
 
-        self.ws.abs_nls_pert = np.array([10**n for n in range(-7, 2)])
+        self.ws.abs_nls_pert = np.array([10**x for x in [-9, -7, -5, -3, -1, 0, 0.5, 1, 1.5, 2]])
 
         # Run checks
         self.ws.abs_xsec_agenda_checkedCalc()
