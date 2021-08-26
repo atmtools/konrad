@@ -376,7 +376,7 @@ class RCE():
             if not np.isnan(self.co2_adjustment_timescale):
                 # Adjusts CO2 concentrations to find a equilibrium state using
                 # equation 8 of Romps 2020
-                n0 = self.surface.heat_sink
+                n0 = getattr(self.surface, "heat_sink", 66.0)
                 A = 5.35
                 tau = self.co2_adjustment_timescale
                 self.atmosphere['CO2'] += self.timestep_days * (
