@@ -13,3 +13,4 @@ Convection Scheme
    NonConvective
    HardAdjustment
    RelaxedAdjustment
+   FixedDynamicalHeating
