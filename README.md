@@ -17,7 +17,7 @@ But of course, any other Python distribution is also working.
 ## Install stable release
 You can install the latest stable version of ``konrad`` using ``pip``:
 ```bash
-pip install konrad
+python -m pip install konrad
 ```
 
 Konrad depends on the [CliMT](https://github.com/CliMT/climt) package.
@@ -28,7 +28,7 @@ However (for Python >3.7) the FORTRAN libraries need to be compiled locally.
 In this case, you need to specify a C compiler, a FORTRAN compiler, and the
 target architecture using the corresponding environment variables:
 ```bash
-CC=gcc FC=gfortran TARGET=HASWELL pip install konrad
+CC=gcc FC=gfortran TARGET=HASWELL python -m pip install konrad
 ```
 
 ### macOS
@@ -44,4 +44,7 @@ CC=gcc-11 FC=gfortran-11
 # Install a trimmed down version of CliMT that ships RRTMG only.
 export CC FC TARGET
 python -m pip install git+https://github.com/atmtools/climt@rrtmg-only
+
+# Install konrad itself
+python -m pip install konrad
 ```
