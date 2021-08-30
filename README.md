@@ -34,6 +34,14 @@ CC=gcc FC=gfortran TARGET=HASWELL pip install konrad
 ### macOS
 On macOS, you may need to install the GCC compiler suite beforehand:
 ```bash
+# Install GCC 11 and set it as C and Fortran compiler.
 brew install gcc@11
-CC=gcc-11 FC=gfortran-11 TARGET=ARMV8 python -m pip install git+https://github.com/atmtools/climt@rrtmg-only
+CC=gcc-11 FC=gfortran-11
+
+# Set the target architecture (different for Apple M1 [arm64]).
+[[ $(uname -p) == arm64 ]] && TARGET=ARMV8 || TARGET=HASWELL
+
+# Install a trimmed down version of CliMT that ships RRTMG only.
+export CC FC TARGET
+python -m pip install git+https://github.com/atmtools/climt@rrtmg-only
 ```
