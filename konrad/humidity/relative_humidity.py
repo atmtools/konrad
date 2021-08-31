@@ -279,6 +279,15 @@ class Romps14(RelativeHumidityModel):
 
 
 class PolynomialCshapedRH(RelativeHumidityModel):
+    """
+        Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
+        The RH increases linearly in the boundary layer from the surface.
+        Between the top of the boundary layer and the freezing level (T=273.15K), the rh is a quadratic function of p,
+        defined by its values at these to points, and a zero derivative at the freezing level.
+        Above the freezing level, the rh is a quadratic function of T, defined by its values at the freezing level and
+        at a chose upper-tropospheric T-value or at the cold point (see `top_peak_T` argument), and a zero derivative
+        at the freezing level.
+    """
     def __init__(
         self,
         top_peak_T=200.0,
@@ -289,14 +298,6 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         surface_rh=0.75,
     ):
         """
-        Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
-        The RH increases linearly in the boundary layer from the surface.
-        Between the top of the boundary layer and the freezing level (T=273.15K), the rh is a quadratic function of p,
-        defined by its values at these to points, and a zero derivative at the freezing level.
-        Above the freezing level, the rh is a quadratic function of T, defined by its values at the freezing level and
-        at a chose upper-tropospheric T-value or at the cold point (see `top_peak_T` argument), and a zero derivative
-        at the freezing level.
-
         Parameters:
             top_peak_T (float): Temperature of the upper tropospheric peak. If None, coupled to the cold-point.
             top_peak_rh (float in [0;1]): value of relative humidity at the upper-tropospheric peak.
@@ -309,7 +310,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         ## Convert percent to dimensionless
         if any(np.array([top_peak_rh, freezing_pt_rh, bl_top_rh, surface_rh]) > 1) :
             raise ValueError(
-                "Some RH values are given above 1, make sure RH is not in %. "
+                "Some RH values are given above 1, make sure RH is not in %."
                 "If this was done on purpose, ignore this warning"
             )
 
@@ -456,10 +457,11 @@ class PerturbProfile(RelativeHumidityModel):
 
 
 class ProfileFromData(RelativeHumidityModel):
+    """
+        Defines a relative humidity from data.
+    """
     def __init__(self, p_data, rh_data):
         """
-        Defines a relative humidity from data.
-
         Parameters:
             p_data (np.ndarray): pressure coordinates corresponding to rh_data, in Pa
             rh_data (np.ndarray): the rh profile on p_data, in unit of RH

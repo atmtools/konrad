@@ -34,6 +34,7 @@ Relative humidity
    Romps14
    PolynomialCshapedRH
    PerturbProfile
+   ProfileFromData
 
 Stratospheric coupling
 ----------------------
