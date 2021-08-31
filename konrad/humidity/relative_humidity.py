@@ -277,7 +277,6 @@ class Romps14(RelativeHumidityModel):
         return self._rh_func(atmosphere["T"][-1, :])
 
 
-
 class PolynomialCshapedRH(RelativeHumidityModel):
     """
         Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
