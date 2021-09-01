@@ -279,14 +279,15 @@ class Romps14(RelativeHumidityModel):
 
 class PolynomialCshapedRH(RelativeHumidityModel):
     """
-        Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
-        The RH increases linearly in the boundary layer from the surface.
-        Between the top of the boundary layer and the freezing level (T=273.15K), the rh is a quadratic function of p,
-        defined by its values at these to points, and a zero derivative at the freezing level.
-        Above the freezing level, the rh is a quadratic function of T, defined by its values at the freezing level and
-        at a chose upper-tropospheric T-value or at the cold point (see `top_peak_T` argument), and a zero derivative
-        at the freezing level.
+    Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
+    The RH increases linearly in the boundary layer from the surface.
+    Between the top of the boundary layer and the freezing level (T=273.15K), the rh is a quadratic function of p,
+    defined by its values at these to points, and a zero derivative at the freezing level.
+    Above the freezing level, the rh is a quadratic function of T, defined by its values at the freezing level and
+    at a chose upper-tropospheric T-value or at the cold point (see `top_peak_T` argument), and a zero derivative
+    at the freezing level.
     """
+
     def __init__(
         self,
         top_peak_T=200.0,
@@ -307,7 +308,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
         """
 
         ## Convert percent to dimensionless
-        if any(np.array([top_peak_rh, freezing_pt_rh, bl_top_rh, surface_rh]) > 1) :
+        if any(np.array([top_peak_rh, freezing_pt_rh, bl_top_rh, surface_rh]) > 1):
             raise ValueError(
                 "Some RH values are given above 1, make sure RH is not in %."
                 "If this was done on purpose, ignore this warning"
@@ -369,7 +370,7 @@ class PolynomialCshapedRH(RelativeHumidityModel):
 
 
 class PerturbProfile(RelativeHumidityModel):
-    """ Wrapper to add a perturbation to a Relative Humidity profile. """
+    """Wrapper to add a perturbation to a Relative Humidity profile."""
 
     def __init__(
         self,
@@ -457,8 +458,9 @@ class PerturbProfile(RelativeHumidityModel):
 
 class ProfileFromData(RelativeHumidityModel):
     """
-        Defines a relative humidity from data.
+    Defines a relative humidity from data.
     """
+
     def __init__(self, p_data, rh_data):
         """
         Parameters:
