@@ -108,7 +108,7 @@ class MoistLapseRate(LapseRate):
 
 
 class FixedLapseRate(LapseRate):
-    """Fixed constant lapse rate through the whole atmosphere. Linear decrease
+    """Fixed constant lapse rate through the whole troposphere. Linear decrease
     in temperature with height."""
 
     def __init__(self, lapserate=0.0065):
