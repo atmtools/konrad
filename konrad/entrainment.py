@@ -34,7 +34,7 @@ class NoEntrainment(Entrainment):
         return T
 
 
-class ZeroBuoyancyEtrainingPlume(Entrainment):
+class ZeroBuoyancyEntrainingPlume(Entrainment):
     """Zero-buoyancy entraining plume with a height-dependent weighting coefficient.
 
     Adjustment with a lapse rate affected by entrainment between the cloud base
