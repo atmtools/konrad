@@ -16,3 +16,13 @@ Clouds
    LowCloud
    ConceptualCloud
    CloudEnsemble
+
+Cloud optics
+------------
+
+.. automodule:: konrad.cloudoptics
+
+.. autosummary::
+   :toctree: _autosummary
+
+   EchamCloudOptics
