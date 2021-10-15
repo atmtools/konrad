@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class _ARTS:
-    def __init__(self, ws=None, threads=None, nstreams=4, verbosity=0):
+    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -26,11 +26,14 @@ class _ARTS:
                 Default is all available threads.
             nstreams (int): Number of viewing angles to base the radiative
                 flux calculation on.
+            scale_vmr (bool): Control whether dry volume mixing ratios are
+                scaled with the water-vapor concentration (default is `False.`)
             verbosity (int): Control the ARTS verbosity from 0 (quiet) to 2.
         """
         from pyarts.workspace import Workspace, arts_agenda
 
         self.nstreams = nstreams
+        self.scale_vmr = scale_vmr
 
         if ws is None:
             self.ws = Workspace(verbosity=verbosity)
@@ -223,18 +226,26 @@ class _ARTS:
         """Set and check the atmospheric fields."""
         atm_fields_compact = atmosphere.to_atm_fields_compact()
 
-        # Scale dry air VMRs with water content
-        vmr_h2o = atm_fields_compact.get("abs_species-H2O")
-        total_vmr = vmr_h2o[0]
+        # Scale dry-air VMRs with H2O and CO2 content.
+        if self.scale_vmr:
+            variable_vmrs = (
+                atm_fields_compact.get("abs_species-H2O")[0]
+                + atm_fields_compact.get("abs_species-CO2")[0]
+            )
+        else:
+            t3_shape = atm_fields_compact.get("abs_species-H2O")[0].shape
+            variable_vmrs = np.zeros(t3_shape)
+
         for species in atm_fields_compact.grids[0]:
-            if species.startswith("abs_species-") and "H2O" not in species:
-                atm_fields_compact.scale(species, 1 - vmr_h2o)
-                total_vmr += atm_fields_compact.get(species)[0]
+            if (species.startswith("abs_species-")
+                and "H2O" not in species
+                and "CO2" not in species):
+                atm_fields_compact.scale(species, 1 - variable_vmrs)
 
         # Compute the N2 VMR as a residual of the full atmosphere composition.
         n2 = ty.arts.types.GriddedField3(
             grids=atm_fields_compact.grids[1:],
-            data=1 - total_vmr,
+            data=0.7808 * (1 - variable_vmrs),
         )
 
         self.ws.atm_fields_compact = atm_fields_compact
