@@ -133,7 +133,7 @@ class DryLapseRate(FixedLapseRate):
         super().__init__(lapserate=gamma_d)
 
 
-def get_moist_adiabat(p, T_s=300.0, T_min=155.0):
+def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0):
     """Create a moist-adiabat from a given surface T up to the cold point.
 
     Warning:
@@ -143,6 +143,7 @@ def get_moist_adiabat(p, T_s=300.0, T_min=155.0):
 
     Parameters:
         p (ndarray): Pressure levels [Pa].
+        p_s (float): Surface pressure [Pa].
         T_s (float): Surface temperautre [K].
         T_min (float): Cold-point temperature (constant temperature above).
 
@@ -152,14 +153,15 @@ def get_moist_adiabat(p, T_s=300.0, T_min=155.0):
     """
     dTdp = MoistLapseRate().calc_lapse_rate
 
-    r = ode(dTdp).set_integrator("lsoda", atol=1e-4)
-    r.set_initial_value(T_s, p[0])
-
     T = np.zeros_like(p)
-    i = 0
     dp = np.gradient(p)
+
+    r = ode(dTdp).set_integrator("lsoda", atol=1e-4)
+    r.set_initial_value(T_s, p[0] - dp[0] if p_s is None else p_s)
+
+    i = 0
     while r.successful() and (r.t > p.min() and r.y[0] > T_min):
-        r.integrate(r.t + dp[i])
+        r.integrate(p[i])
         T[i] = r.y[0]
         i += 1
 
