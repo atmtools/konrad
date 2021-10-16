@@ -157,7 +157,7 @@ def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0):
     dp = np.gradient(p)
 
     r = ode(dTdp).set_integrator("lsoda", atol=1e-4)
-    r.set_initial_value(T_s, p[0] - dp[0] if p_s is None else p_s)
+    r.set_initial_value(T_s, p[0] - 0.5 * dp[0] if p_s is None else p_s)
 
     i = 0
     while r.successful() and (r.t > p.min() and r.y[0] > T_min):
