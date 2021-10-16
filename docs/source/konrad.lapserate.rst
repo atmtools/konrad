@@ -10,4 +10,5 @@ Lapse Rate
    MoistLapseRate
    FixedLapseRate
    DryLapseRate
+   BoundaryLayer
    get_moist_adiabat
