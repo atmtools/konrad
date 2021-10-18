@@ -44,7 +44,10 @@ class Atmosphere(Component):
         "CCl4",
     ]
 
-    pmin = 10e2  # Minimum pressure used as threshold between upper and lower atmosphere [Pa].
+    # Minimum pressure used for detection of e.g. the cold-point temperature.
+    # This is necessary to exclude extreme outliers that can occur
+    # in the uppermost atmosphere laters.
+    pmin = 1e2
 
     def __init__(self, phlev):
         """Initialise atmosphere component.
