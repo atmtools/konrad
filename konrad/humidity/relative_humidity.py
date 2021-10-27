@@ -9,6 +9,18 @@ from konrad.physics import vmr2relative_humidity
 from konrad.utils import gaussian
 
 
+__all__ = [
+    "RelativeHumidityModel",
+    "CacheFromAtmosphere",
+    "HeightConstant",
+    "Manabe67",
+    "Cess76",
+    "Romps14",
+    "PolynomialCshapedRH",
+    "PerturbProfile",
+    "ProfileFromData",
+]
+
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
     def __call__(self, atmosphere, **kwargs):
         """Return the vertical distribution of relative humidity.
@@ -58,158 +70,6 @@ class HeightConstant(RelativeHumidityModel):
             self._rh_cache = self.rh_surface * np.ones_like(p)
 
         return self._rh_cache
-
-
-class VerticallyUniform(RelativeHumidityModel):
-    """Use a single value of relative humidity up to the convective top and
-    then a linearly decreasing value towards the cold point."""
-
-    def __init__(self, rh_surface=0.5, rh_tropopause=0.3):
-        """
-        Parameters:
-            rh_surface (float): relative humidity from the first pressure level
-                (surface) up to the convective top
-            rh_tropopause (float): relative humidity at the tropopause
-        """
-        self.rh_surface = rh_surface
-        self.rh_tropopause = rh_tropopause
-        self.convective_top = 300e2
-        self.cold_point = 100e2
-
-    def __call__(self, atmosphere, convection, **kwargs):
-        p = atmosphere["plev"]
-        self.convective_top = convection.get("convective_top_plev")[0]
-        self.cold_point = atmosphere.get_cold_point_plev()
-
-        rh = (self.rh_tropopause - self.rh_surface) / (
-            self.cold_point - self.convective_top
-        ) * (p - self.convective_top) + self.rh_surface
-        rh[p > self.convective_top] = self.rh_surface
-
-        return rh
-
-
-class ConstantFreezingLevel(RelativeHumidityModel):
-    """Constant relative humidity up to the freezing level and then
-    decreasing."""
-
-    def __init__(self, rh_surface=0.77):
-        """
-        Parameters:
-            rh_surface (float): Relative humidity at first
-                pressure level (surface)
-        """
-        self.rh_surface = rh_surface
-
-    def __call__(self, atmosphere, **kwargs):
-        plev = atmosphere["plev"]
-        rh_profile = self.rh_surface * np.ones_like(plev)
-
-        fl = atmosphere.get_triple_point_index()
-        rh_profile[fl:] = self.rh_surface * (plev[fl:] / plev[fl]) ** 1.3
-
-        return rh_profile
-
-
-class FixedUTH(RelativeHumidityModel):
-    """Idealised model of a fixed C-shaped relative humidity distribution."""
-
-    def __init__(self, rh_surface=0.77, uth=0.75, uth_plev=170e2, uth_offset=0):
-        """Couple the upper-tropospheric humidity peak to the convective top.
-
-        Parameters:
-            rh_surface (float): Relative humidity at first
-                pressure level (surface).
-            uth (float): Relative humidity at the upper-tropospheric peak.
-            uth_plev (float): Pressure level of second humidity maximum [Pa].
-            uth_offset (float): Offset between UTH peak and convective top.
-        """
-        self.rh_surface = rh_surface
-        self.uth = uth
-        self.uth_plev = uth_plev
-        self.uth_offset = uth_offset
-
-        self._rh_base_profile = None
-
-    def get_relative_humidity_profile(self, atmosphere):
-        p = atmosphere["plev"]
-
-        # Use Manabe (1967) relative humidity model as base/background.
-        if self._rh_base_profile is None:
-            manabe_model = Manabe67(rh_surface=self.rh_surface)
-            self._rh_base_profile = manabe_model(atmosphere)
-
-        # Gaussian upper-tropospheric UTH peak in ln(p) coordinates
-        x = p / (self.uth_plev + self.uth_offset)
-        uth = self.uth * np.exp(-np.log(x) ** 2 * np.pi)
-
-        return np.maximum(self._rh_base_profile, uth)
-
-    def __call__(self, atmosphere, **kwargs):
-        return self.get_relative_humidity_profile(atmosphere)
-
-
-class CoupledUTH(FixedUTH):
-    """Idealised model of a coupled C-shaped relative humidity distribution.
-
-    This relative humidity works in the same way as ``FixedUTH`` but the
-    ``uth_plev`` is updated automatically depending on the convective top.
-    """
-
-    def __call__(self, atmosphere, convection, **kwargs):
-        self.uth_plev = convection.get("convective_top_plev")[0]
-
-        return self.get_relative_humidity_profile(atmosphere)
-
-
-class CshapeConstant(RelativeHumidityModel):
-    """Idealized model of a C-shaped RH profile using a quadratic equation."""
-
-    def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
-        self.uth_plev = uth_plev
-        self.rh_min = rh_min
-        self.uth = uth
-        self.rh_surface = uth
-
-    def __call__(self, atmosphere, convection, **kwargs):
-        self.uth_plev = convection.get("convective_top_plev")[0]
-
-        x = np.log10(atmosphere["plev"])
-        xmin = np.log10(self.uth_plev)
-        xmax = x[0]
-
-        a = (self.uth - self.rh_min) * 4 / (xmin - xmax) ** 2
-        b = (xmin + xmax) / 2
-        c = self.rh_min
-
-        return np.clip(a * (x - b) ** 2 + c, a_min=0, a_max=1)
-
-
-class CshapeDecrease(RelativeHumidityModel):
-    """Idealized model of a C-shaped RH profile using a quadratic equation."""
-
-    def __init__(self, uth_plev=200e2, rh_min=0.3, uth=0.8):
-        self.uth_plev = uth_plev
-        self.rh_min = rh_min
-        self.uth = uth
-        self.rh_surface = uth
-
-    def __call__(self, atmosphere, convection, **kwargs):
-        self.uth_plev = convection.get("convective_top_plev")[0]
-
-        x = np.log10(atmosphere["plev"])
-        xmin = np.log10(self.uth_plev)
-        xmax = x[0]
-
-        a = (self.uth - self.rh_min) * 4 / (xmin - xmax) ** 2
-        b = (xmin + xmax) / 2
-        c = self.rh_min
-
-        rh = np.clip(a * (x - b) ** 2 + c, a_min=0, a_max=1)
-
-        rh[x < xmin] *= (10 ** x / 10 ** xmin)[x < xmin]
-
-        return rh
 
 
 class Manabe67(RelativeHumidityModel):
@@ -278,14 +138,16 @@ class Romps14(RelativeHumidityModel):
 
 
 class PolynomialCshapedRH(RelativeHumidityModel):
-    """
-    Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
-    The RH increases linearly in the boundary layer from the surface.
-    Between the top of the boundary layer and the freezing level (T=273.15K), the rh is a quadratic function of p,
-    defined by its values at these to points, and a zero derivative at the freezing level.
-    Above the freezing level, the rh is a quadratic function of T, defined by its values at the freezing level and
-    at a chose upper-tropospheric T-value or at the cold point (see `top_peak_T` argument), and a zero derivative
-    at the freezing level.
+    """Defines a C-shaped polynomial model, that depends on T in the upper troposphere.
+
+    The RH increases linearly in the boundary layer from the surface.  Between
+    the top of the boundary layer and the freezing level (T=273.15K), the rh is
+    a quadratic function of p, defined by its values at these to points, and a
+    zero derivative at the freezing level.  Above the freezing level, the rh is
+    a quadratic function of T, defined by its values at the freezing level and
+    at a chose upper-tropospheric T-value or at the cold point (see `top_peak_T`
+    argument), and a zero derivative at the freezing level.
+
     """
 
     def __init__(

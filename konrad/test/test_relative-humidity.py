@@ -16,16 +16,12 @@ def atmosphere_obj():
 class TestRelativeHumidity:
     rh_models = (
         humidity.CacheFromAtmosphere,
-        humidity.HeightConstant,
         humidity.VerticallyUniform,
-        humidity.ConstantFreezingLevel,
-        humidity.FixedUTH,
-        humidity.CoupledUTH,
-        humidity.CshapeConstant,
-        humidity.CshapeDecrease,
         humidity.Manabe67,
         humidity.Cess76,
         humidity.Romps14,
+        humidity.PolynomialCshapedRH,
+        humidity.PerturbProfile,
     )
 
     @pytest.mark.parametrize("rh_model", rh_models)
