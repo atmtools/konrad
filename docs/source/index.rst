@@ -37,7 +37,6 @@ Model components to configure the configuration of `konrad`.
    konrad.humidity
    konrad.lapserate
    konrad.ozone
-   konrad.plots
    konrad.radiation
    konrad.surface
    konrad.upwelling
