@@ -12,7 +12,7 @@ from konrad.utils import gaussian
 __all__ = [
     "RelativeHumidityModel",
     "CacheFromAtmosphere",
-    "HeightConstant",
+    "VerticallyUniform",
     "Manabe67",
     "Cess76",
     "Romps14",
@@ -52,7 +52,7 @@ class CacheFromAtmosphere(RelativeHumidityModel):
         return self._rh_profile
 
 
-class HeightConstant(RelativeHumidityModel):
+class VerticallyUniform(RelativeHumidityModel):
     """Fix the relative humidity to a single value throughout the atmosphere."""
 
     def __init__(self, rh_surface=0.8):
@@ -236,7 +236,7 @@ class PerturbProfile(RelativeHumidityModel):
 
     def __init__(
         self,
-        base_profile=HeightConstant(),
+        base_profile=VerticallyUniform(),
         shape="square",
         center_plev=500e2,
         width=50e2,

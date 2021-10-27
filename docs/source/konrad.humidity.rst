@@ -22,7 +22,7 @@ Relative humidity
 
    RelativeHumidityModel
    CacheFromAtmosphere
-   HeightConstant
+   VerticallyUniform
    Manabe67
    Cess76
    Romps14
