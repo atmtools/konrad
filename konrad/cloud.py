@@ -522,35 +522,6 @@ class DirectInputCloud(Cloud):
             )
 
 
-class HighCloud(DirectInputCloud):
-    """Representation of a high-level cloud.
-
-    High-level clouds are coupled to the convective top by default. Another
-    reasonable option is a coupling to the level of maximum diabatic
-    subsidence divergence (`"subsidence_divergence"`).
-    """
-    def __init__(self, *args, coupling='convective_top', **kwargs):
-        super().__init__(*args, coupling=coupling, **kwargs)
-
-
-class MidLevelCloud(DirectInputCloud):
-    """Representation of a mid-level cloud.
-
-    Mid-level clouds are coupled to the freezing level.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, coupling='freezing_level', **kwargs)
-
-
-class LowCloud(DirectInputCloud):
-    """Representation of a low-level cloud.
-
-    Low-level clouds are fixed in pressure coordinates.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, coupling='pressure', **kwargs)
-
-
 class ConceptualCloud(DirectInputCloud):
     def __init__(
         self,
@@ -676,6 +647,69 @@ class ConceptualCloud(DirectInputCloud):
         for name in cloud_optics.data_vars:
             self[name][:, :] = 0
             self[name][is_cloud, :] = cloud_optics[name]
+
+
+class HighCloud(ConceptualCloud):
+    """Representation of a high-level cloud.
+
+    High-level clouds are coupled to the maximum diabatic subsidence divergence.
+    """
+    def __init__(self, atmosphere, **kwargs):
+        """Initialize a conceputal high cloud."""
+        default_kwargs = dict(
+            cloud_top=175e2,
+            depth=100e2,
+            cloud_fraction=0.1,
+            water_path=10.,
+            particle_size=100,
+            phase="ice",
+            coupling="subsidence_divergence",
+        )
+        default_kwargs.update(kwargs)
+
+        super().__init__(atmosphere, **default_kwargs)
+
+
+class MidLevelCloud(ConceptualCloud):
+    """Representation of a mid-level cloud.
+
+    Mid-level clouds are coupled to the freezing level.
+    """
+    def __init__(self, *args, **kwargs):
+        """Initialize a conceputal mid-level cloud."""
+        default_kwargs = dict(
+            cloud_top=550e2,
+            depth=100e2,
+            cloud_fraction=0.1,
+            water_path=100.,
+            particle_size=100,
+            phase="ice",
+            coupling="freezing_level",
+        )
+        default_kwargs.update(kwargs)
+
+        super().__init__(atmosphere, **default_kwargs)
+
+
+class LowCloud(ConceptualCloud):
+    """Representation of a low-level cloud.
+
+    Low-level clouds are fixed in pressure coordinates.
+    """
+    def __init__(self, *args, **kwargs):
+        """Initialize a conceputal low-level cloud."""
+        default_kwargs = dict(
+            cloud_top=850e2,
+            depth=100e2,
+            cloud_fraction=0.1,
+            water_path=100.,
+            particle_size=10.,
+            phase="liquid",
+            coupling="pressure",
+        )
+        default_kwargs.update(kwargs)
+
+        super().__init__(atmosphere, **default_kwargs)
 
 
 class CloudEnsemble(DirectInputCloud):
