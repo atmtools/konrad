@@ -1,5 +1,6 @@
 format: jb-book
 root: intro
 chapters:
-- file: simple_rce
-  title: Our first RCE simulation
+- file: getting_started
+- file: adding_clouds
+- file: rrtmg_only

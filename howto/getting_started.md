@@ -11,7 +11,7 @@ kernelspec:
   name: python3
 ---
 
-# Our first simulation
+# Getting started
 
 Set up and run a radiative-convective equilibrium simulation
 
