@@ -7,6 +7,10 @@
 *so.1
 .idea
 .ipynb_checkpoints
+
+# Build artefacts
+build/
 dist/
 docs/build/
 docs/source/_autosummary
+konrad.egg-info/

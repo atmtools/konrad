@@ -33,7 +33,6 @@ from . import lapserate
 from . import netcdf
 from . import ozone
 from . import physics
-from . import plots
 from . import radiation
 from . import surface
 from . import upwelling

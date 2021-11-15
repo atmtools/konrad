@@ -36,7 +36,6 @@ __all__ = [
     'Convection',
     'NonConvective',
     'HardAdjustment',
-    'RelaxedAdjustment',
     'FixedDynamicalHeating',
 ]
 
@@ -411,61 +410,6 @@ class HardAdjustment(Convection):
         self.create_variable('convective_top_height', np.array([contop_z]))
         return
 
-
-class RelaxedAdjustment(HardAdjustment):
-    """Adjustment with relaxed convection in upper atmosphere.
-
-    This convection scheme allows for a transition regime between a
-    convectively driven troposphere and the radiatively balanced stratosphere.
-    """
-    def __init__(self, tau=None, *args, **kwargs):
-        """
-        Parameters:
-            tau (ndarray): Array of convective timescale values [days]
-        """
-        super().__init__(*args, **kwargs)
-        self.convective_tau = tau
-
-    def get_convective_tau(self, p):
-        """Return a convective timescale profile.
-
-        Parameters:
-            p (ndarray): Pressure levels [Pa].
-
-        Returns:
-            ndarray: Convective timescale profile [days].
-        """
-        if self.convective_tau is not None:
-            return self.convective_tau
-
-        tau0 = 1/24  # 1 hour
-        tau = tau0*np.exp(p[0] / p)
-
-        return tau
-
-    def convective_profile(self, atmosphere, surfaceT, lapse, timestep):
-        """
-        Assuming a particular surface temperature (surfaceT), create a new
-        profile, which tries to follow the specified lapse rate (lp). How close
-        it gets to following the specified lapse rate depends on the convective
-        timescale and model timestep.
-
-        Parameters:
-            atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
-            surfaceT (float): surface temperature [K]
-            lapse (konrad.lapsereate.LapseRate): Callable `f(p, T)` that
-                returns a temperature lapse rate in [K/day].
-            timestep (float/int): model timestep [days]
-
-        Returns:
-             ndarray: convectively adjusted temperature profile [K]
-        """
-        T_con = self.get_moist_adiabat(atmosphere, surfaceT, lapse)
-
-        tau = self.get_convective_tau(atmosphere["plev"])
-        tf = 1 - np.exp(-timestep / tau)
-
-        return atmosphere["T"][0] * (1 - tf) + tf * T_con
 
 class FixedDynamicalHeating(HardAdjustment):
     """Adjustment with a fixed convective (dynamical) heating rate.
