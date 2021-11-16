@@ -11,7 +11,7 @@ kernelspec:
   name: python3
 ---
 
-# Adding clouds
+# Clouds
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
