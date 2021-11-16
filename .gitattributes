@@ -1,3 +1,0 @@
-config/* linguist-vendored
-*.ipynb linguist-language=python
-*.ipynb -diff

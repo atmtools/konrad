@@ -1,4 +1,0 @@
-Constants
-=========
-
-.. automodule:: konrad.constants
