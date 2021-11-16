@@ -4,5 +4,11 @@ copyright: "2021"
 logo: "images/konrad-logo.png"
 html:
   favicon: "images/konrad-logo.png"
+  use_repository_button     : true
+repository:
+  url                       : https://github.com/atmtools/konrad
+  path_to_book              : howto
+launch_buttons:
+  binderhub_url             : ""
 execute:
   execute_notebooks: force
