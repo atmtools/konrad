@@ -4,3 +4,5 @@ copyright: "2021"
 logo: "images/konrad-logo.png"
 html:
   favicon: "images/konrad-logo.png"
+execute:
+  execute_notebooks: force
