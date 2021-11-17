@@ -9,4 +9,10 @@ chapters:
     - file: lapserate
     - file: clouds
     - file: surface
-- file: rrtmg_only
+- file: climate_modeling
+  sections:
+    - file: forcing
+    - file: feedback
+- file: misc
+  sections:
+    - file: rrtmg_only

@@ -11,7 +11,7 @@ kernelspec:
   name: python3
 ---
 
-# Use `konrad` as RRTMG interface
+# RRTMG interface
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
