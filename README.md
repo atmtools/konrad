@@ -9,6 +9,9 @@ The goal of ``konrad`` is to provide a simple framework to run
 radiative-convective equilibrium (RCE) simulations. It is build in an object
 oriented structure to allow simple modifications of the model setup.
 
+You can find various tutorials that illustrate the usage of ``konrad`` in our
+[How to konrad](https://atmtools.github.io/konrad) Jupyter book.
+
 ## Requirements
 ``konrad`` requires Python 3.6 or higher. The recommended way to get
 Python is through [Anaconda](https://www.continuum.io/downloads).

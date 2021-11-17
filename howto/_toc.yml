@@ -1,0 +1,19 @@
+format: jb-book
+root: intro
+chapters:
+- file: getting_started
+- file: netcdf_output
+- file: components
+  sections:
+    - file: atmosphere
+    - file: humidity
+    - file: lapserate
+    - file: clouds
+    - file: surface
+- file: climate_modeling
+  sections:
+    - file: forcing
+    - file: feedback
+- file: misc
+  sections:
+    - file: rrtmg_only
