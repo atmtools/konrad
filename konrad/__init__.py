@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """This package aims to provide a framework to run radiative-convective
 equilibrium (RCE) simulations.
 
@@ -11,7 +10,7 @@ requirements are enforced by the use of abstract base classes.
 """
 import logging
 import warnings
-from os.path import (join, dirname)
+from os.path import join, dirname
 
 # Mute annoying `FutureWarning` within Sympl.
 warnings.filterwarnings(
@@ -20,7 +19,7 @@ warnings.filterwarnings(
     module="sympl",
 )
 
-__version__ = open(join(dirname(__file__), 'VERSION')).read().strip()
+__version__ = open(join(dirname(__file__), "VERSION")).read().strip()
 
 from . import atmosphere
 from . import cloud
@@ -50,7 +49,7 @@ def enable_logging():
     """
     logging.basicConfig(
         level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S',
-        style='{',  # Allows to use format string syntax in the next line.
-        format='{asctime} {processName}:{levelname}:{name}:{message}',
-        )
+        datefmt="%Y-%m-%d %H:%M:%S",
+        style="{",  # Allows to use format string syntax in the next line.
+        format="{asctime} {processName}:{levelname}:{name}:{message}",
+    )

@@ -31,6 +31,7 @@ class Component:
     {'variable': (('dimension',), [42])}
 
     """
+
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
         instance._attrs = {}
@@ -63,11 +64,11 @@ class Component:
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
 
-        if not name.startswith('_') and name != 'coords':
+        if not name.startswith("_") and name != "coords":
             self._attrs[name] = value
 
     def __getattr__(self, name):
-        if name.startswith('__'):
+        if name.startswith("__"):
             raise AttributeError
 
         try:
@@ -117,26 +118,26 @@ class Component:
 
         Type: dict-like
         """
-        raise AttributeError('No netCDF subgroups defined.')
+        raise AttributeError("No netCDF subgroups defined.")
 
     def __repr__(self):
-        dims = ', '.join(f'{d}: {np.size(v)}' for d, v in self.coords.items())
-        return f'<{self}({dims}) object at {id(self)}>'
+        dims = ", ".join(f"{d}: {np.size(v)}" for d, v in self.coords.items())
+        return f"<{self}({dims}) object at {id(self)}>"
 
     def __str__(self):
         return self.__class__.__name__
 
     def __hash__(self):
         # Prevent hashing by default as components are most likely mutable.
-        raise TypeError(f'unhashable type: {type(self).__name__}')
+        raise TypeError(f"unhashable type: {type(self).__name__}")
 
     def hash_attributes(self):
         """Create a hash from all **hashable** component attributes."""
-        attrs_sorted_by_key = sorted(self.attrs.items(),
-                                     key=operator.itemgetter(0))
+        attrs_sorted_by_key = sorted(self.attrs.items(), key=operator.itemgetter(0))
 
-        hashable_values = tuple(item[1] for item in attrs_sorted_by_key
-                                if isinstance(item[1], Hashable))
+        hashable_values = tuple(
+            item[1] for item in attrs_sorted_by_key if isinstance(item[1], Hashable)
+        )
 
         # Include the class name to distinguish between different
         # inheriting classes using the same attributes.
@@ -145,11 +146,9 @@ class Component:
     def to_dataset(self):
         """Convert model component into an `xarray.Dataset`."""
         if self.coords is None:
-            raise Exception(
-                "Could not create `xarray.Dataset`: `self.coords` not set."
-            )
+            raise Exception("Could not create `xarray.Dataset`: `self.coords` not set.")
         else:
-            self.coords['time'] = [0]
+            self.coords["time"] = [0]
             return xr.Dataset(
                 coords=self.coords,
                 data_vars=self.data_vars,
@@ -176,12 +175,12 @@ class Component:
         if dims is None:
             try:
                 # Try to determine default dimensions for common variables.
-                dims = constants.variable_description[name].get('dims')
+                dims = constants.variable_description[name].get("dims")
             except KeyError:
                 # It is not possible to create variables without dimension.
                 raise ValueError(
                     f'Could not determine default dimensions for "{name}". '
-                    'You can provide them using the `dims` keyword.'
+                    "You can provide them using the `dims` keyword."
                 )
 
         if len(dims) == 2 and data.ndim == 1:
@@ -225,4 +224,3 @@ class Component:
                 raise KeyError(f"'{variable}' not found and no default given.")
 
         return values if keepdims else values.ravel()
-

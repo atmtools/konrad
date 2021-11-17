@@ -21,6 +21,7 @@ __all__ = [
     "ProfileFromData",
 ]
 
+
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
     def __call__(self, atmosphere, **kwargs):
         """Return the vertical distribution of relative humidity.

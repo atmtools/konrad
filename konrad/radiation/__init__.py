@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """This module defines methods required for a radiation scheme to be used in
 a radiative-convective simulation and also contains a wrapper for RRTMG.
 
@@ -29,4 +28,4 @@ from .rrtmg import RRTMG
 from .common import *
 
 
-__all__ = [s for s in dir() if not s.startswith('_')]
+__all__ = [s for s in dir() if not s.startswith("_")]

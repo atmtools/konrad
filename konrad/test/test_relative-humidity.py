@@ -1,9 +1,9 @@
-from os.path import (dirname, join)
+from os.path import dirname, join
 
 import numpy as np
 import pytest
 
-from konrad import (atmosphere, utils, humidity)
+from konrad import atmosphere, utils, humidity
 
 
 @pytest.fixture

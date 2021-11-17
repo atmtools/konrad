@@ -4,12 +4,12 @@ from datetime import datetime
 import netCDF4
 import numpy as np
 
-from konrad import (constants, __version__)
+from konrad import constants, __version__
 from konrad.component import Component
 
 
 __all__ = [
-    'NetcdfHandler',
+    "NetcdfHandler",
 ]
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def convert_unsupported_types(variable):
     if isinstance(variable, str):
         return np.asarray([variable])
 
-    if hasattr(variable, 'values'):
+    if hasattr(variable, "values"):
         return variable.values
 
     return variable
@@ -52,11 +52,12 @@ class NetcdfHandler:
         >>> nc.write()  # write (append) current RCE state to file
 
     """
+
     def __init__(self, filename, rce):
         self.filename = filename
         self.rce = rce
 
-        self.udim = 'time'
+        self.udim = "time"
         self.udim_size = 0
         self.groups = []
         self._component_cache = {}
@@ -64,13 +65,15 @@ class NetcdfHandler:
         self.create_file()
 
     def create_file(self):
-        with netCDF4.Dataset(self.filename, mode='w') as root:
-            root.setncatts({
-                'title': self.rce.experiment,
-                'created': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'source': f'konrad {__version__}',
-                'references': 'https://github.com/atmtools/konrad',
-            })
+        with netCDF4.Dataset(self.filename, mode="w") as root:
+            root.setncatts(
+                {
+                    "title": self.rce.experiment,
+                    "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "source": f"konrad {__version__}",
+                    "references": "https://github.com/atmtools/konrad",
+                }
+            )
 
         logger.debug(f'Created "{self.filename}".')
 
@@ -101,14 +104,13 @@ class NetcdfHandler:
         desc = constants.variable_description.get(variable.name, {})
 
         for attribute_name, value in desc.items():
-            logger.debug(
-                f'Added attribute "{attribute_name}" to "{variable.name}".')
+            logger.debug(f'Added attribute "{attribute_name}" to "{variable.name}".')
             setattr(variable, attribute_name, value)
 
     def create_group(self, component, groupname):
-        with netCDF4.Dataset(self.filename, 'a') as root:
+        with netCDF4.Dataset(self.filename, "a") as root:
             group = root.createGroup(groupname)
-            group.setncattr('class', type(component).__name__)
+            group.setncattr("class", type(component).__name__)
 
             for attr, value in component.attrs.items():
                 self.create_variable(group, attr, value)
@@ -127,20 +129,21 @@ class NetcdfHandler:
             self.groups.append(groupname)
 
     def append_group(self, component, groupname):
-        with netCDF4.Dataset(self.filename, 'a') as root:
+        with netCDF4.Dataset(self.filename, "a") as root:
             group = root[groupname]
 
             for varname, (dims, data) in component.data_vars.items():
                 if self.udim not in dims:
                     continue
 
-                s = [self.udim_size if dim == self.udim else slice(None)
-                     for dim in dims]
+                s = [
+                    self.udim_size if dim == self.udim else slice(None) for dim in dims
+                ]
 
                 group.variables[varname][tuple(s)] = data
 
     def expand_unlimited_dimension(self):
-        with netCDF4.Dataset(self.filename, 'a') as root:
+        with netCDF4.Dataset(self.filename, "a") as root:
             self.udim_size = root.dimensions[self.udim].size
 
             desc = constants.variable_description.get(self.udim, {})
@@ -155,11 +158,11 @@ class NetcdfHandler:
         if len(self._component_cache) == 0:
             # Ensure that the atmosphere component is stored first as it holds
             # the common coordinates `plev` and `phlev`.
-            self._component_cache['atmosphere'] = self.rce.atmosphere
+            self._component_cache["atmosphere"] = self.rce.atmosphere
 
             for attr_name in dir(self.rce):
                 attr = getattr(self.rce, attr_name)
-                if attr_name.startswith('_') or not isinstance(attr, Component):
+                if attr_name.startswith("_") or not isinstance(attr, Component):
                     continue  # Only cache (#1) non-private (#2) components.
 
                 if hasattr(attr, "netcdf_subgroups"):
@@ -176,7 +179,7 @@ class NetcdfHandler:
         for name, component in self.get_components().items():
             self.create_group(component, name)
 
-        with netCDF4.Dataset(self.filename, 'a') as root:
+        with netCDF4.Dataset(self.filename, "a") as root:
             root.variables[self.udim][:] = 0
 
     def append_to_file(self):

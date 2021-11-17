@@ -16,22 +16,23 @@ from konrad.cloud import ClearSky
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'Radiation',
+    "Radiation",
 ]
 
 # Subclasses of `Radiation` need to define a `Radiation.calc_radiation()`
 # method that returns a `xr.Dataset` containing at least following variables:
 REQUIRED_VARIABLES = [
-    'net_htngrt',
-    'lw_flxd',
-    'lw_flxu',
-    'sw_flxd',
-    'sw_flxu',
+    "net_htngrt",
+    "lw_flxd",
+    "lw_flxu",
+    "sw_flxd",
+    "sw_flxu",
 ]
 
 
 class Radiation(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
+
     def __init__(self, zenith_angle=42.05, bias=None):
         """
         Parameters:
@@ -55,22 +56,22 @@ class Radiation(Component, metaclass=abc.ABCMeta):
 
         self._bias = bias
 
-        self['lw_htngrt'] = (('time', 'plev'), None)
-        self['lw_htngrt_clr'] = (('time', 'plev'), None)
-        self['lw_flxu'] = (('time', 'phlev'), None)
-        self['lw_flxd'] = (('time', 'phlev'), None)
-        self['lw_flxu_clr'] = (('time', 'phlev'), None)
-        self['lw_flxd_clr'] = (('time', 'phlev'), None)
-        self['sw_htngrt'] = (('time', 'plev'), None)
-        self['sw_htngrt_clr'] = (('time', 'plev'), None)
-        self['sw_flxu'] = (('time', 'phlev'), None)
-        self['sw_flxd'] = (('time', 'phlev'), None)
-        self['sw_flxu_clr'] = (('time', 'phlev'), None)
-        self['sw_flxd_clr'] = (('time', 'phlev'), None)
+        self["lw_htngrt"] = (("time", "plev"), None)
+        self["lw_htngrt_clr"] = (("time", "plev"), None)
+        self["lw_flxu"] = (("time", "phlev"), None)
+        self["lw_flxd"] = (("time", "phlev"), None)
+        self["lw_flxu_clr"] = (("time", "phlev"), None)
+        self["lw_flxd_clr"] = (("time", "phlev"), None)
+        self["sw_htngrt"] = (("time", "plev"), None)
+        self["sw_htngrt_clr"] = (("time", "plev"), None)
+        self["sw_flxu"] = (("time", "phlev"), None)
+        self["sw_flxd"] = (("time", "phlev"), None)
+        self["sw_flxu_clr"] = (("time", "phlev"), None)
+        self["sw_flxd_clr"] = (("time", "phlev"), None)
 
-        self['net_htngrt'] = (('time', 'plev'), None)
-        self['net_htngrt_clr'] = (('time', 'plev'), None)
-        self['toa'] = (('time',), None)
+        self["net_htngrt"] = (("time", "plev"), None)
+        self["net_htngrt_clr"] = (("time", "plev"), None)
+        self["toa"] = (("time",), None)
 
     @abc.abstractmethod
     def calc_radiation(self, atmosphere, surface, cloud):
@@ -93,24 +94,24 @@ class Radiation(Component, metaclass=abc.ABCMeta):
 
         # self.correct_bias(rad_dataset)
 
-        self['sw_htngrt'][-1] = fluxes2heating(
-            net_fluxes=self['sw_flxu'][-1] - self['sw_flxd'][-1],
-            pressure=atmosphere['phlev'],
+        self["sw_htngrt"][-1] = fluxes2heating(
+            net_fluxes=self["sw_flxu"][-1] - self["sw_flxd"][-1],
+            pressure=atmosphere["phlev"],
         )
 
-        self['sw_htngrt_clr'][-1] = fluxes2heating(
-            net_fluxes=self['sw_flxu_clr'][-1] - self['sw_flxd_clr'][-1],
-            pressure=atmosphere['phlev'],
+        self["sw_htngrt_clr"][-1] = fluxes2heating(
+            net_fluxes=self["sw_flxu_clr"][-1] - self["sw_flxd_clr"][-1],
+            pressure=atmosphere["phlev"],
         )
 
-        self['lw_htngrt'][-1] = fluxes2heating(
-            net_fluxes=self['lw_flxu'][-1] - self['lw_flxd'][-1],
-            pressure=atmosphere['phlev'],
+        self["lw_htngrt"][-1] = fluxes2heating(
+            net_fluxes=self["lw_flxu"][-1] - self["lw_flxd"][-1],
+            pressure=atmosphere["phlev"],
         )
 
-        self['lw_htngrt_clr'][-1] = fluxes2heating(
-            net_fluxes=self['lw_flxu_clr'][-1] - self['lw_flxd_clr'][-1],
-            pressure=atmosphere['phlev'],
+        self["lw_htngrt_clr"][-1] = fluxes2heating(
+            net_fluxes=self["lw_flxu_clr"][-1] - self["lw_flxd_clr"][-1],
+            pressure=atmosphere["phlev"],
         )
 
         self.derive_diagnostics()
@@ -120,9 +121,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         """Check if a given dataset contains all required variables."""
         for key in REQUIRED_VARIABLES:
             if key not in dataset.variables:
-                raise KeyError(
-                    f'"{key}" not present in radiative transfer results.'
-                )
+                raise KeyError(f'"{key}" not present in radiative transfer results.')
 
     def correct_bias(self, dataset):
         """Apply bias correction."""
@@ -134,7 +133,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
                 x = self._bias[zdim].values
                 y = self._bias[key].values
 
-                f_interp = interp1d(x, y, fill_value='extrapolate')
+                f_interp = interp1d(x, y, fill_value="extrapolate")
                 bias_dict[key] = f_interp(dataset[zdim].values)
 
             self._bias = bias_dict
@@ -144,17 +143,15 @@ class Radiation(Component, metaclass=abc.ABCMeta):
                 if key not in dataset.indexes:
                     dataset[key] -= value
 
-
     def derive_diagnostics(self):
         """Derive diagnostic variables from radiative transfer results."""
         # Net heating rate.
-        self['net_htngrt'] = self['lw_htngrt'] + self['sw_htngrt']
-        self['net_htngrt_clr'] = self['lw_htngrt_clr'] + self['sw_htngrt_clr']
+        self["net_htngrt"] = self["lw_htngrt"] + self["sw_htngrt"]
+        self["net_htngrt_clr"] = self["lw_htngrt_clr"] + self["sw_htngrt_clr"]
 
         # Radiation budget at top of the atmosphere (TOA).
-        self['toa'] = (
-            (self['sw_flxd'][:, -1] + self['lw_flxd'][:, -1]) -
-            (self['sw_flxu'][:, -1] + self['lw_flxu'][:, -1])
+        self["toa"] = (self["sw_flxd"][:, -1] + self["lw_flxd"][:, -1]) - (
+            self["sw_flxu"][:, -1] + self["lw_flxu"][:, -1]
         )
 
     @staticmethod
@@ -185,8 +182,8 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         """
         # The local zenith angle, calculated from the latitude and longitude.
         # Seasons are not considered.
-        solar_angle = np.rad2deg(np.arccos(
-            np.cos(np.deg2rad(self.zenith_angle)) * 
-            np.cos(2 * np.pi * time)))
+        solar_angle = np.rad2deg(
+            np.arccos(np.cos(np.deg2rad(self.zenith_angle)) * np.cos(2 * np.pi * time))
+        )
 
         self.current_solar_angle = solar_angle

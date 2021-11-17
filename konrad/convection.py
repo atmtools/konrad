@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """This module contains a choice of convective adjustments, which can be used
 in the RCE simulations.
 
@@ -30,13 +29,13 @@ from konrad.surface import FixedTemperature
 
 
 __all__ = [
-    'energy_difference',
-    'latent_heat_difference',
-    'interp_variable',
-    'Convection',
-    'NonConvective',
-    'HardAdjustment',
-    'FixedDynamicalHeating',
+    "energy_difference",
+    "latent_heat_difference",
+    "interp_variable",
+    "Convection",
+    "NonConvective",
+    "HardAdjustment",
+    "FixedDynamicalHeating",
 ]
 
 
@@ -59,7 +58,7 @@ def energy_difference(T_2, T_1, sst_2, sst_1, phlev, eff_Cp_s):
     dT = T_2 - T_1  # convective temperature change of atmosphere
     dT_s = sst_2 - sst_1  # of surface
 
-    term_diff = - np.sum(Cp/g * dT * np.diff(phlev)) + eff_Cp_s * dT_s
+    term_diff = -np.sum(Cp / g * dT * np.diff(phlev)) + eff_Cp_s * dT_s
 
     return term_diff
 
@@ -77,7 +76,7 @@ def latent_heat_difference(h2o_2, h2o_1):
     """
 
     Lv = constants.Lv  # TODO: include pressure/temperature dependence?
-    term_diff = np.sum((h2o_2-h2o_1) * Lv)
+    term_diff = np.sum((h2o_2 - h2o_1) * Lv)
 
     return term_diff
 
@@ -98,14 +97,14 @@ def interp_variable(variable, convective_heating, lim):
          float: interpolated value of 'variable'
     """
     positive_i = int(np.argmax(convective_heating > lim))
-    contop_index = int(np.argmax(
-        convective_heating[positive_i:] < lim)) + positive_i
+    contop_index = int(np.argmax(convective_heating[positive_i:] < lim)) + positive_i
 
     # Create auxiliary arrays storing the Qr, T and p values above and below
     # the threshold value. These arrays are used as input for the interpolation
     # in the next step.
-    heat_array = np.array([convective_heating[contop_index - 1],
-                           convective_heating[contop_index]])
+    heat_array = np.array(
+        [convective_heating[contop_index - 1], convective_heating[contop_index]]
+    )
     var_array = np.array([variable[contop_index - 1], variable[contop_index]])
 
     # Interpolate the values to where the convective heating rate equals `lim`.
@@ -114,6 +113,7 @@ def interp_variable(variable, convective_heating, lim):
 
 class Convection(Component, metaclass=abc.ABCMeta):
     """Base class to define abstract methods for convection schemes."""
+
     @abc.abstractmethod
     def stabilize(self, atmosphere, lapse, surface, timestep):
         """Stabilize the temperature profile by redistributing energy.
@@ -129,12 +129,14 @@ class Convection(Component, metaclass=abc.ABCMeta):
 
 class NonConvective(Convection):
     """Do not apply convection."""
+
     def stabilize(self, *args, **kwargs):
         pass
 
 
 class HardAdjustment(Convection):
     """Instantaneous adjustment of temperature profiles"""
+
     def __init__(self, entrainment=None, etol=1e-4):
         """Initialize the convective adjustment.
 
@@ -158,8 +160,8 @@ class HardAdjustment(Convection):
         return {"entrainment": self._entrainment}
 
     def stabilize(self, atmosphere, lapse, surface, timestep):
-        T_rad = atmosphere['T'][0, :]
-        p = atmosphere['plev']
+        T_rad = atmosphere["T"][0, :]
+        p = atmosphere["plev"]
 
         # Find convectively adjusted temperature profile.
         T_new, T_s_new = self.convective_adjustment(
@@ -171,8 +173,8 @@ class HardAdjustment(Convection):
         # get convective top temperature and pressure
         self.update_convective_top(T_rad, T_new, p, timestep=timestep)
         # Update atmospheric temperatures as well as surface temperature.
-        atmosphere['T'][0, :] = T_new
-        surface['temperature'][0] = T_s_new
+        atmosphere["T"][0, :] = T_new
+        surface["temperature"][0] = T_s_new
 
     def convective_adjustment(self, atmosphere, lapse, surface, timestep=0.1):
         """
@@ -199,8 +201,9 @@ class HardAdjustment(Convection):
         # fixed surface temperature. In this case, energy is not conserved.
         if isinstance(surface, FixedTemperature):
             T_con = self.convective_profile(
-                atmosphere, surface['temperature'], lapse, timestep=timestep)
-            return T_con, surface['temperature']
+                atmosphere, surface["temperature"], lapse, timestep=timestep
+            )
+            return T_con, surface["temperature"]
 
         # Otherwise we should conserve energy --> our energy change should be
         # less than the threshold 'near_zero'.
@@ -211,15 +214,16 @@ class HardAdjustment(Convection):
         # Find the energy difference if there is no change to surface temp due
         # to convective adjustment. In this case the new profile should be
         # associated with an increase in energy in the atmosphere.
-        surfaceTpos = surface['temperature']
+        surfaceTpos = surface["temperature"]
         T_con, diff_pos = self.create_and_check_profile(
-            atmosphere, surface, surfaceTpos, lapse, timestep=timestep)
+            atmosphere, surface, surfaceTpos, lapse, timestep=timestep
+        )
 
         # For other cases, if we find a decrease or approx no change in energy,
         # the atmosphere is not being warmed by the convection,
         # as it is not unstable to convection, so no adjustment is applied.
         if diff_pos < near_zero:
-            return T_con, surface['temperature']
+            return T_con, surface["temperature"]
 
         # If the atmosphere is unstable to convection, a fixed surface
         # temperature produces an increase in energy, as convection warms the
@@ -232,7 +236,7 @@ class HardAdjustment(Convection):
         # surface temperature change.
         surfaceTneg = atmosphere["T"][0, 0]
         eff_Cp_s = surface.heat_capacity
-        diff_neg = eff_Cp_s * (surfaceTneg - surface['temperature'])
+        diff_neg = eff_Cp_s * (surfaceTneg - surface["temperature"])
         if np.abs(diff_neg) < near_zero:
             return T_con, surfaceTneg
 
@@ -243,12 +247,14 @@ class HardAdjustment(Convection):
         while diff_pos >= near_zero and np.abs(diff_neg) >= near_zero:
             # Use a surface temperature between our upper and lower bounds and
             # closer to the bound associated with a smaller energy change.
-            surfaceT = (surfaceTneg + (surfaceTpos - surfaceTneg)
-                        * (-diff_neg) / (-diff_neg + diff_pos))
+            surfaceT = surfaceTneg + (surfaceTpos - surfaceTneg) * (-diff_neg) / (
+                -diff_neg + diff_pos
+            )
             # Calculate temperature profile and energy change associated with
             # this surface temperature.
             T_con, diff = self.create_and_check_profile(
-                atmosphere, surface, surfaceT, lapse, timestep=timestep)
+                atmosphere, surface, surfaceT, lapse, timestep=timestep
+            )
 
             # Update either upper or lower bound.
             if diff > 0:
@@ -261,9 +267,7 @@ class HardAdjustment(Convection):
             # to avoid getting stuck in a loop if something weird is going on
             counter += 1
             if counter == 100:
-                raise ValueError(
-                    "No energy conserving convective profile can be found"
-                )
+                raise ValueError("No energy conserving convective profile can be found")
 
         return T_con, surfaceT
 
@@ -290,7 +294,7 @@ class HardAdjustment(Convection):
         ph = atmosphere["phlev"]
         Ts = surfaceT
 
-        r = ode(lapse).set_integrator('lsoda', atol=1e-4)
+        r = ode(lapse).set_integrator("lsoda", atol=1e-4)
         r.set_initial_value(Ts, ph[0])
 
         T = np.zeros_like(p)
@@ -315,15 +319,15 @@ class HardAdjustment(Convection):
         # Combine radiative and convective temperature profiles.
         if np.any(T_con > T_rad):
             contop = np.max(np.where(T_con > T_rad))
-            T_con[contop+1:] = T_rad[contop+1:]
+            T_con[contop + 1 :] = T_rad[contop + 1 :]
         else:
             return T_rad
 
         return T_con
 
-
-    def create_and_check_profile(self, atmosphere, surface, surfaceT, lapse,
-                                 timestep=0.1):
+    def create_and_check_profile(
+        self, atmosphere, surface, surfaceT, lapse, timestep=0.1
+    ):
         """Create a convectively adjusted temperature profile and calculate how
         close it is to satisfying energy conservation.
 
@@ -340,13 +344,18 @@ class HardAdjustment(Convection):
             float: energy difference between the new profile and the old one
         """
         T_rad = atmosphere["T"][-1]
-        T_con = self.convective_profile(atmosphere, surfaceT, lapse,
-                                        timestep=timestep)
+        T_con = self.convective_profile(atmosphere, surfaceT, lapse, timestep=timestep)
 
         eff_Cp_s = surface.heat_capacity
 
-        diff = energy_difference(T_con, T_rad, surfaceT,
-                                 surface['temperature'], atmosphere["phlev"], eff_Cp_s)
+        diff = energy_difference(
+            T_con,
+            T_rad,
+            surfaceT,
+            surface["temperature"],
+            atmosphere["phlev"],
+            eff_Cp_s,
+        )
         return T_con, float(diff)
 
     def update_convective_top(self, T_rad, T_con, p, timestep=0.1, lim=0.2):
@@ -367,7 +376,7 @@ class HardAdjustment(Convection):
             lim (float): Threshold value [K/day].
         """
         convective_heating = (T_con - T_rad) / timestep
-        self.create_variable('convective_heating_rate', convective_heating)
+        self.create_variable("convective_heating_rate", convective_heating)
 
         if np.any(convective_heating > lim):  # if there is convective heating
             # find the values of pressure and temperature at the convective top,
@@ -381,16 +390,18 @@ class HardAdjustment(Convection):
             # warm (normally) or cool (at certain times during the diurnal
             # cycle) the lower troposphere. Therefore, we search for the
             # convective top index from the top going downwards.
-            contop_index = (len(convective_heating) -
-                            np.argmin(convective_heating[::-1] <= 0))
+            contop_index = len(convective_heating) - np.argmin(
+                convective_heating[::-1] <= 0
+            )
 
         else:  # if there is no convective heating
             contop_index, contop_p, contop_T = np.nan, np.nan, np.nan
 
-        for name, value in [('convective_top_plev', contop_p),
-                            ('convective_top_temperature', contop_T),
-                            ('convective_top_index', contop_index),
-                            ]:
+        for name, value in [
+            ("convective_top_plev", contop_p),
+            ("convective_top_temperature", contop_T),
+            ("convective_top_index", contop_index),
+        ]:
             self.create_variable(name, np.array([value]))
 
         return
@@ -402,18 +413,18 @@ class HardAdjustment(Convection):
             z (ndarray): height array [m]
             lim (float): Threshold convective heating value [K/day]
         """
-        convective_heating = self.get('convective_heating_rate')[0]
+        convective_heating = self.get("convective_heating_rate")[0]
         if np.any(convective_heating > lim):  # if there is convective heating
             contop_z = interp_variable(z, convective_heating, lim=lim)
         else:  # if there is no convective heating
             contop_z = np.nan
-        self.create_variable('convective_top_height', np.array([contop_z]))
+        self.create_variable("convective_top_height", np.array([contop_z]))
         return
 
 
 class FixedDynamicalHeating(HardAdjustment):
-    """Adjustment with a fixed convective (dynamical) heating rate.
-    """
+    """Adjustment with a fixed convective (dynamical) heating rate."""
+
     def __init__(self, heating=None, *args, **kwargs):
         """
         Parameters:
@@ -428,5 +439,5 @@ class FixedDynamicalHeating(HardAdjustment):
         T_new = T_rad + timestep * self._heating
 
         self.update_convective_top(T_rad, T_new, p, timestep=timestep)
-        
+
         atmosphere["T"][-1] = T_new

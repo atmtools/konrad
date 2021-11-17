@@ -8,22 +8,22 @@ from konrad import constants
 from konrad import utils
 from konrad import netcdf
 from konrad.radiation import RRTMG
-from konrad.ozone import (Ozone, OzonePressure)
+from konrad.ozone import Ozone, OzonePressure
 from konrad.humidity import FixedRH
-from konrad.surface import (Surface, FixedTemperature)
-from konrad.cloud import (Cloud, ClearSky)
-from konrad.convection import (Convection, HardAdjustment)
-from konrad.lapserate import (LapseRate, MoistLapseRate)
-from konrad.upwelling import (Upwelling, NoUpwelling)
+from konrad.surface import Surface, FixedTemperature
+from konrad.cloud import Cloud, ClearSky
+from konrad.convection import Convection, HardAdjustment
+from konrad.lapserate import LapseRate, MoistLapseRate
+from konrad.upwelling import Upwelling, NoUpwelling
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    'RCE',
+    "RCE",
 ]
 
 
-class RCE():
+class RCE:
     """Interface to control the radiative-convective equilibrium simulation.
 
     Examples:
@@ -38,11 +38,11 @@ class RCE():
     def __init__(
         self,
         atmosphere,
-        timestep='12h',
-        max_duration='200d',
+        timestep="12h",
+        max_duration="200d",
         outfile=None,
-        experiment='RCE',
-        writeevery='24h',
+        experiment="RCE",
+        writeevery="24h",
         delta=0.0,
         delta2=0.0,
         post_count=365,
@@ -147,65 +147,67 @@ class RCE():
                 Default (`None`) is keeping the given timestep fixed.
         """
         # Sub-model initialisation
-        
+
         # Atmosphere
         self.atmosphere = atmosphere
-        
+
         # Radiation
         if radiation is None:
             self.radiation = RRTMG()
         else:
             self.radiation = radiation
-        
+
         # Ozone
-        self.ozone = utils.return_if_type(ozone, 'ozone',
-                                          Ozone, OzonePressure())
-        
+        self.ozone = utils.return_if_type(ozone, "ozone", Ozone, OzonePressure())
+
         # Humidity
         self.humidity = FixedRH() if humidity is None else humidity
-        
+
         # Surface
-        self.surface = utils.return_if_type(surface, 'surface',
-                                            Surface, FixedTemperature())
-        
+        self.surface = utils.return_if_type(
+            surface, "surface", Surface, FixedTemperature()
+        )
+
         # Cloud
-        self.cloud = utils.return_if_type(cloud, 'cloud',
-                                          Cloud,
-                                          ClearSky(self.atmosphere['plev'].size)
-                                          )
-        
+        self.cloud = utils.return_if_type(
+            cloud, "cloud", Cloud, ClearSky(self.atmosphere["plev"].size)
+        )
+
         # Convection
-        self.convection = utils.return_if_type(convection, 'convection',
-                                               Convection, HardAdjustment())
-        
+        self.convection = utils.return_if_type(
+            convection, "convection", Convection, HardAdjustment()
+        )
+
         # Critical lapse-rate
-        self.lapserate = utils.return_if_type(lapserate, 'lapserate',
-                                              LapseRate, MoistLapseRate())
-        
+        self.lapserate = utils.return_if_type(
+            lapserate, "lapserate", LapseRate, MoistLapseRate()
+        )
+
         # Stratospheric upwelling
-        self.upwelling = utils.return_if_type(upwelling, 'upwelling',
-                                              Upwelling, NoUpwelling())
-        
+        self.upwelling = utils.return_if_type(
+            upwelling, "upwelling", Upwelling, NoUpwelling()
+        )
+
         # Diurnal cycle
         self.diurnal_cycle = diurnal_cycle
-        
+
         # Time, timestepping and duration attributes
         self.timestep = utils.parse_fraction_of_day(timestep)
         self.time = datetime.datetime(1, 1, 1)  # Start model run at 0001/1/1
         self.max_duration = utils.parse_fraction_of_day(max_duration)
         self.niter = 0
         self.timestep_adjuster = timestep_adjuster
-        
+
         # Output writing attributes
         self.writeevery = utils.parse_fraction_of_day(writeevery)
         self.last_written = self.time
         self.outfile = outfile
         self.nchandler = None
         self.experiment = experiment
-        
+
         # Logging attributes
         self.logevery = logevery
-        
+
         # Attributes used by the is_converged() method
         self.delta = delta
         if delta != 0.0 and delta2 == 0.0:
@@ -219,29 +221,30 @@ class RCE():
         self.counteq = datetime.timedelta(microseconds=0)
         self.post_count = utils.parse_fraction_of_day(post_count)
         self.converged = False
-        
+
         # Attributes used by the time-step adjuster
         self.oldT = 0
         self.deltaT = 0
-        
+
         # Attributes for experiments with varying carbon dioxide following
         # Romps (2020)
         self.co2_adjustment_timescale = co2_adjustment_timescale
         if not np.isnan(co2_adjustment_timescale) and not isinstance(
-                surface, FixedTemperature):
+            surface, FixedTemperature
+        ):
             raise TypeError(
                 "Runs with adjusting CO2 concentration "
                 "require a fixed surface temperature."
-                )
-        
-        logging.info('Created Konrad object:\n{}'.format(self))
+            )
+
+        logging.info("Created Konrad object:\n{}".format(self))
 
     def __repr__(self):
-        retstr = '{}(\n'.format(self.__class__.__name__)
+        retstr = "{}(\n".format(self.__class__.__name__)
         # Loop over all public object attributes.
-        for a in filter(lambda k: not k.startswith('_'), self.__dict__):
-            retstr += '    {}={},\n'.format(a, getattr(self, a))
-        retstr += ')'
+        for a in filter(lambda k: not k.startswith("_"), self.__dict__):
+            retstr += "    {}={},\n".format(a, getattr(self, a))
+        retstr += ")"
 
         return retstr
 
@@ -264,7 +267,7 @@ class RCE():
 
     def is_converged(self):
         """Check if the atmosphere is in radiative-convective equilibrium.
-        
+
         Here is implemented a convergence criterion using the first and a
         pseudo-second order time derivatives of the energy flux at the TOA.
         Using only the first can lead to false convergence, hence the second
@@ -273,16 +276,16 @@ class RCE():
         Returns:
             bool: ``True`` if converged, else ``False``.
         """
-        
+
         # Calculates the change in the energy flux imbalance at the TOA
         self.newDN = self.radiation["toa"][-1] - self.oldN
         # Calculates a second order difference of the imbalance at the TOA
         self.newDDN = np.abs(self.newDN) - np.abs(self.oldDN)
-        
+
         # Checks whether the difference is below the threshold
         test1 = (np.abs(self.newDN) / self.timestep_days) <= self.delta
         # Checks whether the second order difference is below the threshold
-        test2 = (np.abs(self.newDDN) / self.timestep_days**2) <= self.delta2
+        test2 = (np.abs(self.newDDN) / self.timestep_days ** 2) <= self.delta2
 
         # Stores the above-calculated value for the next iteration
         self.oldDN = self.newDN
@@ -291,7 +294,7 @@ class RCE():
         #     in one timestep
         # In any other case it reduces the count in one timestep or maintains
         #     it at zero
-        if ( test1 and test2 ):
+        if test1 and test2:
             self.counteq += self.timestep
         else:
             if self.counteq > datetime.timedelta(microseconds=0):
@@ -302,12 +305,13 @@ class RCE():
         # Displays information about convergence
         if self.logevery is not None and self.niter % self.logevery == 0:
             d_txt = "Days within equilibrium conditions: {0:3.2f}"
-            logger.debug(d_txt.format(self.counteq.total_seconds() /
-                                      (60 * 60 * 24)))
+            logger.debug(d_txt.format(self.counteq.total_seconds() / (60 * 60 * 24)))
             d_txt = "Delta N (TOA): {0:2.2e} (Threshold: {1:2.2e})"
             logger.debug(d_txt.format(self.newDN / self.timestep_days, self.delta))
             d_txt = "Delta (Delta N (TOA)): {0:2.2e} (Threshold: {1:2.2e})"
-            logger.debug(d_txt.format(self.newDDN / self.timestep_days**2, self.delta2))
+            logger.debug(
+                d_txt.format(self.newDDN / self.timestep_days ** 2, self.delta2)
+            )
 
         # If the equilibrium is larger than the threshold count, it declares
         #     convergence
@@ -324,8 +328,9 @@ class RCE():
         if self.outfile is None:
             return False
 
-        if ((self.time - self.last_written) >= self.writeevery
-           or self.time == datetime.datetime(1, 1, 1)):
+        if (
+            self.time - self.last_written
+        ) >= self.writeevery or self.time == datetime.datetime(1, 1, 1):
             self.last_written = self.time
             return True
         else:
@@ -333,29 +338,29 @@ class RCE():
 
     def run(self):
         """Run the radiative-convective equilibrium model."""
-        logger.info('Start RCE model run.')
+        logger.info("Start RCE model run.")
 
         # Initializes surface pressure to be equal to lowest half-level
         # pressure. This is consistent with handling in PSrad.
-        self.surface.pressure = self.atmosphere['phlev'][0]
+        self.surface.pressure = self.atmosphere["phlev"][0]
 
         # Main loop to control all model iterations until maximum number is
         # reached or a given stop criterion is fulfilled.
         while self.runtime <= self.max_duration:
             if self.logevery is not None and self.niter % self.logevery == 0:
                 # Writes every 100th time step in loglevel INFO.
-                logger.info(f'Enter iteration {self.niter}.')
+                logger.info(f"Enter iteration {self.niter}.")
                 if self.timestep_adjuster is not None:
-                    logger.info(f'Model timestep: {self.timestep}.')
-            
+                    logger.info(f"Model timestep: {self.timestep}.")
+
             # Saves the old radiative imbalance at the TOA (convergence check)
             if self.niter != 0:
                 self.oldN = self.radiation["toa"][-1]
-            
+
             # Adjusts solar parameters if diurnal cycle is active
             if self.diurnal_cycle:
                 self.radiation.adjust_solar_angle(self.get_hours_passed() / 24)
-            
+
             # Performs radiative calculations with the present state
             self.radiation.update_heatingrates(
                 atmosphere=self.atmosphere,
@@ -365,13 +370,13 @@ class RCE():
 
             # Applies heating rates and fluxes to the the surface
             self.surface.adjust(
-                sw_down=self.radiation['sw_flxd'][0, 0],
-                sw_up=self.radiation['sw_flxu'][0, 0],
-                lw_down=self.radiation['lw_flxd'][0, 0],
-                lw_up=self.radiation['lw_flxu'][0, 0],
+                sw_down=self.radiation["sw_flxd"][0, 0],
+                sw_up=self.radiation["sw_flxu"][0, 0],
+                lw_down=self.radiation["lw_flxd"][0, 0],
+                lw_up=self.radiation["lw_flxu"][0, 0],
                 timestep=self.timestep_days,
             )
-            
+
             # If it uses Romps (2020) idea, adjusts the carbon dioxide
             if not np.isnan(self.co2_adjustment_timescale):
                 # Adjusts CO2 concentrations to find a equilibrium state using
@@ -379,15 +384,18 @@ class RCE():
                 n0 = getattr(self.surface, "heat_sink", 66.0)
                 A = 5.35
                 tau = self.co2_adjustment_timescale
-                self.atmosphere['CO2'] += self.timestep_days * (
-                    n0 - self.radiation['toa'][0]) / (A * tau
-                                                      ) * self.atmosphere['CO2']
+                self.atmosphere["CO2"] += (
+                    self.timestep_days
+                    * (n0 - self.radiation["toa"][0])
+                    / (A * tau)
+                    * self.atmosphere["CO2"]
+                )
 
             # Saves the old temperature (time step adjustment)
-            self.oldT = self.atmosphere['T'][0].copy()
+            self.oldT = self.atmosphere["T"][0].copy()
 
             # Applies radiative heating rates to the temperature profile
-            self.atmosphere['T'] += (self.radiation['net_htngrt'] * self.timestep_days)
+            self.atmosphere["T"] += self.radiation["net_htngrt"] * self.timestep_days
 
             # Performs the convective adjustment of the temperature profile
             self.convection.stabilize(
@@ -396,29 +404,29 @@ class RCE():
                 timestep=self.timestep_days,
                 surface=self.surface,
             )
-            
+
             # Applies cooling due to stratospheric upwelling
             self.upwelling.cool(
                 atmosphere=self.atmosphere,
                 convection=self.convection,
                 timestep=self.timestep_days,
             )
-            
+
             # Updates height and other diagnostic quantities
             # TODO: Consider implementing an Atmosphere.update_diagnostics()
             # method to include e.g. convective top in the output
             self.atmosphere.update_height()
-            z = self.atmosphere.get('z')[0, :]
+            z = self.atmosphere.get("z")[0, :]
             if isinstance(self.convection, HardAdjustment):
                 self.convection.update_convective_top_height(z)
-            
+
             # Updates the ozone profile
             self.ozone(
                 atmosphere=self.atmosphere,
                 convection=self.convection,
                 timestep=self.timestep_days,
                 upwelling=self.upwelling,
-                zenith=self.radiation.current_solar_angle
+                zenith=self.radiation.current_solar_angle,
             )
 
             # Updates the humidity profile
@@ -427,7 +435,7 @@ class RCE():
                 convection=self.convection,
                 surface=self.surface,
             )
-            
+
             # Updates the cloud profile
             self.cloud.update_cloud_profile(
                 atmosphere=self.atmosphere,
@@ -436,8 +444,8 @@ class RCE():
             )
 
             # Calculates temperature change (time step adjustment)
-            self.deltaT = self.atmosphere['T'][0].copy() - self.oldT
-            
+            self.deltaT = self.atmosphere["T"][0].copy() - self.oldT
+
             # Adjusts the time step
             if self.timestep_adjuster is not None:
                 self.timestep = self.timestep_adjuster(
@@ -448,24 +456,27 @@ class RCE():
             if self.check_if_write():
                 if self.nchandler is None:
                     self.nchandler = netcdf.NetcdfHandler(
-                        filename=self.outfile, rce=self)
+                        filename=self.outfile, rce=self
+                    )
 
                 self.nchandler.write()
 
             # Checks if the model run has converged to an equilibrium state
             if self.is_converged():
                 # If the model is converged, skip further iterations. Success!
-                logger.info(f'Converged after {self.niter} iterations.')
+                logger.info(f"Converged after {self.niter} iterations.")
                 break
             # Otherwise increase the iteration count and go on
             else:
                 self.niter += 1
                 self.time += self.timestep
         else:
-            logger.info('Stop. Reached maximum runtime.')
+            logger.info("Stop. Reached maximum runtime.")
+
 
 class TimestepAdjuster:
     """Callable object to adjust the model timestep."""
+
     def __init__(
         self,
         increment=None,
