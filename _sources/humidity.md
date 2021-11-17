@@ -33,7 +33,7 @@ There are various pre-defined functions in `konrad.humidity`, for exmaple, a ver
 
 ```{code-cell} ipython3
 humidity_model = konrad.humidity.FixedRH(
-    rh_func=konrad.humidity.VerticallyUniform(0.1),
+    rh_func=konrad.humidity.VerticallyUniform(0.7),
 )
 ```
 
@@ -48,19 +48,28 @@ rce = konrad.RCE(
     surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
     humidity=humidity_model,  # Here, we pass the humidity component that we just created
     timestep='12h',  # Set timestep in model time.
-    max_duration='100d',  # Set maximum runtime.
+    max_duration='150d',  # Set maximum runtime.
 )
 rce.run()  # Start the simulation.
+```
 
-fig, ax = plt.subplots()
-plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
-ax.set_xlabel(r"$T$ / K")
-ax.set_ylabel("$p$ / hPa")
+The vertical humidity distribution is one of the largest controling factors for the net radiative heating $Q_r$ in the atmosphere.
+$Q_r$ is a decisive quantity in climate science as it destabilizies the atmosphere, which is a premise for convection of air masses.
+
+```{code-cell} ipython3
+fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
+plots.profile_p_log(atmosphere['plev'], atmosphere['H2O'][-1, :], ax=ax0)
+ax0.set_xlabel(r"$q$ / VMR")
+ax0.set_xscale("log")
+ax0.set_ylabel("$p$ / hPa")
+
+ax1.axvline(0, color="k", linewidth=0.8)
+plots.profile_p_log(atmosphere['plev'], rce.radiation["net_htngrt"][-1, :], ax=ax1)
+ax1.set_xlim(-2, 0.5)
+ax1.set_xlabel(r"$Q_\mathrm{r}$ / (K/day)")
 ```
 
 ## Fixed absolute humidity
-
-+++
 
 There is also a special class that will keep the absolute amount of water vapor fixed. This can be used to turn off the water-vapor feedback in a simulation, or, to run a simulation without any water vapor at all.
 
@@ -80,8 +89,13 @@ rce = konrad.RCE(
 )
 rce.run()  # Start the simulation.
 
-fig, ax = plt.subplots()
-plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
-ax.set_xlabel(r"$T$ / K")
-ax.set_ylabel("$p$ / hPa")
+fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
+plots.profile_p_log(atmosphere['plev'], atmosphere['H2O'][-1, :], ax=ax0)
+ax0.set_xlabel(r"$q$ / VMR")
+ax0.set_ylabel("$p$ / hPa")
+
+ax1.axvline(0, color="k", linewidth=0.8)
+plots.profile_p_log(atmosphere['plev'], rce.radiation["net_htngrt"][-1, :], ax=ax1)
+ax1.set_xlim(-2, 0.5)
+ax1.set_xlabel(r"$Q_\mathrm{r}$ / (K/day)")
 ```

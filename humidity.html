@@ -42,11 +42,13 @@
     <script src="_static/copybutton.js"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown, .tag_hide_input div.cell_input, .tag_hide-input div.cell_input, .tag_hide_output div.cell_output, .tag_hide-output div.cell_output, .tag_hide_cell.cell, .tag_hide-cell.cell';</script>
     <script src="_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
     <script async="async" src="https://unpkg.com/thebe@0.5.1/lib/index.js"></script>
     <script>
-        const thebe_selector = ".thebe,.cell"
-        const thebe_selector_input = "pre,.cell_input div.highlight"
-        const thebe_selector_output = ".output,.cell_output"
+        const thebe_selector = ".thebe"
+        const thebe_selector_input = "pre"
+        const thebe_selector_output = ".output"
     </script>
     <script async="async" src="_static/sphinx-thebe.js"></script>
     <link rel="shortcut icon" href="_static/konrad-logo.png"/>
@@ -103,9 +105,14 @@
    Getting started
   </a>
  </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="netcdf_output.html">
+   Store netCDF output
+  </a>
+ </li>
  <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="components.html">
-   Components
+   Model components
   </a>
   <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
   <label for="toctree-checkbox-1">
@@ -140,16 +147,44 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="rrtmg_only.html">
-   Use
-   <code class="docutils literal notranslate">
-    <span class="pre">
-     konrad
-    </span>
-   </code>
-   as RRTMG interface
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="climate_modeling.html">
+   Climate modeling
   </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <label for="toctree-checkbox-2">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="forcing.html">
+     Radiative forcing
+    </a>
+   </li>
+   <li class="toctree-l2">
+    <a class="reference internal" href="feedback.html">
+     Climate feedback
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="misc.html">
+   Miscellaneous examples
+  </a>
+  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <label for="toctree-checkbox-3">
+   <i class="fas fa-chevron-down">
+   </i>
+  </label>
+  <ul>
+   <li class="toctree-l2">
+    <a class="reference internal" href="rrtmg_only.html">
+     RRTMG interface
+    </a>
+   </li>
+  </ul>
  </li>
 </ul>
 
@@ -206,6 +241,21 @@
 
             <!-- Source interaction buttons -->
 
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/atmtools/konrad"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/master/howto/humidity.md"><button
+                type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
+                title="Edit this page"><i class="fas fa-pencil-alt"></i>suggest edit</button></a>
+    </div>
+</div>
+
             <!-- Full screen (wrap in <a> to have style consistency -->
 
 <a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
@@ -214,26 +264,6 @@
             class="fas fa-expand"></i></button></a>
 
             <!-- Launch buttons -->
-
-<div class="dropdown-buttons-trigger">
-    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
-        aria-label="Launch interactive content"><i class="fas fa-rocket"></i></button>
-    <div class="dropdown-buttons">
-        
-        <a class="binder-button" href="https://mybinder.org/v2/gh/atmtools/konrad/master?urlpath=tree/howto/humidity.md"><button type="button"
-                class="btn btn-secondary topbarbtn" title="Launch Binder" data-toggle="tooltip"
-                data-placement="left"><img class="binder-button-logo"
-                    src="_static/images/logo_binder.svg"
-                    alt="Interact on binder">Binder</button></a>
-        
-        
-        
-        <button type="button" class="btn btn-secondary topbarbtn"
-            onclick="initThebeSBT()" title="Launch Thebe" data-toggle="tooltip" data-placement="left"><i
-                class="fas fa-play"></i><span style="margin-left: .4em;">Live Code</span></button>
-        
-    </div>
-</div>
 
         </div>
 
@@ -289,7 +319,7 @@ There are various pre-defined functions in <code class="docutils literal notrans
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">humidity_model</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">FixedRH</span><span class="p">(</span>
-    <span class="n">rh_func</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">VerticallyUniform</span><span class="p">(</span><span class="mf">0.1</span><span class="p">),</span>
+    <span class="n">rh_func</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">VerticallyUniform</span><span class="p">(</span><span class="mf">0.7</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -306,22 +336,35 @@ There are various pre-defined functions in <code class="docutils literal notrans
     <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
     <span class="n">humidity</span><span class="o">=</span><span class="n">humidity_model</span><span class="p">,</span>  <span class="c1"># Here, we pass the humidity component that we just created</span>
     <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
-    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
+    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
 <span class="p">)</span>
 <span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>  <span class="c1"># Start the simulation.</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>The vertical humidity distribution is one of the largest controling factors for the net radiative heating <span class="math notranslate nohighlight">\(Q_r\)</span> in the atmosphere.
+<span class="math notranslate nohighlight">\(Q_r\)</span> is a decisive quantity in climate science as it destabilizies the atmosphere, which is a premise for convection of air masses.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;H2O&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$q$ / VMR&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;T&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">rce</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;net_htngrt&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$Q_\mathrm</span><span class="si">{r}</span><span class="s2">$ / (K/day)&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0, 0.5, &#39;$p$ / hPa&#39;)
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0.5, 0, &#39;$Q_\\mathrm{r}$ / (K/day)&#39;)
 </pre></div>
 </div>
-<img alt="_images/humidity_6_1.png" src="_images/humidity_6_1.png" />
+<img alt="_images/humidity_8_1.png" src="_images/humidity_8_1.png" />
 </div>
 </div>
 </div>
@@ -345,18 +388,23 @@ There are various pre-defined functions in <code class="docutils literal notrans
 <span class="p">)</span>
 <span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>  <span class="c1"># Start the simulation.</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;T&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;H2O&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$q$ / VMR&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+
+<span class="n">ax1</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">rce</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;net_htngrt&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$Q_\mathrm</span><span class="si">{r}</span><span class="s2">$ / (K/day)&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0, 0.5, &#39;$p$ / hPa&#39;)
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0.5, 0, &#39;$Q_\\mathrm{r}$ / (K/day)&#39;)
 </pre></div>
 </div>
-<img alt="_images/humidity_9_1.png" src="_images/humidity_9_1.png" />
+<img alt="_images/humidity_10_1.png" src="_images/humidity_10_1.png" />
 </div>
 </div>
 </div>
@@ -366,7 +414,7 @@ There are various pre-defined functions in <code class="docutils literal notrans
     {
         requestKernel: true,
         binderOptions: {
-            repo: "atmtools/konrad",
+            repo: "binder-examples/jupyter-stacks-datascience",
             ref: "master",
         },
         codeMirrorConfig: {
@@ -409,7 +457,7 @@ There are various pre-defined functions in <code class="docutils literal notrans
     <div class="container">
       <p>
         
-          By The Jupyter Book community<br/>
+          By konrad developers<br/>
         
             &copy; Copyright 2021.<br/>
       </p>

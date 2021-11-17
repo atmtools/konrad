@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Model components &#8212; How to konrad</title>
+    <title>Radiative forcing &#8212; How to konrad</title>
     
   <link href="_static/css/theme.css" rel="stylesheet">
   <link href="_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -52,8 +52,8 @@
     <link rel="shortcut icon" href="_static/konrad-logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Atmosphere" href="atmosphere.html" />
-    <link rel="prev" title="Store netCDF output" href="netcdf_output.html" />
+    <link rel="next" title="Climate feedback" href="feedback.html" />
+    <link rel="prev" title="Climate modeling" href="climate_modeling.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -108,11 +108,11 @@
    Store netCDF output
   </a>
  </li>
- <li class="toctree-l1 current active has-children">
-  <a class="current reference internal" href="#">
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="components.html">
    Model components
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox"/>
   <label for="toctree-checkbox-1">
    <i class="fas fa-chevron-down">
    </i>
@@ -145,18 +145,18 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
+ <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="climate_modeling.html">
    Climate modeling
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul>
-   <li class="toctree-l2">
-    <a class="reference internal" href="forcing.html">
+  <ul class="current">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Radiative forcing
     </a>
    </li>
@@ -223,9 +223,12 @@
 
     <div class="dropdown-buttons">
         <!-- ipynb file if we had a myst markdown file -->
-        
+        <a class="dropdown-buttons"
+            href="_sources/forcing.ipynb"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download notebook file" data-toggle="tooltip"
+                data-placement="left">.ipynb</button></a>
         <!-- Download raw file -->
-        <a class="dropdown-buttons" href="_sources/components.md"><button type="button"
+        <a class="dropdown-buttons" href="_sources/forcing.md"><button type="button"
                 class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
                 data-placement="left">.md</button></a>
         <!-- Download PDF via print -->
@@ -245,7 +248,7 @@
                 data-toggle="tooltip" data-placement="left" title="Source repository"><i
                     class="fab fa-github"></i>repository</button></a>
         
-        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/master/howto/components.md"><button
+        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/master/howto/forcing.md"><button
                 type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
                 title="Edit this page"><i class="fas fa-pencil-alt"></i>suggest edit</button></a>
     </div>
@@ -265,6 +268,29 @@
         <!-- Table of contents -->
         <div class="d-none d-md-block col-md-2 bd-toc show">
             
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reference-climate">
+   Reference climate
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#instantanoues-forcing">
+   Instantanoues forcing
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#effective-forcing">
+   Effective forcing
+  </a>
+ </li>
+</ul>
+
+            </nav>
         </div>
     </div>
 </div>
@@ -273,11 +299,90 @@
         
               <div>
                 
-  <div class="tex2jax_ignore mathjax_ignore section" id="model-components">
-<h1>Model components<a class="headerlink" href="#model-components" title="Permalink to this headline">¶</a></h1>
-<p>Konrad is build in a modular way, which allows the user to alter its behaviour
-by replacing various model components.</p>
-<div class="toctree-wrapper compound">
+  <div class="tex2jax_ignore mathjax_ignore section" id="radiative-forcing">
+<h1>Radiative forcing<a class="headerlink" href="#radiative-forcing" title="Permalink to this headline">¶</a></h1>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">typhon</span> <span class="k">as</span> <span class="nn">ty</span>
+
+<span class="kn">import</span> <span class="nn">konrad</span>
+
+
+<span class="n">ty</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">use</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="reference-climate">
+<h2>Reference climate<a class="headerlink" href="#reference-climate" title="Permalink to this headline">¶</a></h2>
+<p>In a first step, we equilibrate our model in a reference climate state.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_quadratic_pgrid</span><span class="p">(</span><span class="mf">1000e2</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+<span class="n">atmosphere</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">Atmosphere</span><span class="p">(</span><span class="n">phlev</span><span class="p">)</span>
+<span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;CO2&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="mf">348e-6</span> <span class="c1"># Set reference CO2 concentration</span>
+
+<span class="c1"># Calculate reference OLR.</span>
+<span class="n">spinup</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span> <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">)</span>
+<span class="n">spinup</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>After the model has converged, we store the outgoing-longwave radiation at the top-of-the-atmosphere.
+This value is our reference against which we will later compute the radiative forcing.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">olr_ref</span> <span class="o">=</span> <span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="instantanoues-forcing">
+<h2>Instantanoues forcing<a class="headerlink" href="#instantanoues-forcing" title="Permalink to this headline">¶</a></h2>
+<p>The instantanoues forcing is the change in OLR that is induced by a doubling of the CO2 concentration only.
+In this defintion, no other changes to the atmospheric state - in particular the temperature - are allowed.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Calculate OLR at perturbed atmospheric state.</span>
+<span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;CO2&quot;</span><span class="p">][:]</span> <span class="o">*=</span> <span class="mi">2</span>  <span class="c1"># double the CO2 concentration</span>
+<span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="o">.</span><span class="n">update_heatingrates</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">)</span>
+
+<span class="n">instant_forcing</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">olr_ref</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Instantanoues forcing: </span><span class="si">{</span><span class="n">instant_forcing</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> W/m^2&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Instantanoues forcing: 2.57 W/m^2
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="effective-forcing">
+<h2>Effective forcing<a class="headerlink" href="#effective-forcing" title="Permalink to this headline">¶</a></h2>
+<p>The effective forcing includes the so called “stratospheric adjustment”. Due to a significant cooling of the stratosphere, the radiative forcing at the top-of-the-atmosphere is increased.
+The effective forcing is better description of the radiative imbalance that actually forces the troposphere.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">perturbed</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span><span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">)</span>
+<span class="n">perturbed</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="n">effective_forcing</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">perturbed</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">olr_ref</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Effective forcing: </span><span class="si">{</span><span class="n">effective_forcing</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> W/m^2&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Effective forcing: 4.32 W/m^2
+</pre></div>
+</div>
+</div>
+</div>
 </div>
 </div>
 
@@ -306,17 +411,17 @@ by replacing various model components.</p>
         
             <!-- Previous / next buttons -->
 <div class='prev-next-area'> 
-    <a class='left-prev' id="prev-link" href="netcdf_output.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="climate_modeling.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Store netCDF output</p>
+            <p class="prev-next-title">Climate modeling</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="atmosphere.html" title="next page">
+    <a class='right-next' id="next-link" href="feedback.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Atmosphere</p>
+        <p class="prev-next-title">Climate feedback</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>
