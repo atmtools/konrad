@@ -9,6 +9,7 @@ html:
 repository:
   url                       : https://github.com/atmtools/konrad
   path_to_book              : howto
+  branch                    : main
 launch_buttons:
   binderhub_url             : ""
 execute:
