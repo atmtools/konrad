@@ -5,6 +5,7 @@ logo: "images/konrad-logo.png"
 html:
   favicon: "images/konrad-logo.png"
   use_repository_button     : true
+  use_edit_page_button      : true
 repository:
   url                       : https://github.com/atmtools/konrad
   path_to_book              : howto
