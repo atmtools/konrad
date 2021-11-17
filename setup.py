@@ -46,6 +46,7 @@ setup(
             'pyarts',
         ],
         'docs': [
+            'jupyter-book',
             'sphinx',
             'sphinx_rtd_theme',
         ],

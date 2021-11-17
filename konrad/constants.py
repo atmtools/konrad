@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Physical constants.
-"""
+"""Physical constants.  """
 import scipy.constants as spc
 import typhon.constants as tyc
 
@@ -25,276 +23,275 @@ meters_per_day = seconds_in_a_day * 0.001  # to convert from mm s^-1 to m/day
 # Variable descriptions
 variable_description = {
     # Atmospheric variables
-    'plev': {
-        'units': 'Pa',
-        'standard_name': 'air_pressure',
-        },
-    'phlev': {
-        'units': 'Pa',
-        'standard_name': 'air_pressure_at_halflevel',
+    "plev": {
+        "units": "Pa",
+        "standard_name": "air_pressure",
     },
-    'time': {
-        'standard_name': 'time',
-        'units': 'hours since 0001-01-01 00:00:00.0',
-        'calendar': 'gregorian',
-        },
-    'T': {
-        'units': 'K',
-        'standard_name': 'air_temperature',
-        'arts_name': 'T',
-        'dims': ('time', 'plev'),
-        },
-    'z': {
-        'units': 'm',
-        'standard_name': 'geopotential_height',
-        'description': 'Geopotential height calculated from atmospheric state',
-        'arts_name': 'z',
-        'dims': ('time', 'plev'),
-        },
-    'lapse': {
-        'units': 'K / m',
-        'standard_name': 'air_temperature_lapse_rate',
+    "phlev": {
+        "units": "Pa",
+        "standard_name": "air_pressure_at_halflevel",
     },
-    'H2O': {
-        'units': '1',
-        'standard_name': 'humidity_mixing_ratio',
-        'arts_name': 'abs_species-H2O',
-        'dims': ('time', 'plev'),
-        },
-    'N2O': {
-        'units': '1',
-        'standard_name': 'nitrous_oxide_mixing_ratio',
-        'arts_name': 'abs_species-N2O',
-        'dims': ('plev',),
-        },
-    'O3': {
-        'units': '1',
-        'standard_name': 'ozone_mixing_ratio',
-        'arts_name': 'abs_species-O3',
-        'dims': ('time', 'plev'),
-        },
-    'O2': {
-        'units': '1',
-        'standard_name': 'oxygen_mixing_ratio',
-        'arts_name': 'abs_species-O2',
-        'dims': ('plev',),
+    "time": {
+        "standard_name": "time",
+        "units": "hours since 0001-01-01 00:00:00.0",
+        "calendar": "gregorian",
     },
-    'CO2': {
-        'units': '1',
-        'standard_name': 'carbon_dioxide_mixing_ratio',
-        'arts_name': 'abs_species-CO2',
-        'dims': ('time', 'plev',),
-        },
-    'CO': {
-        'units': '1',
-        'standard_name': 'carbon_monoxide_mixing_ratio',
-        'arts_name': 'abs_species-CO',
-        'dims': ('plev',),
-        },
-    'CH4': {
-        'units': '1',
-        'standard_name': 'methane_mixing_ratio',
-        'arts_name': 'abs_species-CH4',
-        'dims': ('plev',),
-        },
-    'CFC11': {
-        'units': '1',
-        'standard_name': 'cfc11_mixing_ratio',
-        'arts_name': 'abs_species-CFC11',
-        'dims': ('plev',),
+    "T": {
+        "units": "K",
+        "standard_name": "air_temperature",
+        "arts_name": "T",
+        "dims": ("time", "plev"),
     },
-    'CFC12': {
-        'units': '1',
-        'standard_name': 'cfc12_mixing_ratio',
-        'arts_name': 'abs_species-CFC12',
-        'dims': ('plev',),
+    "z": {
+        "units": "m",
+        "standard_name": "geopotential_height",
+        "description": "Geopotential height calculated from atmospheric state",
+        "arts_name": "z",
+        "dims": ("time", "plev"),
     },
-    'CFC22': {
-        'units': '1',
-        'standard_name': 'cfc22_mixing_ratio',
-        'arts_name': 'abs_species-CFC22',
-        'dims': ('plev',),
+    "lapse": {
+        "units": "K / m",
+        "standard_name": "air_temperature_lapse_rate",
     },
-    'CCl4': {
-        'units': '1',
-        'standard_name': 'carbon_tetrachloride_mixing_ratio',
-        'arts_name': 'abs_species-CCl4',
-        'dims': ('plev',),
+    "H2O": {
+        "units": "1",
+        "standard_name": "humidity_mixing_ratio",
+        "arts_name": "abs_species-H2O",
+        "dims": ("time", "plev"),
     },
-    'diabatic_convergence_max_plev': {
-        'units': 'Pa',
-        'standard_name': 'diabatic_convergence_max_plev',
-        'description': 'Pressure level of maximum diabatic convergence',
-        'dims': ('time',),
+    "N2O": {
+        "units": "1",
+        "standard_name": "nitrous_oxide_mixing_ratio",
+        "arts_name": "abs_species-N2O",
+        "dims": ("plev",),
     },
-    'diabatic_convergence_max_index': {
-        'units': '1',
-        'standard_name': 'diabatic_convergence_max_index',
-        'description': 'Level index of maximum diabatic convergence',
-        'dims': ('time',),
+    "O3": {
+        "units": "1",
+        "standard_name": "ozone_mixing_ratio",
+        "arts_name": "abs_species-O3",
+        "dims": ("time", "plev"),
+    },
+    "O2": {
+        "units": "1",
+        "standard_name": "oxygen_mixing_ratio",
+        "arts_name": "abs_species-O2",
+        "dims": ("plev",),
+    },
+    "CO2": {
+        "units": "1",
+        "standard_name": "carbon_dioxide_mixing_ratio",
+        "arts_name": "abs_species-CO2",
+        "dims": (
+            "time",
+            "plev",
+        ),
+    },
+    "CO": {
+        "units": "1",
+        "standard_name": "carbon_monoxide_mixing_ratio",
+        "arts_name": "abs_species-CO",
+        "dims": ("plev",),
+    },
+    "CH4": {
+        "units": "1",
+        "standard_name": "methane_mixing_ratio",
+        "arts_name": "abs_species-CH4",
+        "dims": ("plev",),
+    },
+    "CFC11": {
+        "units": "1",
+        "standard_name": "cfc11_mixing_ratio",
+        "arts_name": "abs_species-CFC11",
+        "dims": ("plev",),
+    },
+    "CFC12": {
+        "units": "1",
+        "standard_name": "cfc12_mixing_ratio",
+        "arts_name": "abs_species-CFC12",
+        "dims": ("plev",),
+    },
+    "CFC22": {
+        "units": "1",
+        "standard_name": "cfc22_mixing_ratio",
+        "arts_name": "abs_species-CFC22",
+        "dims": ("plev",),
+    },
+    "CCl4": {
+        "units": "1",
+        "standard_name": "carbon_tetrachloride_mixing_ratio",
+        "arts_name": "abs_species-CCl4",
+        "dims": ("plev",),
+    },
+    "diabatic_convergence_max_plev": {
+        "units": "Pa",
+        "standard_name": "diabatic_convergence_max_plev",
+        "description": "Pressure level of maximum diabatic convergence",
+        "dims": ("time",),
+    },
+    "diabatic_convergence_max_index": {
+        "units": "1",
+        "standard_name": "diabatic_convergence_max_index",
+        "description": "Level index of maximum diabatic convergence",
+        "dims": ("time",),
     },
     # Convective quantities
-    'convective_heating_rate': {
-        'units': 'K / day',
-        'standard_name': 'convective_heating_rate',
-        'dims': ('time', 'plev'),
+    "convective_heating_rate": {
+        "units": "K / day",
+        "standard_name": "convective_heating_rate",
+        "dims": ("time", "plev"),
     },
-    'convective_top_plev': {
-        'units': 'Pa',
-        'standard_name': 'convective_top_plev',
-        'description': 'Pressure level of the top of convection',
-        'dims': ('time',),
+    "convective_top_plev": {
+        "units": "Pa",
+        "standard_name": "convective_top_plev",
+        "description": "Pressure level of the top of convection",
+        "dims": ("time",),
     },
-    'convective_top_temperature': {
-        'units': 'K',
-        'standard_name': 'convective_top_temperature',
-        'description': 'Temperature at the top of convection',
-        'dims': ('time',),
+    "convective_top_temperature": {
+        "units": "K",
+        "standard_name": "convective_top_temperature",
+        "description": "Temperature at the top of convection",
+        "dims": ("time",),
     },
-    'convective_top_index': {
-        'units': 'model_level_index',
-        'standard_name': 'convective_top_index',
-        'description': 'Model level index at the top of convection '
-                       '(interpolated, between levels)',
-        'dims': ('time',),
+    "convective_top_index": {
+        "units": "model_level_index",
+        "standard_name": "convective_top_index",
+        "description": "Model level index at the top of convection "
+        "(interpolated, between levels)",
+        "dims": ("time",),
     },
-    'convective_top_height': {
-        'units': 'm',
-        'standard_name': 'convective_top_height',
-        'description': 'Altitude of the top of convection',
-        'dims': ('time',),
+    "convective_top_height": {
+        "units": "m",
+        "standard_name": "convective_top_height",
+        "description": "Altitude of the top of convection",
+        "dims": ("time",),
     },
     # Radiative quantities
-    'lw_htngrt': {
-        'units': 'K / day',
-        'standard_name': 'tendency_of_air_temperature_due_to_longwave_heating',
-        },
-    'lw_htngrt_clr': {
-        'units': 'K / day',
-        'standard_name': ('tendency_of_air_temperature_'
-                          'due_to_longwave_heating_assuming_clear_sky'
-                          ),
-        },
-    'lw_flxu': {
-        'units': 'W / m**2',
-        'standard_name': 'upwelling_longwave_flux_in_air',
-        },
-    'lw_flxd': {
-        'units': 'W / m**2',
-        'standard_name': 'downwelling_longwave_flux_in_air',
-        },
-    'lw_flxu_clr': {
-        'units': 'W / m**2',
-        'standard_name': 'upwelling_longwave_flux_in_air_assuming_clear_sky',
-        },
-    'lw_flxd_clr': {
-        'units': 'W / m**2',
-        'standard_name': 'downwelling_longwave_flux_in_air_assuming_clear_sky',
-        },
-    'sw_htngrt': {
-        'units': 'K / day',
-        'standard_name':
-            'tendency_of_air_temperature_due_to_shortwave_heating',
-        },
-    'sw_htngrt_clr': {
-        'units': 'K / day',
-        'standard_name': ('tendency_of_air_temperature_'
-                          'due_to_shortwave_heating_assuming_clear_sky'
-                          ),
-        },
-    'sw_flxu': {
-        'units': 'W / m**2',
-        'standard_name': 'upwelling_shortwave_flux_in_air',
-        },
-    'sw_flxd': {
-        'units': 'W / m**2',
-        'standard_name': 'downwelling_shortwave_flux_in_air',
-        },
-    'sw_flxu_clr': {
-        'units': 'W / m**2',
-        'standard_name': 'upwelling_shortwave_flux_in_air_assuming_clear_sky',
-        },
-    'sw_flxd_clr': {
-        'units': 'W / m**2',
-        'standard_name':
-            'downwelling_shortwave_flux_in_air_assuming_clear_sky',
-        },
-    'net_htngrt': {
-        'units': 'K / day',
-        'standard_name':
-            'tendency_of_air_temperature_due_to_radiative_heating',
-        },
-    'deltaT': {
-        'units': 'K / day',
-        'standard_name': 'tendency_of_air_temperature',
-        },
+    "lw_htngrt": {
+        "units": "K / day",
+        "standard_name": "tendency_of_air_temperature_due_to_longwave_heating",
+    },
+    "lw_htngrt_clr": {
+        "units": "K / day",
+        "standard_name": (
+            "tendency_of_air_temperature_" "due_to_longwave_heating_assuming_clear_sky"
+        ),
+    },
+    "lw_flxu": {
+        "units": "W / m**2",
+        "standard_name": "upwelling_longwave_flux_in_air",
+    },
+    "lw_flxd": {
+        "units": "W / m**2",
+        "standard_name": "downwelling_longwave_flux_in_air",
+    },
+    "lw_flxu_clr": {
+        "units": "W / m**2",
+        "standard_name": "upwelling_longwave_flux_in_air_assuming_clear_sky",
+    },
+    "lw_flxd_clr": {
+        "units": "W / m**2",
+        "standard_name": "downwelling_longwave_flux_in_air_assuming_clear_sky",
+    },
+    "sw_htngrt": {
+        "units": "K / day",
+        "standard_name": "tendency_of_air_temperature_due_to_shortwave_heating",
+    },
+    "sw_htngrt_clr": {
+        "units": "K / day",
+        "standard_name": (
+            "tendency_of_air_temperature_" "due_to_shortwave_heating_assuming_clear_sky"
+        ),
+    },
+    "sw_flxu": {
+        "units": "W / m**2",
+        "standard_name": "upwelling_shortwave_flux_in_air",
+    },
+    "sw_flxd": {
+        "units": "W / m**2",
+        "standard_name": "downwelling_shortwave_flux_in_air",
+    },
+    "sw_flxu_clr": {
+        "units": "W / m**2",
+        "standard_name": "upwelling_shortwave_flux_in_air_assuming_clear_sky",
+    },
+    "sw_flxd_clr": {
+        "units": "W / m**2",
+        "standard_name": "downwelling_shortwave_flux_in_air_assuming_clear_sky",
+    },
+    "net_htngrt": {
+        "units": "K / day",
+        "standard_name": "tendency_of_air_temperature_due_to_radiative_heating",
+    },
+    "deltaT": {
+        "units": "K / day",
+        "standard_name": "tendency_of_air_temperature",
+    },
     # Radiation
-    'toa': {
-        'units': 'W / m**2',
-        'standard_name':
-            'radiation_budget_at_top_of_the_atmosphere',
+    "toa": {
+        "units": "W / m**2",
+        "standard_name": "radiation_budget_at_top_of_the_atmosphere",
     },
-    'frequency': {
-        'units': 'Hz',
-        'standard_name': 'frequency',
-        },
-    'outgoing_longwave_radiation': {
-        'units': 'W / m**2 / Hz',
-        'standard_name': 'spectral_outgoing_longwave_radiation_at_top_of_the_atmospher',
-        },
+    "frequency": {
+        "units": "Hz",
+        "standard_name": "frequency",
+    },
+    "outgoing_longwave_radiation": {
+        "units": "W / m**2 / Hz",
+        "standard_name": "spectral_outgoing_longwave_radiation_at_top_of_the_atmospher",
+    },
     # Surface parameters
-    'albedo': {
-        'units': '1',
-        'standard_name': 'surface_albedo',
+    "albedo": {
+        "units": "1",
+        "standard_name": "surface_albedo",
     },
-    'pressure': {
-        'units': 'Pa',
-        'standard_name': 'surface_pressure',
+    "pressure": {
+        "units": "Pa",
+        "standard_name": "surface_pressure",
     },
-    'temperature': {
-        'units': 'K',
-        'standard_name': 'surface_temperature',
+    "temperature": {
+        "units": "K",
+        "standard_name": "surface_temperature",
     },
-    'c_p': {
-        'units': 'J / kg / K',
-        'standard_name': 'specific_heat_capacity_sea_water',
+    "c_p": {
+        "units": "J / kg / K",
+        "standard_name": "specific_heat_capacity_sea_water",
     },
-    'rho': {
-        'units': 'kg / m**3',
-        'standard_name': 'surface_density',
+    "rho": {
+        "units": "kg / m**3",
+        "standard_name": "surface_density",
     },
-    'depth': {
-        'units': 'm',
-        'standard_name': 'surface_depth',
+    "depth": {
+        "units": "m",
+        "standard_name": "surface_depth",
     },
-    'heat_capacity': {
-        'units': 'J / K',
-        'standard_name': 'surface_heat_capacity',
+    "heat_capacity": {
+        "units": "J / K",
+        "standard_name": "surface_heat_capacity",
     },
     # Ozone quantities
-    'ozone_source': {
-        'units': 'ppv / day',
-        'dims': ('time', 'plev'),
+    "ozone_source": {
+        "units": "ppv / day",
+        "dims": ("time", "plev"),
     },
-    'ozone_sink_ox': {
-        'units': 'ppv / day',
-        'dims': ('time', 'plev'),
+    "ozone_sink_ox": {
+        "units": "ppv / day",
+        "dims": ("time", "plev"),
     },
-    'ozone_sink_nox': {
-        'units': 'ppv / day',
-        'dims': ('time', 'plev'),
+    "ozone_sink_nox": {
+        "units": "ppv / day",
+        "dims": ("time", "plev"),
     },
-    'ozone_transport': {
-        'units': 'ppv / day',
-        'dims': ('time', 'plev'),
+    "ozone_transport": {
+        "units": "ppv / day",
+        "dims": ("time", "plev"),
     },
-    'ozone_sink_hox': {
-        'units': 'ppv / day',
-        'dims': ('time', 'plev'),
+    "ozone_sink_hox": {
+        "units": "ppv / day",
+        "dims": ("time", "plev"),
     },
     # Upwelling
-    'w': {
-        'units': 'm / day',
-        'dims': ('time', 'plev'),
-    }
+    "w": {
+        "units": "m / day",
+        "dims": ("time", "plev"),
+    },
 }
