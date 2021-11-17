@@ -10,7 +10,7 @@ from konrad import netcdf
 from konrad.radiation import RRTMG
 from konrad.ozone import (Ozone, OzonePressure)
 from konrad.humidity import FixedRH
-from konrad.surface import (Surface, SlabOcean, FixedTemperature)
+from konrad.surface import (Surface, FixedTemperature)
 from konrad.cloud import (Cloud, ClearSky)
 from konrad.convection import (Convection, HardAdjustment)
 from konrad.lapserate import (LapseRate, MoistLapseRate)
@@ -38,8 +38,8 @@ class RCE():
     def __init__(
         self,
         atmosphere,
-        timestep='6h',
-        max_duration='500d',
+        timestep='12h',
+        max_duration='200d',
         outfile=None,
         experiment='RCE',
         writeevery='24h',
@@ -110,7 +110,7 @@ class RCE():
                 Defaults to :class:`konrad.humidity.FixedRH`.
 
             surface (konrad.surface): Surface model.
-                Defaults to :class:`konrad.surface.SlabOcean`.
+                Defaults to :class:`konrad.surface.FixedTemperature`.
 
             cloud (konrad.cloud): Cloud model.
                 Defaults to :class:`konrad.cloud.ClearSky`.
@@ -166,7 +166,7 @@ class RCE():
         
         # Surface
         self.surface = utils.return_if_type(surface, 'surface',
-                                            Surface, SlabOcean())
+                                            Surface, FixedTemperature())
         
         # Cloud
         self.cloud = utils.return_if_type(cloud, 'cloud',
