@@ -3,14 +3,14 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1313687.svg)](https://doi.org/10.5281/zenodo.1313687)
 [![Documentation Status](https://readthedocs.org/projects/konrad/badge/?version=latest)](https://konrad.readthedocs.io/en/latest/?badge=latest)
 
-# konrad - Radiative-convective equilibrium framework
+# ![Logo](howto/images/konrad-logo_64.png) konrad
 
-The goal of ``konrad`` is to provide a simple framework to run
-radiative-convective equilibrium (RCE) simulations. It is build in an object
-oriented structure to allow simple modifications of the model setup.
+``konrad`` is a one-dimensional radiative-convective equilibrium (RCE) model.
+It is build in an object oriented structure to allow simple modifications of
+the model setup.
 
 You can find various tutorials that illustrate the usage of ``konrad`` in our
-[How to konrad](https://atmtools.github.io/konrad) Jupyter book.
+["How to konrad"](https://atmtools.github.io/konrad) Jupyter book.
 
 ## Requirements
 ``konrad`` requires Python 3.6 or higher. The recommended way to get
