@@ -19,7 +19,6 @@ __all__ = [
     'return_if_type',
     'plev_from_phlev',
     'dz_from_z',
-    'get_squeezable_pgrid',
     'get_quadratic_pgrid',
     'get_pressure_grids',
     'ozonesquash',
@@ -153,36 +152,7 @@ def dz_from_z(z):
     return dz
 
 
-def get_squeezable_pgrid(start=1000e2, stop=1, num=200, shift=0.5,
-                         fixpoint=0.):
-    """Create a pressure grid with adjustable distribution in logspace.
-
-    Notes:
-          Wrapper for ``typhon.math.squeezable_logspace``.
-
-    Parameters:
-        start (float): The starting value of the sequence.
-        stop (float): The end value of the sequence.
-        num (int): Number of sample to generate.
-        shift (float): Factor with which the first stepwidth is
-            squeezed in logspace. Has to be between  ``(0, 2)``.
-            Values smaller than one compress the gridpoints,
-            while values greater than 1 strecht the spacing.
-            The default is ``0.5`` (bottom heavy.)
-        fixpoint (float): Relative fixpoint for squeezing the grid.
-            Has to be between ``[0, 1]``. The  default is ``0`` (bottom).
-
-    Returns:
-        ndarray: Pressure grid.
-    """
-    grid = ty.math.squeezable_logspace(
-        start=start, stop=stop, num=num, squeeze=shift, fixpoint=fixpoint
-    )
-
-    return grid
-
-
-def get_quadratic_pgrid(surface_pressure=1000e2, top_pressure=1, num=200):
+def get_quadratic_pgrid(surface_pressure=1000e2, top_pressure=1, num=128):
     r"""Create matching pressure levels and half-levels.
 
     The half-levels range from ``surface_pressure`` to 1 Pa.
@@ -208,7 +178,7 @@ def get_quadratic_pgrid(surface_pressure=1000e2, top_pressure=1, num=200):
     return np.exp(-lnp/2 * (i**2 + i) + lnp) * top_pressure
 
 
-def get_pressure_grids(surface_pressure=1000e2, top_pressure=1, num=200):
+def get_pressure_grids(surface_pressure=1000e2, top_pressure=1, num=128):
     r"""Create matching pressures at full-levels and half-levels.
 
     The half-levels range from ``surface_pressure`` to 1 Pa.
