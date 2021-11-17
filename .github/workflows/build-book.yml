@@ -34,7 +34,7 @@ jobs:
 
   publish:
     needs: build
-    if: "github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository_owner == 'atmtools'"
+    if: "github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository_owner == 'atmtools'"
     runs-on: ubuntu-latest
     steps:
       - name: Download compiled book
