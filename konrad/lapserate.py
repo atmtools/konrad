@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Contains classes for handling atmospheric temperature lapse rates.
 These are used by the convection sub-model to set the temperature profile in
 the troposphere.
@@ -166,4 +165,3 @@ def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0):
         i += 1
 
     return T.clip(min=T_min)
-

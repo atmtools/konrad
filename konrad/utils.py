@@ -14,24 +14,24 @@ from konrad import constants
 
 
 __all__ = [
-    'append_description',
-    'append_timestep_netcdf',
-    'return_if_type',
-    'plev_from_phlev',
-    'dz_from_z',
-    'get_quadratic_pgrid',
-    'get_pressure_grids',
-    'ozonesquash',
-    'ozone_profile_rcemip',
-    'humidity_profile_rcemip',
-    'parse_fraction_of_day',
-    'standard_atmosphere',
-    'prefix_dict_keys',
-    'is_decreasing',
-    'calculate_combined_weights',
-    'gaussian',
-    'dp_from_dz',
-    'find_first_below',
+    "append_description",
+    "append_timestep_netcdf",
+    "return_if_type",
+    "plev_from_phlev",
+    "dz_from_z",
+    "get_quadratic_pgrid",
+    "get_pressure_grids",
+    "ozonesquash",
+    "ozone_profile_rcemip",
+    "humidity_profile_rcemip",
+    "parse_fraction_of_day",
+    "standard_atmosphere",
+    "prefix_dict_keys",
+    "is_decreasing",
+    "calculate_combined_weights",
+    "gaussian",
+    "dp_from_dz",
+    "find_first_below",
 ]
 
 logger = logging.getLogger(__name__)
@@ -75,23 +75,23 @@ def append_timestep_netcdf(filename, data, timestamp):
         timestamp (float): Timestamp of values appended.
     """
     # Open netCDF4 file in `append` mode.
-    with Dataset(filename, 'a') as nc:
+    with Dataset(filename, "a") as nc:
         logging.debug('Append timestep to "{}".'.format(filename))
-        t = nc.dimensions['time'].size  # get index to store data.
-        nc.variables['time'][t] = timestamp  # append timestamp.
+        t = nc.dimensions["time"].size  # get index to store data.
+        nc.variables["time"][t] = timestamp  # append timestamp.
 
         # Append values for each data variable in ``data``.
         for var in data.data_vars:
             # Append variable if it has a `time` dimension.
-            if 'time' in nc[var].dimensions:
+            if "time" in nc[var].dimensions:
                 # TODO: Find a cleaner way to handle different data dimensions.
-                if 'plev' in nc[var].dimensions:
-                    if hasattr(data[var], 'values'):
+                if "plev" in nc[var].dimensions:
+                    if hasattr(data[var], "values"):
                         nc.variables[var][t, :] = data[var].values
                     else:
                         nc.variables[var][t, :] = data[var]
                 else:
-                    if hasattr(data[var], 'values'):
+                    if hasattr(data[var], "values"):
                         nc.variables[var][t] = data[var].values
                     else:
                         nc.variables[var][t] = data[var]
@@ -114,8 +114,9 @@ def return_if_type(variable, variablename, expect, default):
         variable = default
     elif not isinstance(variable, expect):
         raise TypeError(
-            'Argument `{name}` has to be of type `{type}`.'.format(
-                name=variablename, type=expect.__name__)
+            "Argument `{name}` has to be of type `{type}`.".format(
+                name=variablename, type=expect.__name__
+            )
         )
 
     return variable
@@ -175,7 +176,7 @@ def get_quadratic_pgrid(surface_pressure=1000e2, top_pressure=1, num=128):
     i = np.linspace(0, 1, num)
     lnp = np.log(surface_pressure / top_pressure)
 
-    return np.exp(-lnp/2 * (i**2 + i) + lnp) * top_pressure
+    return np.exp(-lnp / 2 * (i ** 2 + i) + lnp) * top_pressure
 
 
 def get_pressure_grids(surface_pressure=1000e2, top_pressure=1, num=128):
@@ -197,7 +198,7 @@ def get_pressure_grids(surface_pressure=1000e2, top_pressure=1, num=128):
     phlev = get_quadratic_pgrid(
         surface_pressure=surface_pressure,
         top_pressure=top_pressure,
-        num=num+1,
+        num=num + 1,
     )
     plev = plev_from_phlev(phlev)
 
@@ -221,7 +222,7 @@ def ozonesquash(o3, z, squash):
     """
     i_max_o3 = np.argmax(o3)
 
-    sqz = (z[:i_max_o3] - z[i_max_o3])*squash + z[i_max_o3]
+    sqz = (z[:i_max_o3] - z[i_max_o3]) * squash + z[i_max_o3]
     new_o3 = copy.copy(o3)
     new_o3[:i_max_o3] = np.interp(z[:i_max_o3], sqz, o3[:i_max_o3])
     return new_o3
@@ -247,11 +248,10 @@ def ozone_profile_rcemip(plev, g1=3.6478, g2=0.83209, g3=11.3515):
 
     """
     p = plev / 100
-    return g1 * p**g2 * np.exp(-p / g3) * 1e-6
+    return g1 * p ** g2 * np.exp(-p / g3) * 1e-6
 
 
-def humidity_profile_rcemip(z, q0=18.65, qt=1e-11, zt=15000, zq1=4000,
-                            zq2=7500):
+def humidity_profile_rcemip(z, q0=18.65, qt=1e-11, zt=15000, zq1=4000, zq2=7500):
     r"""Compute the water vapor volumetric mixing ratio as function of height.
 
     .. math::
@@ -274,7 +274,7 @@ def humidity_profile_rcemip(z, q0=18.65, qt=1e-11, zt=15000, zq1=4000,
         Intercomparison Project
 
     """
-    q = q0 * np.exp(-z / zq1) * np.exp(-(z / zq2) ** 2)
+    q = q0 * np.exp(-z / zq1) * np.exp(-((z / zq2) ** 2))
 
     q[z > zt] = qt
 
@@ -304,11 +304,11 @@ def parse_fraction_of_day(time):
         datetime.timedelta(seconds=43200)
     """
     mapping = {
-        's': 'seconds',
-        'm': 'minutes',
-        'h': 'hours',
-        'd': 'days',
-        'w': 'weeks',
+        "s": "seconds",
+        "m": "minutes",
+        "h": "hours",
+        "d": "days",
+        "w": "weeks",
     }
 
     if isinstance(time, timedelta):
@@ -322,7 +322,7 @@ def parse_fraction_of_day(time):
 
 # TODO: Replace with ``typhon.physics.standard_atmosphere`` after next
 #  typhon relase (>0.6.0).
-def standard_atmosphere(z, coordinates='height'):
+def standard_atmosphere(z, coordinates="height"):
     """International Standard Atmosphere (ISA).
 
     The temperature profile is defined between 0-85 km (1089 h-0.004 hPa).
@@ -354,25 +354,23 @@ def standard_atmosphere(z, coordinates='height'):
             plt.show()
     """
     h = np.array([-610, 11000, 20000, 32000, 47000, 51000, 71000, 84852])
-    p = np.array(
-        [108_900, 22_632, 5474.9, 868.02, 110.91, 66.939, 3.9564, 0.3734]
-    )
+    p = np.array([108_900, 22_632, 5474.9, 868.02, 110.91, 66.939, 3.9564, 0.3734])
     temp = np.array([+19.0, -56.5, -56.5, -44.5, -2.5, -2.5, -58.5, -86.28])
 
-    if coordinates == 'height':
+    if coordinates == "height":
         z_ref = h
-    elif coordinates == 'pressure':
+    elif coordinates == "pressure":
         z_ref = np.log(p)
         z = np.log(z)
     else:
         raise ValueError(
-            f'"{coordinates}" coordinate is unsupported. '
-            'Use "height" or "pressure".')
+            f'"{coordinates}" coordinate is unsupported. ' 'Use "height" or "pressure".'
+        )
 
-    return interp1d(z_ref, temp + 273.15, fill_value='extrapolate')(z)
+    return interp1d(z_ref, temp + 273.15, fill_value="extrapolate")(z)
 
 
-def prefix_dict_keys(dictionary, prefix, delimiter='/'):
+def prefix_dict_keys(dictionary, prefix, delimiter="/"):
     """Return a copy of a dictionary with a prefix added to every key.
 
     Parameters:
@@ -388,8 +386,7 @@ def prefix_dict_keys(dictionary, prefix, delimiter='/'):
         {'foo.bar': 42}
 
     """
-    return {delimiter.join((prefix, key)): val
-            for key, val in dictionary.items()}
+    return {delimiter.join((prefix, key)): val for key, val in dictionary.items()}
 
 
 def is_decreasing(a):
@@ -399,9 +396,7 @@ def is_decreasing(a):
 
 def calculate_combined_weights(weights):
     """Calculate combined probabilities for a set of single probabilities."""
-    binary_table = np.array(
-        list(itertools.product([False, True], repeat=len(weights)))
-    )
+    binary_table = np.array(list(itertools.product([False, True], repeat=len(weights))))
 
     pij = np.zeros_like(binary_table, dtype=float)
     for (i, j), is_cloudy in np.ndenumerate(binary_table):
@@ -409,17 +404,19 @@ def calculate_combined_weights(weights):
 
     return binary_table, np.prod(pij, axis=1)
 
-def gaussian(x, m, s) :
-        """
-        Parameters:
-            x (float): Abscissa
-            m (float): Mean of the gaussian
-            s (float): Standard deviation of the gaussian
 
-        Returns (float) the value of a gaussian distribution of mean m and std s at point x. 
-        """ 
-        X = (x-m)**2 / (2*s**2)
-        return np.exp(-X)
+def gaussian(x, m, s):
+    """
+    Parameters:
+        x (float): Abscissa
+        m (float): Mean of the gaussian
+        s (float): Standard deviation of the gaussian
+
+    Returns (float) the value of a gaussian distribution of mean m and std s at point x.
+    """
+    X = (x - m) ** 2 / (2 * s ** 2)
+    return np.exp(-X)
+
 
 def dp_from_dz(dz, p, T):
     """

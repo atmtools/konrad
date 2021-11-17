@@ -3,7 +3,7 @@ import numpy as np
 from konrad import constants
 
 
-def fluxes2heating(net_fluxes, pressure, cp=None, method='diff'):
+def fluxes2heating(net_fluxes, pressure, cp=None, method="diff"):
     r"""Calculate radiative heating from net fluxes
 
     .. math::
@@ -24,9 +24,9 @@ def fluxes2heating(net_fluxes, pressure, cp=None, method='diff'):
     if cp is None:
         cp = constants.isobaric_mass_heat_capacity_dry_air
 
-    if method == 'diff':
+    if method == "diff":
         dfdp = np.diff(net_fluxes) / np.diff(pressure)
-    elif method == 'gradient':
+    elif method == "gradient":
         dfdp = np.gradient(net_fluxes, pressure)
     else:
         raise ValueError(f'Method has to be "diff" or "gradient".')

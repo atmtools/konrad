@@ -1,9 +1,9 @@
-from os.path import (dirname, join)
+from os.path import dirname, join
 
 import numpy as np
 import pytest
 
-from konrad import (atmosphere, utils)
+from konrad import atmosphere, utils
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ class TestAtmosphere:
 
     def test_from_netcdf(self):
         """Test initialisation from netCDF file."""
-        ncfile = join(self.ref_dir, 'reference.nc')
+        ncfile = join(self.ref_dir, "reference.nc")
         atmosphere.Atmosphere.from_netcdf(ncfile)
 
     def test_from_netcdf_invalid_input(self):
@@ -49,12 +49,11 @@ class TestAtmosphere:
         # arguments to the ``from_*`` classmethods. This lead to unexpected
         # behaviour during initialisation.
         with pytest.raises(TypeError):
-            atmosphere.Atmosphere.from_netcdf('dummy.nc', surface=None)
+            atmosphere.Atmosphere.from_netcdf("dummy.nc", surface=None)
 
     def test_refine_plev(self, atmosphere_obj):
         """Test refinement of pressure grid."""
         phlev = np.array([1000e2, 500e2, 10e2])
         atmosphere_new = atmosphere_obj.refine_plev(phlev=phlev)
 
-        #TODO Add a proper test of values
-
+        # TODO Add a proper test of values

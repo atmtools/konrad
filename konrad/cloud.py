@@ -47,16 +47,16 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    'get_rectangular_profile',
-    'Cloud',
-    'ClearSky',
-    'DirectInputCloud',
-    'PhysicalCloud',
-    'HighCloud',
-    'MidLevelCloud',
-    'LowCloud',
-    'ConceptualCloud',
-    'CloudEnsemble',
+    "get_rectangular_profile",
+    "Cloud",
+    "ClearSky",
+    "DirectInputCloud",
+    "PhysicalCloud",
+    "HighCloud",
+    "MidLevelCloud",
+    "LowCloud",
+    "ConceptualCloud",
+    "CloudEnsemble",
 ]
 
 
@@ -89,14 +89,22 @@ class Cloud(Component, metaclass=abc.ABCMeta):
     #: number of shortwave bands used in the radiation scheme
     num_shortwave_bands = 14
 
-    def __init__(self, numlevels, cloud_fraction=0, mass_ice=0, mass_water=0,
-                 ice_particle_size=20, droplet_radius=10,
-                 lw_optical_thickness=0, sw_optical_thickness=0,
-                 forward_scattering_fraction=0, asymmetry_parameter=0.85,
-                 single_scattering_albedo=0.9,
-                 rrtmg_cloud_optical_properties='liquid_and_ice_clouds',
-                 rrtmg_cloud_ice_properties='ebert_curry_two',
-                 ):
+    def __init__(
+        self,
+        numlevels,
+        cloud_fraction=0,
+        mass_ice=0,
+        mass_water=0,
+        ice_particle_size=20,
+        droplet_radius=10,
+        lw_optical_thickness=0,
+        sw_optical_thickness=0,
+        forward_scattering_fraction=0,
+        asymmetry_parameter=0.85,
+        single_scattering_albedo=0.9,
+        rrtmg_cloud_optical_properties="liquid_and_ice_clouds",
+        rrtmg_cloud_ice_properties="ebert_curry_two",
+    ):
         """Create a cloud. Which of the input parameters are used and which
         ignored depends on the set-up of the radiation scheme.
 
@@ -167,22 +175,23 @@ class Cloud(Component, metaclass=abc.ABCMeta):
         self.numlevels = numlevels
 
         self.coords = {
-            'mid_levels': np.arange(self.numlevels),
-            'num_longwave_bands': np.arange(self.num_longwave_bands),
-            'num_shortwave_bands': np.arange(self.num_shortwave_bands),
+            "mid_levels": np.arange(self.numlevels),
+            "num_longwave_bands": np.arange(self.num_longwave_bands),
+            "num_shortwave_bands": np.arange(self.num_shortwave_bands),
         }
 
         physical_props = {
-            'mass_content_of_cloud_liquid_water_in_atmosphere_layer':
-                (mass_water, 'kg m^-2'),
-            'mass_content_of_cloud_ice_in_atmosphere_layer':
-                (mass_ice, 'kg m^-2'),
-            'cloud_area_fraction_in_atmosphere_layer':
-                (cloud_fraction, 'dimensionless'),
-            'cloud_ice_particle_size':
-                (ice_particle_size, 'micrometers'),
-            'cloud_water_droplet_radius':
-                (droplet_radius, 'micrometers'),
+            "mass_content_of_cloud_liquid_water_in_atmosphere_layer": (
+                mass_water,
+                "kg m^-2",
+            ),
+            "mass_content_of_cloud_ice_in_atmosphere_layer": (mass_ice, "kg m^-2"),
+            "cloud_area_fraction_in_atmosphere_layer": (
+                cloud_fraction,
+                "dimensionless",
+            ),
+            "cloud_ice_particle_size": (ice_particle_size, "micrometers"),
+            "cloud_water_droplet_radius": (droplet_radius, "micrometers"),
         }
 
         for name, (var, unit) in physical_props.items():
@@ -190,16 +199,27 @@ class Cloud(Component, metaclass=abc.ABCMeta):
             self[name] = dataarray.dims, dataarray
 
         cloud_optics = {
-            'longwave_optical_thickness_due_to_cloud':
-                (lw_optical_thickness, 'dimensionless', False),
-            'cloud_forward_scattering_fraction':
-                (forward_scattering_fraction, 'dimensionless', True),
-            'cloud_asymmetry_parameter':
-                (asymmetry_parameter, 'dimensionless', True),
-            'shortwave_optical_thickness_due_to_cloud':
-                (sw_optical_thickness, 'dimensionless', True),
-            'single_scattering_albedo_due_to_cloud':
-                (single_scattering_albedo, 'dimensionless', True),
+            "longwave_optical_thickness_due_to_cloud": (
+                lw_optical_thickness,
+                "dimensionless",
+                False,
+            ),
+            "cloud_forward_scattering_fraction": (
+                forward_scattering_fraction,
+                "dimensionless",
+                True,
+            ),
+            "cloud_asymmetry_parameter": (asymmetry_parameter, "dimensionless", True),
+            "shortwave_optical_thickness_due_to_cloud": (
+                sw_optical_thickness,
+                "dimensionless",
+                True,
+            ),
+            "single_scattering_albedo_due_to_cloud": (
+                single_scattering_albedo,
+                "dimensionless",
+                True,
+            ),
         }
 
         for name, (var, unit, is_sw) in cloud_optics.items():
@@ -209,62 +229,62 @@ class Cloud(Component, metaclass=abc.ABCMeta):
         self._rrtmg_cloud_optical_properties = rrtmg_cloud_optical_properties
         self._rrtmg_cloud_ice_properties = rrtmg_cloud_ice_properties
 
-    def get_p_data_array(self, values, units='kg m^-2'):
+    def get_p_data_array(self, values, units="kg m^-2"):
         """Return a DataArray of values."""
         if isinstance(values, DataArray):
             return values
         elif isinstance(values, np.ndarray):
             if values.shape != (self.numlevels,):
                 raise ValueError(
-                    'shape mismatch: Shape of cloud parameter input array '
-                    f'{values.shape} is not compatible with number of model '
-                    f'levels ({self.numlevels},).'
+                    "shape mismatch: Shape of cloud parameter input array "
+                    f"{values.shape} is not compatible with number of model "
+                    f"levels ({self.numlevels},)."
                 )
         elif isinstance(values, numbers.Number):
-            values = values * np.ones(self.numlevels,)
+            values = values * np.ones(
+                self.numlevels,
+            )
         else:
             raise TypeError(
-                'Cloud variable input must be a single value, '
-                '`numpy.ndarray` or a `sympl.DataArray`'
+                "Cloud variable input must be a single value, "
+                "`numpy.ndarray` or a `sympl.DataArray`"
             )
 
-        return DataArray(values, dims=('mid_levels',), attrs={'units': units})
+        return DataArray(values, dims=("mid_levels",), attrs={"units": units})
 
-    def get_waveband_data_array(self, values, units='dimensionless', sw=True):
+    def get_waveband_data_array(self, values, units="dimensionless", sw=True):
         """Return a DataArray of values."""
         if isinstance(values, DataArray):
             return values
 
         if sw:
-            dims = ('mid_levels', 'num_shortwave_bands')
+            dims = ("mid_levels", "num_shortwave_bands")
             numbands = self.num_shortwave_bands
         else:
-            dims = ('mid_levels', 'num_longwave_bands')
+            dims = ("mid_levels", "num_longwave_bands")
             numbands = self.num_longwave_bands
 
         if isinstance(values, numbers.Number):
             values = values * np.ones((self.numlevels, numbands))
         elif isinstance(values, np.ndarray):
             if values.shape == (self.numlevels,):
-                values = np.repeat(
-                    values[:, np.newaxis], numbands, axis=1)
+                values = np.repeat(values[:, np.newaxis], numbands, axis=1)
             elif values.shape == (numbands,):
-                values = np.repeat(
-                    values[np.newaxis, :], self.numlevels, axis=0)
+                values = np.repeat(values[np.newaxis, :], self.numlevels, axis=0)
             elif not values.shape == (self.numlevels, numbands):
                 raise ValueError(
-                    f'shape mismatch: input array of shape {values.shape} '
-                    'is not supported. Allowed shapes are: '
-                    f'({self.numlevels},), ({numbands},), or '
-                    f'({self.numlevels}, {numbands}).'
+                    f"shape mismatch: input array of shape {values.shape} "
+                    "is not supported. Allowed shapes are: "
+                    f"({self.numlevels},), ({numbands},), or "
+                    f"({self.numlevels}, {numbands})."
                 )
         else:
             raise TypeError(
-                'Cloud variable input must be a single value, '
-                '`numpy.ndarray` or a `sympl.DataArray`'
+                "Cloud variable input must be a single value, "
+                "`numpy.ndarray` or a `sympl.DataArray`"
             )
 
-        return DataArray(values, dims=dims, attrs={'units': units})
+        return DataArray(values, dims=dims, attrs={"units": units})
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
@@ -275,11 +295,10 @@ class Cloud(Component, metaclass=abc.ABCMeta):
                 Atmosphere component.
 
         """
-        return cls(numlevels=atmosphere['plev'].size, **kwargs)
+        return cls(numlevels=atmosphere["plev"].size, **kwargs)
 
     @abc.abstractmethod
-    def update_cloud_profile(self, atmosphere, convection, radiation,
-                             **kwargs):
+    def update_cloud_profile(self, atmosphere, convection, radiation, **kwargs):
         """Return the cloud parameters for the radiation scheme.
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
@@ -289,15 +308,15 @@ class Cloud(Component, metaclass=abc.ABCMeta):
 
     def overcast(self):
         """Set cloud fraction in cloud layers to ``1`` (full overcast)."""
-        cloud_fraction = self['cloud_area_fraction_in_atmosphere_layer'][:]
+        cloud_fraction = self["cloud_area_fraction_in_atmosphere_layer"][:]
         cloud_mask = (cloud_fraction > 0).astype(float)
 
-        self['cloud_area_fraction_in_atmosphere_layer'][:] = cloud_mask
+        self["cloud_area_fraction_in_atmosphere_layer"][:] = cloud_mask
 
 
 class ClearSky(Cloud):
-    """No cloud.
-    """
+    """No cloud."""
+
     def update_cloud_profile(self, *args, **kwargs):
         return
 
@@ -309,8 +328,16 @@ class PhysicalCloud(Cloud):
     and particle size.  To be used with
     cloud_optical_properties='liquid_and_ice_clouds' in climt/RRTMG.
     """
-    def __init__(self, numlevels, cloud_fraction, mass_water, mass_ice,
-                 ice_particle_size, droplet_radius):
+
+    def __init__(
+        self,
+        numlevels,
+        cloud_fraction,
+        mass_water,
+        mass_ice,
+        ice_particle_size,
+        droplet_radius,
+    ):
         """Initialize a cloud component.
 
         Parameters:
@@ -332,30 +359,38 @@ class PhysicalCloud(Cloud):
             mass_water=mass_water,
             ice_particle_size=ice_particle_size,
             droplet_radius=droplet_radius,
-            rrtmg_cloud_optical_properties='liquid_and_ice_clouds'
+            rrtmg_cloud_optical_properties="liquid_and_ice_clouds",
         )
 
     def update_cloud_profile(self, *args, **kwargs):
-        """Keep the cloud fixed with pressure. """
+        """Keep the cloud fixed with pressure."""
         return
 
 
 class DirectInputCloud(Cloud):
-    """ To be used with cloud_optical_properties='direct_input' in climt/RRTMG.
-    """
+    """To be used with cloud_optical_properties='direct_input' in climt/RRTMG."""
+
     direct_input_parameters = {
-        'cloud_area_fraction_in_atmosphere_layer',
-        'longwave_optical_thickness_due_to_cloud',
-        'cloud_forward_scattering_fraction',
-        'cloud_asymmetry_parameter',
-        'shortwave_optical_thickness_due_to_cloud',
-        'single_scattering_albedo_due_to_cloud',
+        "cloud_area_fraction_in_atmosphere_layer",
+        "longwave_optical_thickness_due_to_cloud",
+        "cloud_forward_scattering_fraction",
+        "cloud_asymmetry_parameter",
+        "shortwave_optical_thickness_due_to_cloud",
+        "single_scattering_albedo_due_to_cloud",
     }
 
-    def __init__(self, numlevels, cloud_fraction, lw_optical_thickness,
-                 sw_optical_thickness, coupling='convective_top',
-                 forward_scattering_fraction=0, asymmetry_parameter=0.85,
-                 single_scattering_albedo=0.9, norm_index=None):
+    def __init__(
+        self,
+        numlevels,
+        cloud_fraction,
+        lw_optical_thickness,
+        sw_optical_thickness,
+        coupling="convective_top",
+        forward_scattering_fraction=0,
+        asymmetry_parameter=0.85,
+        single_scattering_albedo=0.9,
+        norm_index=None,
+    ):
 
         """Define a cloud based on properties that are directly used by the
         radiation scheme, namely cloud optical depth and scattering parameters.
@@ -395,7 +430,7 @@ class DirectInputCloud(Cloud):
             forward_scattering_fraction=forward_scattering_fraction,
             asymmetry_parameter=asymmetry_parameter,
             single_scattering_albedo=single_scattering_albedo,
-            rrtmg_cloud_optical_properties='direct_input'
+            rrtmg_cloud_optical_properties="direct_input",
         )
 
         self._norm_index = norm_index
@@ -405,18 +440,12 @@ class DirectInputCloud(Cloud):
     def __add__(self, other):
         """Define the superposition of two clouds in a layer."""
         name_map = (
-            ('cloud_fraction',
-             'cloud_area_fraction_in_atmosphere_layer'),
-            ('lw_optical_thickness',
-             'longwave_optical_thickness_due_to_cloud'),
-            ('sw_optical_thickness',
-             'shortwave_optical_thickness_due_to_cloud'),
-            ('forward_scattering_fraction',
-             'cloud_forward_scattering_fraction'),
-            ('asymmetry_parameter',
-             'cloud_asymmetry_parameter'),
-            ('single_scattering_albedo',
-             'single_scattering_albedo_due_to_cloud'),
+            ("cloud_fraction", "cloud_area_fraction_in_atmosphere_layer"),
+            ("lw_optical_thickness", "longwave_optical_thickness_due_to_cloud"),
+            ("sw_optical_thickness", "shortwave_optical_thickness_due_to_cloud"),
+            ("forward_scattering_fraction", "cloud_forward_scattering_fraction"),
+            ("asymmetry_parameter", "cloud_asymmetry_parameter"),
+            ("single_scattering_albedo", "single_scattering_albedo_due_to_cloud"),
         )
 
         # The superposition of two clouds is implemented following a
@@ -424,8 +453,8 @@ class DirectInputCloud(Cloud):
         # For each cloud layer, the properties of the bigger cloud (in terms
         # of cloud fraction) is used.
         other_is_bigger = (
-                other['cloud_area_fraction_in_atmosphere_layer']
-                > self['cloud_area_fraction_in_atmosphere_layer']
+            other["cloud_area_fraction_in_atmosphere_layer"]
+            > self["cloud_area_fraction_in_atmosphere_layer"]
         )
 
         kwargs = {}
@@ -439,7 +468,7 @@ class DirectInputCloud(Cloud):
         return summed_cloud
 
     def interpolation_function(self, cloud_parameter):
-        """ Calculate the interpolation function, to be used to maintain the
+        """Calculate the interpolation function, to be used to maintain the
         cloud optical properties and keep the cloud attached to a normalisation
         level (self._norm_index). A separate interpolation function is required
         for each cloud parameter that needs to be interpolated.
@@ -489,7 +518,8 @@ class DirectInputCloud(Cloud):
         for varname in self.direct_input_parameters:
             if varname not in self._interp_cache:
                 self._interp_cache[varname] = self.interpolation_function(
-                    cloud_parameter=self[varname])
+                    cloud_parameter=self[varname]
+                )
 
             self[varname][:] = self.shift_property(
                 cloud_parameter=self[varname],
@@ -497,28 +527,25 @@ class DirectInputCloud(Cloud):
                 norm_new=norm_new,
             )
 
-    def update_cloud_profile(self, atmosphere, convection, radiation,
-                             **kwargs):
-        """Keep the cloud profile fixed with model level (pressure). """
-        if self.coupling == 'convective_top':
-            self.shift_cloud_profile(
-                norm_new=convection.get('convective_top_index')[0]
-            )
-        elif self.coupling == 'freezing_level':
+    def update_cloud_profile(self, atmosphere, convection, radiation, **kwargs):
+        """Keep the cloud profile fixed with model level (pressure)."""
+        if self.coupling == "convective_top":
+            self.shift_cloud_profile(norm_new=convection.get("convective_top_index")[0])
+        elif self.coupling == "freezing_level":
             self.shift_cloud_profile(
                 norm_new=atmosphere.get_triple_point_index(),
             )
-        elif self.coupling == 'subsidence_divergence':
-            Qr = radiation['net_htngrt_clr'][-1]
+        elif self.coupling == "subsidence_divergence":
+            Qr = radiation["net_htngrt_clr"][-1]
             self.shift_cloud_profile(
                 norm_new=atmosphere.get_subsidence_convergence_max_index(Qr),
             )
-        elif self.coupling == 'pressure':
+        elif self.coupling == "pressure":
             return
         else:
             raise ValueError(
-                'The cloud class has been initialized with an invalid '
-                'cloud coupling mechanism.'
+                "The cloud class has been initialized with an invalid "
+                "cloud coupling mechanism."
             )
 
 
@@ -530,9 +557,9 @@ class ConceptualCloud(DirectInputCloud):
         depth,
         cloud_fraction,
         water_path=100e-3,
-        particle_size=100.,
-        phase='ice',
-        coupling='pressure'
+        particle_size=100.0,
+        phase="ice",
+        coupling="pressure",
     ):
         """Initialize a conceptual cloud.
 
@@ -558,7 +585,7 @@ class ConceptualCloud(DirectInputCloud):
 
         """
         super().__init__(
-            numlevels=atmosphere['plev'].size,
+            numlevels=atmosphere["plev"].size,
             cloud_fraction=np.nan,
             lw_optical_thickness=np.nan,
             sw_optical_thickness=np.nan,
@@ -580,27 +607,30 @@ class ConceptualCloud(DirectInputCloud):
         cld_opt_props = EchamCloudOptics()
 
         return cld_opt_props.get_cloud_properties(
-            self.particle_size, water_content, self.phase)
+            self.particle_size, water_content, self.phase
+        )
 
     @classmethod
     def from_atmosphere(cls, atmosphere, **kwargs):
-        return cls(atmosphere['plev'].size, **kwargs)
+        return cls(atmosphere["plev"].size, **kwargs)
 
     def update_cloud_top_plev(self, atmosphere, convection=None, radiation=None):
         """Determine cloud top pressure depending on coupling mechanism."""
-        if self.coupling.lower() == 'pressure':
+        if self.coupling.lower() == "pressure":
             return
-        elif self.coupling.lower() == 'convective_top':
+        elif self.coupling.lower() == "convective_top":
             if convection is not None:
-                self.cloud_top = convection.get('convective_top_plev')[0]
-        elif self.coupling.lower() == 'freezing_level':
+                self.cloud_top = convection.get("convective_top_plev")[0]
+        elif self.coupling.lower() == "freezing_level":
             self["cloud_top"][:] = atmosphere.get_triple_point_plev()
             self["cloud_top"][:] -= self.depth / 2  # Center around freezing level
-        elif self.coupling.lower() == 'subsidence_divergence':
+        elif self.coupling.lower() == "subsidence_divergence":
             if radiation is not None:
-                Qr = radiation['net_htngrt_clr'][-1]
-                self["cloud_top"][:] = atmosphere.get_subsidence_convergence_max_plev(Qr)
-        elif self.coupling.lower().startswith('temperature'):
+                Qr = radiation["net_htngrt_clr"][-1]
+                self["cloud_top"][:] = atmosphere.get_subsidence_convergence_max_plev(
+                    Qr
+                )
+        elif self.coupling.lower().startswith("temperature"):
             # Retrieve target temperature from keyword.
             threshold = float(self.coupling.split(":")[-1])
 
@@ -614,8 +644,8 @@ class ConceptualCloud(DirectInputCloud):
             self["cloud_top"][:] = atmosphere["plev"][idx]
         else:
             raise ValueError(
-                'The cloud class has been initialized with an invalid '
-                'cloud coupling mechanism.'
+                "The cloud class has been initialized with an invalid "
+                "cloud coupling mechanism."
             )
 
     def update_cloud_top_temperature(self, atmosphere):
@@ -625,24 +655,27 @@ class ConceptualCloud(DirectInputCloud):
 
         self["cloud_top_temperature"][:] = T[np.abs(p - self["cloud_top"]).argmin()]
 
-    def update_cloud_profile(self, atmosphere, convection=None, radiation=None, **kwargs):
+    def update_cloud_profile(
+        self, atmosphere, convection=None, radiation=None, **kwargs
+    ):
         """Update the cloud profile depending on the atmospheric state."""
         self.update_cloud_top_plev(atmosphere, convection, radiation)
         self.update_cloud_top_temperature(atmosphere)
 
         is_cloud = np.logical_and(
-            atmosphere['plev'] > self["cloud_top"],
-            atmosphere['plev'] < self["cloud_top"] + self.depth,
+            atmosphere["plev"] > self["cloud_top"],
+            atmosphere["plev"] < self["cloud_top"] + self.depth,
         ).astype(bool)
 
-        self['cloud_area_fraction_in_atmosphere_layer'][:] = (
+        self["cloud_area_fraction_in_atmosphere_layer"][:] = (
             self.cloud_fraction * is_cloud
         )
 
         water_content_per_Layer = self.water_path / np.sum(is_cloud)
 
         cloud_optics = self.get_cloud_optical_properties(
-            water_content=water_content_per_Layer)
+            water_content=water_content_per_Layer
+        )
 
         for name in cloud_optics.data_vars:
             self[name][:, :] = 0
@@ -654,13 +687,14 @@ class HighCloud(ConceptualCloud):
 
     High-level clouds are coupled to the maximum diabatic subsidence divergence.
     """
+
     def __init__(self, atmosphere, **kwargs):
         """Initialize a conceputal high cloud."""
         default_kwargs = dict(
             cloud_top=175e2,
             depth=100e2,
             cloud_fraction=0.1,
-            water_path=10.,
+            water_path=10.0,
             particle_size=100,
             phase="ice",
             coupling="subsidence_divergence",
@@ -675,13 +709,14 @@ class MidLevelCloud(ConceptualCloud):
 
     Mid-level clouds are coupled to the freezing level.
     """
+
     def __init__(self, *args, **kwargs):
         """Initialize a conceputal mid-level cloud."""
         default_kwargs = dict(
             cloud_top=550e2,
             depth=100e2,
             cloud_fraction=0.1,
-            water_path=100.,
+            water_path=100.0,
             particle_size=100,
             phase="ice",
             coupling="freezing_level",
@@ -696,14 +731,15 @@ class LowCloud(ConceptualCloud):
 
     Low-level clouds are fixed in pressure coordinates.
     """
+
     def __init__(self, *args, **kwargs):
         """Initialize a conceputal low-level cloud."""
         default_kwargs = dict(
             cloud_top=850e2,
             depth=100e2,
             cloud_fraction=0.1,
-            water_path=100.,
-            particle_size=10.,
+            water_path=100.0,
+            particle_size=10.0,
             phase="liquid",
             coupling="pressure",
         )
@@ -726,10 +762,10 @@ class CloudEnsemble(DirectInputCloud):
     >>> cloud_ensemble.cloud_area_fraction_in_atmosphere_layer
 
     """
+
     def __init__(self, *args):
         if not all([isinstance(a, DirectInputCloud) for a in args]):
-            raise ValueError(
-                'Only `DirectInputCloud`s can be combined in an ensemble.')
+            raise ValueError("Only `DirectInputCloud`s can be combined in an ensemble.")
         else:
             self._clouds = np.asarray(args)
 
@@ -739,7 +775,7 @@ class CloudEnsemble(DirectInputCloud):
         self.coords = self._superposition.coords
 
     def __getattr__(self, name):
-        if name.startswith('__'):
+        if name.startswith("__"):
             raise AttributeError
 
         return getattr(self._superposition, name)
@@ -764,7 +800,7 @@ class CloudEnsemble(DirectInputCloud):
     @property
     def netcdf_subgroups(self):
         """Dynamically create a netCDF subgroup for each cloud."""
-        return {f"cloud-{i}": cloud for i, cloud in enumerate( self._clouds)}
+        return {f"cloud-{i}": cloud for i, cloud in enumerate(self._clouds)}
 
     def update_cloud_profile(self, *args, **kwargs):
         """Update every cloud in the cloud ensemble."""
@@ -776,9 +812,7 @@ class CloudEnsemble(DirectInputCloud):
     def get_combinations(self):
         """Get all combinations of overlapping cloud layers."""
         if not all([isinstance(c, ConceptualCloud) for c in self._clouds]):
-            raise TypeError(
-                'Only `ConceptualCloud`s can be combined.'
-            )
+            raise TypeError("Only `ConceptualCloud`s can be combined.")
 
         bool_index, combined_weights = utils.calculate_combined_weights(
             weights=[cld.cloud_fraction for cld in self._clouds]
@@ -787,12 +821,14 @@ class CloudEnsemble(DirectInputCloud):
         clouds = []
         for (i, p) in zip(bool_index, combined_weights):
             if not any(i):
-                clouds.append(DirectInputCloud(
-                    numlevels=self.coords['mid_levels'].size,
-                    cloud_fraction=0.,
-                    lw_optical_thickness=0.,
-                    sw_optical_thickness=0.,
-                ))
+                clouds.append(
+                    DirectInputCloud(
+                        numlevels=self.coords["mid_levels"].size,
+                        cloud_fraction=0.0,
+                        lw_optical_thickness=0.0,
+                        sw_optical_thickness=0.0,
+                    )
+                )
             else:
                 composed_clouds = np.sum(self._clouds[i])
                 composed_clouds.overcast()
