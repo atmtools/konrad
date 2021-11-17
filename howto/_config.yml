@@ -13,3 +13,4 @@ launch_buttons:
   binderhub_url             : ""
 execute:
   execute_notebooks: force
+  timeout: 90

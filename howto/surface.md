@@ -10,7 +10,7 @@ kernelspec:
   language: python
   name: python3
 execution:
-  timeout: 90
+  timeout: 180
 ---
 
 # Surface
