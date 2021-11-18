@@ -314,7 +314,7 @@ Konrad will create the file and store a snapshot of the instantaneous model stat
 
 <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
     <span class="n">atmosphere</span><span class="p">,</span>
-    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
     <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
     <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
     <span class="n">outfile</span><span class="o">=</span><span class="s2">&quot;my_rce_output.nc&quot;</span><span class="p">,</span>  <span class="c1"># Specifiy the output file</span>

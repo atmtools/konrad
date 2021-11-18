@@ -44,7 +44,7 @@ for lapserate in [6.5, 8, 10]:
 
     rce = konrad.RCE(
         atmosphere,
-        surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
+        surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
         lapserate=lapserate,  # Here, we pass the lapserate component that we just created
         timestep='12h',  # Set timestep in model time.
         max_duration='100d',  # Set maximum runtime.
@@ -65,7 +65,7 @@ atmosphere = konrad.atmosphere.Atmosphere(phlev)
 
 rce = konrad.RCE(
     atmosphere,
-    surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
+    surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
     lapserate=lapserate,  # Here, we pass the lapserate component that we just created
     timestep='12h',  # Set timestep in model time.
     max_duration='100d',  # Set maximum runtime.
@@ -93,7 +93,7 @@ fig, ax = plt.subplots()
 for Ts in [280, 290, 300]:
     rce = konrad.RCE(
         atmosphere,
-        surface=konrad.surface.FixedTemperature(Ts),  # Run with a fixed surface temperature.
+        surface=konrad.surface.FixedTemperature(temperature=Ts),  # Run with a fixed surface temperature.
         lapserate=konrad.lapserate.MoistLapseRate(),  # Here, we pass the lapserate component that we just created
         timestep='12h',  # Set timestep in model time.
         max_duration='100d',  # Set maximum runtime.

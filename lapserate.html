@@ -332,7 +332,7 @@ Here, we will have a look at some of the different options in <code class="docut
 
     <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
         <span class="n">atmosphere</span><span class="p">,</span>
-        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
+        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
         <span class="n">lapserate</span><span class="o">=</span><span class="n">lapserate</span><span class="p">,</span>  <span class="c1"># Here, we pass the lapserate component that we just created</span>
         <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
         <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
@@ -362,7 +362,7 @@ Here, we will have a look at some of the different options in <code class="docut
 
 <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
     <span class="n">atmosphere</span><span class="p">,</span>
-    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
     <span class="n">lapserate</span><span class="o">=</span><span class="n">lapserate</span><span class="p">,</span>  <span class="c1"># Here, we pass the lapserate component that we just created</span>
     <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
     <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
@@ -398,7 +398,7 @@ This way, we can account for a changing lapse rate in a warming climate</p>
 <span class="k">for</span> <span class="n">Ts</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">280</span><span class="p">,</span> <span class="mi">290</span><span class="p">,</span> <span class="mi">300</span><span class="p">]:</span>
     <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
         <span class="n">atmosphere</span><span class="p">,</span>
-        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">Ts</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
+        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="n">Ts</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
         <span class="n">lapserate</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">lapserate</span><span class="o">.</span><span class="n">MoistLapseRate</span><span class="p">(),</span>  <span class="c1"># Here, we pass the lapserate component that we just created</span>
         <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
         <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>

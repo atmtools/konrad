@@ -33,7 +33,7 @@ atmosphere = konrad.atmosphere.Atmosphere(phlev)
 
 rce = konrad.RCE(
     atmosphere,
-    surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
+    surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
     timestep='12h',  # Set timestep in model time.
     max_duration='100d',  # Set maximum runtime.
     outfile="my_rce_output.nc",  # Specifiy the output file
