@@ -31,7 +31,7 @@ The simplest representatio of a surface in `konrad` is the fixed surface tempera
 It is defined by an albedo and a prescribed temperature.
 
 ```{code-cell} ipython3
-surface = konrad.surface.FixedTemperature(288., albedo=0.3)
+surface = konrad.surface.FixedTemperature(temperature=288., albedo=0.3)
 ```
 
 When using a fixed surface temperature, the atmosphere component will converge to a consistent equilibrium quite fast (order of ~100 days)
@@ -42,7 +42,7 @@ atmosphere = konrad.atmosphere.Atmosphere(phlev)
 
 rce = konrad.RCE(
     atmosphere,
-    surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
+    surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
     timestep='12h',  # Set timestep in model time.
     max_duration='100d',  # Set maximum runtime.
 )
