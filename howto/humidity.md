@@ -45,7 +45,7 @@ atmosphere = konrad.atmosphere.Atmosphere(phlev)
 
 rce = konrad.RCE(
     atmosphere,
-    surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
+    surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
     humidity=humidity_model,  # Here, we pass the humidity component that we just created
     timestep='12h',  # Set timestep in model time.
     max_duration='150d',  # Set maximum runtime.
@@ -82,7 +82,7 @@ humidity_model = konrad.humidity.FixedVMR()  # Preserve the absolute humidity
 
 rce = konrad.RCE(
     atmosphere,
-    surface=konrad.surface.FixedTemperature(288.),  # Run with a fixed surface temperature.
+    surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
     humidity=humidity_model,  # Here, we pass the humidity component that we just created
     timestep='12h',  # Set timestep in model time.
     max_duration='100d',  # Set maximum runtime.
