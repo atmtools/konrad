@@ -1,7 +1,7 @@
 [![PyPI version](https://badge.fury.io/py/konrad.svg)](https://badge.fury.io/py/konrad)
 [![Test](https://github.com/atmtools/konrad/workflows/Test/badge.svg?branch=main)](https://github.com/atmtools/konrad/commits/main)
+[![Documentation Status](https://readthedocs.org/projects/konrad/badge/?version=latest)](https://konrad.readthedocs.io/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1313687.svg)](https://doi.org/10.5281/zenodo.1313687)
-[![Documentation Status](https://readthedocs.org/projects/konrad/badge/?version=latest)](https://konrad.readthedocs.io/en/latest/?badge=latest)
 
 # ![Logo](howto/images/konrad-logo_64.png) konrad
 
