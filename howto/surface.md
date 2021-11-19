@@ -71,7 +71,7 @@ print("Initial temperature: ", slab["temperature"][0])
 
 rce = konrad.RCE(
     atmosphere,
-    surface=slab,  # Run with a fixed surface temperature.
+    surface=slab,  # Run with a slab surface.
     timestep='12h',  # Set timestep in model time.
     max_duration='300d',  # Set maximum runtime.
 )
