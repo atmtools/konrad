@@ -66,7 +66,7 @@ atmosphere = konrad.atmosphere.Atmosphere(phlev)
 rce = konrad.RCE(
     atmosphere,
     surface=konrad.surface.FixedTemperature(temperature=288.),  # Run with a fixed surface temperature.
-    lapserate=lapserate,  # Here, we pass the lapserate component that we just created
+    lapserate=konrad.lapserate.DryLapseRate(),  # Run with dry adiabatic lapse rate
     timestep='12h',  # Set timestep in model time.
     max_duration='100d',  # Set maximum runtime.
 )
