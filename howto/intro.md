@@ -12,7 +12,7 @@ radiative-convective equilibrium (RCE) model konrad.
 
 ## Idea
 
-The idea of this book is to guide the user throw their first steps of using
+The idea of this book is to guide the user through their first steps of using
 konrad. The tutorials will introduce various different ways to configure RCE
 simulations and how to use them to gain conceptual insights into the climate
 system.
