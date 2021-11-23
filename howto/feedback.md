@@ -19,12 +19,12 @@ execution:
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
-import typhon as ty
+from typhon import plots
 
 import konrad
 
 
-ty.plots.styles.use()
+plots.styles.use()
 ```
 
 ## Regression method
@@ -65,7 +65,7 @@ perturbed.run()  # Start the simulation.
 with netCDF4.Dataset("perturbed.nc", "r") as root:
     Ts = root["surface/temperature"][:]
     olr = root["radiation/toa"][:] - root["surface/heat_sink"][0]
-        
+
 fig, ax = plt.subplots()
 ax.plot(Ts - Ts[0], olr, lw=4)
 p = np.polyfit(Ts[25:] - Ts[0], olr[25:], deg=1)

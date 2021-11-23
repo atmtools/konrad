@@ -27,7 +27,7 @@ plots.styles.use('typhon')
 
 ## Fixed surface temperature
 
-The simplest representatio of a surface in `konrad` is the fixed surface temperature.
+The simplest representation of a surface in `konrad` is the fixed surface temperature.
 It is defined by an albedo and a prescribed temperature.
 
 ```{code-cell} ipython3
@@ -52,7 +52,7 @@ rce.run()  # Start the simulation.
 ## Adjustable slab ocean
 
 In addition, `konrad` provides a slab surface component. In contrast to the fixed surface temperature, the slab surface will adjust it's temperature depending on the net energy budget at the surface layer.
-This energy consists of the net radiative fluxes as wel las an enthalpy sink that can be thought of as heat transport in the ocean layer (e.g. by ocean currents to the extra-tropics).
+This energy consists of the net radiative fluxes as well as an enthalpy sink that can be thought of as heat transport in the ocean layer (e.g. by ocean currents to the extra-tropics).
 The value of the heat sink can be chosen to tune the energy budget. Here, we set it equal to the net energy balance at top-of-the-atmosphere from the previous fixed temperature run. This way, the model should be in equilibrium even if the surface temperature is allows to change.
 
 ```{code-cell} ipython3
