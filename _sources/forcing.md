@@ -16,12 +16,12 @@ kernelspec:
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
 import numpy as np
-import typhon as ty
+from typhon import plots
 
 import konrad
 
 
-ty.plots.styles.use()
+plots.styles.use()
 ```
 
 ## Reference climate
@@ -62,7 +62,7 @@ print(f"Instantanoues forcing: {instant_forcing:.2f} W/m^2")
 ## Effective forcing
 
 The effective forcing includes the so called "stratospheric adjustment". Due to a significant cooling of the stratosphere, the radiative forcing at the top-of-the-atmosphere is increased.
-The effective forcing is better description of the radiative imbalance that actually forces the troposphere.
+The effective forcing is a better description of the radiative imbalance that actually forces the troposphere.
 
 ```{code-cell} ipython3
 perturbed = konrad.RCE(atmosphere, timestep='24h',max_duration='150d')

@@ -25,7 +25,13 @@ import konrad
 plots.styles.use('typhon')
 ```
 
-After each timestep `konrad` will adjust the atmospheric temperature profile to follow a specified temperature lapse rate.
+After each timestep `konrad` will adjust the atmospheric temperature profile to
+follow a specified temperature lapse rate.  This lapse rate will prescribe the
+vertical temperature structure up to the convective top. The latter is
+diagnosed interactively as the level at which no radiative cooling is left to
+fuel convection. From there on, the atmosphere follows a pure radiative
+equilibrium.
+
 Here, we will have a look at some of the different options in `konrad.lapserate`.
 
 +++
@@ -40,7 +46,7 @@ atmosphere = konrad.atmosphere.Atmosphere(phlev)
 
 fig, ax = plt.subplots()
 for lapserate in [6.5, 8, 10]:
-    lapserate = konrad.lapserate.FixedLapseRate(lapserate / 1000)  # K/m -> K/km
+    lapserate = konrad.lapserate.FixedLapseRate(lapserate / 1000)  # K/km -> K/m
 
     rce = konrad.RCE(
         atmosphere,

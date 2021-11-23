@@ -305,12 +305,12 @@
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">typhon</span> <span class="k">as</span> <span class="nn">ty</span>
+<span class="kn">from</span> <span class="nn">typhon</span> <span class="kn">import</span> <span class="n">plots</span>
 
 <span class="kn">import</span> <span class="nn">konrad</span>
 
 
-<span class="n">ty</span><span class="o">.</span><span class="n">plots</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">use</span><span class="p">()</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">use</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -366,7 +366,7 @@ In this defintion, no other changes to the atmospheric state - in particular the
 <div class="section" id="effective-forcing">
 <h2>Effective forcing<a class="headerlink" href="#effective-forcing" title="Permalink to this headline">¶</a></h2>
 <p>The effective forcing includes the so called “stratospheric adjustment”. Due to a significant cooling of the stratosphere, the radiative forcing at the top-of-the-atmosphere is increased.
-The effective forcing is better description of the radiative imbalance that actually forces the troposphere.</p>
+The effective forcing is a better description of the radiative imbalance that actually forces the troposphere.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">perturbed</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span><span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">)</span>

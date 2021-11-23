@@ -15,12 +15,13 @@ kernelspec:
 
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
-import typhon as ty
+from typhon import plots
 
 import konrad
 
 
-konrad.enable_logging()
+plots.styles.use('typhon')
+
 
 # Create an atmosphere component.
 plev, phlev = konrad.utils.get_pressure_grids(1000e2, 1, 201)
@@ -43,16 +44,15 @@ rrtmg.calc_radiation(atmosphere, surface, cloud)  # Actual RT simulation
 ## Plot radiative fluxes
 
 ```{code-cell} ipython3
-plt.style.use(ty.plots.styles('typhon'))
 fig, ax = plt.subplots()
-ty.plots.profile_p_log(atmosphere['phlev'], rrtmg['sw_flxu'][-1, :],
-                       label='SW Up', color='skyblue', ls='solid')
-ty.plots.profile_p_log(atmosphere['phlev'], rrtmg['sw_flxd'][-1, :],
-                       label='SW Down', color='skyblue', ls='dashed')
-ty.plots.profile_p_log(atmosphere['phlev'], rrtmg['lw_flxu'][-1, :],
+plots.profile_p_log(atmosphere['phlev'], rrtmg['sw_flxu'][-1, :],
+                    label='SW Up', color='skyblue', ls='solid')
+plots.profile_p_log(atmosphere['phlev'], rrtmg['sw_flxd'][-1, :],
+                    label='SW Down', color='skyblue', ls='dashed')
+plots.profile_p_log(atmosphere['phlev'], rrtmg['lw_flxu'][-1, :],
                        label='LW Up', color='orangered', ls='solid')
-ty.plots.profile_p_log(atmosphere['phlev'], rrtmg['lw_flxd'][-1, :],
-                       label='LW Down', color='orangered', ls='dashed')
+plots.profile_p_log(atmosphere['phlev'], rrtmg['lw_flxd'][-1, :],
+                    label='LW Down', color='orangered', ls='dashed')
 ax.legend(loc='upper right')
 ax.set_xlabel('Radiative flux [$\sf W/m^2$]')
 ```
@@ -61,18 +61,13 @@ ax.set_xlabel('Radiative flux [$\sf W/m^2$]')
 
 ```{code-cell} ipython3
 # Plot the calculated fluxes.
-plt.style.use(ty.plots.styles('typhon'))
 fig, ax = plt.subplots()
 ax.axvline(0, color='black', linewidth=0.8)
-ty.plots.profile_p_log(atmosphere['plev'], rrtmg['sw_htngrt'][-1, :],
-                       label='SW', color='skyblue')
-ty.plots.profile_p_log(atmosphere['plev'], rrtmg['lw_htngrt'][-1, :],
-                       label='LW', color='orangered')
+plots.profile_p_log(atmosphere['plev'], rrtmg['sw_htngrt'][-1, :],
+                    label='SW', color='skyblue')
+plots.profile_p_log(atmosphere['plev'], rrtmg['lw_htngrt'][-1, :],
+                    label='LW', color='orangered')
 ax.legend(loc='upper right')
 ax.set_xlabel('Radiative heating [K/day]')
 ax.set_xlim(-12, 12)
-```
-
-```{code-cell} ipython3
-
 ```

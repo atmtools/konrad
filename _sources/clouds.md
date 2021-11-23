@@ -16,12 +16,12 @@ kernelspec:
 ```{code-cell} ipython3
 import matplotlib.pyplot as plt
 import numpy as np
+from typhon import plots
 
 import konrad
-import typhon as ty
 
 
-ty.plots.styles.use()
+plots.styles.use()
 ```
 
 ## Clear-sky background
@@ -43,12 +43,12 @@ rce = konrad.RCE(
 rce.run()
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
-ty.plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1], ax=ax0)
+plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1], ax=ax0)
 ax0.set_ylabel("$p$ / hPa")
 ax0.set_xlabel("$T$ / K")
 
 ax1.axvline(0, color="k", linewidth=0.8)
-ty.plots.profile_p_log(atmosphere["plev"], rce.radiation["net_htngrt"][-1], ax=ax1)
+plots.profile_p_log(atmosphere["plev"], rce.radiation["net_htngrt"][-1], ax=ax1)
 ax1.set_xlabel("Q / $\sf K\,day^{-1}$")
 ax1.set_xlim(-4, 0.5)
 ax1.set_ylim(bottom=phlev.max())
@@ -74,14 +74,14 @@ rrtmg.update_heatingrates(
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
 ax0.axvline(0, color="k", linewidth=0.8)
-ty.plots.profile_p_log(atmosphere["plev"], rrtmg["net_htngrt"][-1], ax=ax0)
+plots.profile_p_log(atmosphere["plev"], rrtmg["net_htngrt"][-1], ax=ax0)
 ax0.set_xlabel("Q / $\sf K\,day^{-1}$")
 ax0.set_xlim(-4, 0.5)
 ax0.set_ylabel("$p$ / hPa")
 ax0.set_ylim(bottom=phlev.max())
 
 ax1.axvline(0, color="k", linewidth=0.8)
-ty.plots.profile_p_log(atmosphere["plev"], rrtmg["net_htngrt"][-1] - rrtmg["net_htngrt_clr"][-1], ax=ax1)
+plots.profile_p_log(atmosphere["plev"], rrtmg["net_htngrt"][-1] - rrtmg["net_htngrt_clr"][-1], ax=ax1)
 ax1.set_xlabel("$\sf Q_\mathrm{cloud}$ / $\sf K\,day^{-1}$")
 ax1.set_xlim(-2.25, 2.25)
 ax1.set_ylim(bottom=phlev.max())

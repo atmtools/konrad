@@ -291,8 +291,14 @@
 </div>
 </div>
 </div>
-<p>At the heart of each <code class="docutils literal notranslate"><span class="pre">konrad</span></code> simulation is the atmosphere component, which represents the thermodynamical state of the model column.
-In a first step, we create a vertical (pressure) grid and initialize the atmosphere.</p>
+<p>At the heart of each <code class="docutils literal notranslate"><span class="pre">konrad</span></code> simulation is the atmosphere component, which
+represents the thermodynamical state of the model column.  In a first step, we
+create a vertical (pressure) grid and initialize the atmosphere.  Internally,
+<code class="docutils literal notranslate"><span class="pre">konrad</span></code> distinguishes full-levels (<code class="docutils literal notranslate"><span class="pre">plev</span></code>) and half-levels (<code class="docutils literal notranslate"><span class="pre">phlev</span></code>).  The
+thermodynamic state and the atmospheric composition are defined for each
+full-level.  Half-levels are used to consistently represent (radiative) fluxes
+between full-levels. Therefore, the surface is also placed at the lowest
+half-level.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plev</span><span class="p">,</span> <span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_pressure_grids</span><span class="p">(</span><span class="mf">1000e2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>

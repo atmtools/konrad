@@ -316,8 +316,13 @@
 </div>
 </div>
 </div>
-<p>After each timestep <code class="docutils literal notranslate"><span class="pre">konrad</span></code> will adjust the atmospheric temperature profile to follow a specified temperature lapse rate.
-Here, we will have a look at some of the different options in <code class="docutils literal notranslate"><span class="pre">konrad.lapserate</span></code>.</p>
+<p>After each timestep <code class="docutils literal notranslate"><span class="pre">konrad</span></code> will adjust the atmospheric temperature profile to
+follow a specified temperature lapse rate.  This lapse rate will prescribe the
+vertical temperature structure up to the convective top. The latter is
+diagnosed interactively as the level at which no radiative cooling is left to
+fuel convection. From there on, the atmosphere follows a pure radiative
+equilibrium.</p>
+<p>Here, we will have a look at some of the different options in <code class="docutils literal notranslate"><span class="pre">konrad.lapserate</span></code>.</p>
 <div class="section" id="fixed-temperature-lapse-rate">
 <h2>Fixed temperature lapse rate<a class="headerlink" href="#fixed-temperature-lapse-rate" title="Permalink to this headline">¶</a></h2>
 <p>One can specify an arbitrary temperature lapse rate.</p>
@@ -328,7 +333,7 @@ Here, we will have a look at some of the different options in <code class="docut
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
 <span class="k">for</span> <span class="n">lapserate</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">6.5</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">10</span><span class="p">]:</span>
-    <span class="n">lapserate</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">lapserate</span><span class="o">.</span><span class="n">FixedLapseRate</span><span class="p">(</span><span class="n">lapserate</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>  <span class="c1"># K/m -&gt; K/km</span>
+    <span class="n">lapserate</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">lapserate</span><span class="o">.</span><span class="n">FixedLapseRate</span><span class="p">(</span><span class="n">lapserate</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>  <span class="c1"># K/km -&gt; K/m</span>
 
     <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
         <span class="n">atmosphere</span><span class="p">,</span>

@@ -28,8 +28,8 @@ plots.styles.use('typhon')
 +++
 
 By default, konrad will preserve the relative humidity in the atmospheric column.
-Internally, this is done by the `FixedRH` component, which will use a given function that presrcibes the vertical distribution of relative humidity.
-There are various pre-defined functions in `konrad.humidity`, for exmaple, a vertically uniform humidity distribution.
+Internally, this is done by the `FixedRH` component, which will use a given function that prescribes the vertical distribution of relative humidity.
+There are various pre-defined functions in `konrad.humidity`, for example, a vertically uniform humidity distribution.
 
 ```{code-cell} ipython3
 humidity_model = konrad.humidity.FixedRH(
