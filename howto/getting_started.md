@@ -23,8 +23,14 @@ import konrad
 plots.styles.use('typhon')
 ```
 
-At the heart of each `konrad` simulation is the atmosphere component, which represents the thermodynamical state of the model column.
-In a first step, we create a vertical (pressure) grid and initialize the atmosphere.
+At the heart of each `konrad` simulation is the atmosphere component, which
+represents the thermodynamical state of the model column.  In a first step, we
+create a vertical (pressure) grid and initialize the atmosphere.  Internally,
+`konrad` distinguishes full-levels (`plev`) and half-levels (`phlev`).  The
+thermodynamic state and the atmospheric composition are defined for each
+full-level.  Half-levels are used to consistently represent (radiative) fluxes
+between full-levels. Therefore, the surface is also placed at the lowest
+half-level.
 
 ```{code-cell} ipython3
 plev, phlev = konrad.utils.get_pressure_grids(1000e2, 1, 128)
