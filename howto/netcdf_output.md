@@ -60,3 +60,37 @@ for i, temp in enumerate(T):
 ax.set_xlabel(r"$T$ / K")
 ax.set_ylabel(r"$p$ / hPa")
 ```
+
+## Restart from a stored model state
+
+It is possible to initialize the atmospheric and surface state from a previous run.
+
+```{code-cell} ipython3
+ncfile = "my_rce_output.nc"
+atmosphere = konrad.atmosphere.Atmosphere.from_netcdf(ncfile)
+surface = konrad.surface.FixedTemperature.from_netcdf(ncfile)
+```
+
+This allows the user to _spin-up_ the model to a reference state before performing a perturbation.
+For example, one can double the CO2 concentration in an otherwise equilibrated atmosphere to observe the stratospheric temperature adjustment.
+
+```{code-cell} ipython3
+# Plot reference state
+fig, ax = plt.subplots()
+plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1])
+ax.set_xlabel(r"$T$ / K")
+ax.set_ylabel(r"$p$ / hPa")
+
+atmosphere["CO2"][:] *= 2. # Double the CO2 concentration
+
+rce = konrad.RCE(
+    atmosphere,
+    surface=surface,
+    timestep='12h',  # Set timestep in model time.
+    max_duration='100d',  # Set maximum runtime.
+)
+rce.run()
+
+# Plot adjusted state
+plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1])
+```
