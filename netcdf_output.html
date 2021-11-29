@@ -129,6 +129,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="convection.html">
+     Convection
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="lapserate.html">
      Lapse rate
     </a>
@@ -278,6 +283,11 @@
    Read and visualize model output
   </a>
  </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#restart-from-a-stored-model-state">
+   Restart from a stored model state
+  </a>
+ </li>
 </ul>
 
             </nav>
@@ -350,6 +360,51 @@ Here, we plot the temporal evolution of the temperature profile from the inital 
 </pre></div>
 </div>
 <img alt="_images/netcdf_output_5_1.png" src="_images/netcdf_output_5_1.png" />
+</div>
+</div>
+</div>
+<div class="section" id="restart-from-a-stored-model-state">
+<h2>Restart from a stored model state<a class="headerlink" href="#restart-from-a-stored-model-state" title="Permalink to this headline">¶</a></h2>
+<p>It is possible to initialize the atmospheric and surface state from a previous run.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">ncfile</span> <span class="o">=</span> <span class="s2">&quot;my_rce_output.nc&quot;</span>
+<span class="n">atmosphere</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">Atmosphere</span><span class="o">.</span><span class="n">from_netcdf</span><span class="p">(</span><span class="n">ncfile</span><span class="p">)</span>
+<span class="n">surface</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="o">.</span><span class="n">from_netcdf</span><span class="p">(</span><span class="n">ncfile</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>This allows the user to <em>spin-up</em> the model to a reference state before performing a perturbation.
+For example, one can double the CO2 concentration in an otherwise equilibrated atmosphere to observe the stratospheric temperature adjustment.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot reference state</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+
+<span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;CO2&quot;</span><span class="p">][:]</span> <span class="o">*=</span> <span class="mf">2.</span> <span class="c1"># Double the CO2 concentration</span>
+
+<span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
+    <span class="n">atmosphere</span><span class="p">,</span>
+    <span class="n">surface</span><span class="o">=</span><span class="n">surface</span><span class="p">,</span>
+    <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
+    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
+<span class="p">)</span>
+<span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="c1"># Plot adjusted state</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&lt;matplotlib.lines.Line2D at 0x7fc76221dc70&gt;]
+</pre></div>
+</div>
+<img alt="_images/netcdf_output_9_1.png" src="_images/netcdf_output_9_1.png" />
 </div>
 </div>
 </div>

@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Atmosphere &#8212; How to konrad</title>
+    <title>Convection &#8212; How to konrad</title>
     
   <link href="_static/css/theme.css" rel="stylesheet">
   <link href="_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -52,8 +52,8 @@
     <link rel="shortcut icon" href="_static/konrad-logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Humidity" href="humidity.html" />
-    <link rel="prev" title="Model components" href="components.html" />
+    <link rel="next" title="Lapse rate" href="lapserate.html" />
+    <link rel="prev" title="Humidity" href="humidity.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -118,8 +118,8 @@
    </i>
   </label>
   <ul class="current">
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
+   <li class="toctree-l2">
+    <a class="reference internal" href="atmosphere.html">
      Atmosphere
     </a>
    </li>
@@ -128,8 +128,8 @@
      Humidity
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="convection.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Convection
     </a>
    </li>
@@ -229,11 +229,11 @@
     <div class="dropdown-buttons">
         <!-- ipynb file if we had a myst markdown file -->
         <a class="dropdown-buttons"
-            href="_sources/atmosphere.ipynb"><button type="button"
+            href="_sources/convection.ipynb"><button type="button"
                 class="btn btn-secondary topbarbtn" title="Download notebook file" data-toggle="tooltip"
                 data-placement="left">.ipynb</button></a>
         <!-- Download raw file -->
-        <a class="dropdown-buttons" href="_sources/atmosphere.md"><button type="button"
+        <a class="dropdown-buttons" href="_sources/convection.md"><button type="button"
                 class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
                 data-placement="left">.md</button></a>
         <!-- Download PDF via print -->
@@ -253,7 +253,7 @@
                 data-toggle="tooltip" data-placement="left" title="Source repository"><i
                     class="fab fa-github"></i>repository</button></a>
         
-        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/main/howto/atmosphere.md"><button
+        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/main/howto/convection.md"><button
                 type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
                 title="Edit this page"><i class="fas fa-pencil-alt"></i>suggest edit</button></a>
     </div>
@@ -273,6 +273,29 @@
         <!-- Table of contents -->
         <div class="d-none d-md-block col-md-2 bd-toc show">
             
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#radiative-equilibrium-re">
+   Radiative equilibrium (RE)
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#radiative-convective-equilibrium-rce">
+   Radiative-convective equilibrium (RCE)
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#compare-re-and-rce">
+   Compare RE and RCE
+  </a>
+ </li>
+</ul>
+
+            </nav>
         </div>
     </div>
 </div>
@@ -281,68 +304,92 @@
         
               <div>
                 
-  <div class="tex2jax_ignore mathjax_ignore section" id="atmosphere">
-<h1>Atmosphere<a class="headerlink" href="#atmosphere" title="Permalink to this headline">¶</a></h1>
+  <div class="tex2jax_ignore mathjax_ignore section" id="convection">
+<h1>Convection<a class="headerlink" href="#convection" title="Permalink to this headline">¶</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">typhon</span> <span class="kn">import</span> <span class="n">plots</span>
 
 <span class="kn">import</span> <span class="nn">konrad</span>
 
 
-<span class="n">plots</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;typhon&#39;</span><span class="p">)</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">use</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 </div>
-<p>In the introduction we have already learned how to initialize an atmopshere component.</p>
+<p>In its default configuration, konrad simulates a radiative-convective
+equilibrium state. However, it is possible to turn off the convective
+adjustment.</p>
+<div class="section" id="radiative-equilibrium-re">
+<h2>Radiative equilibrium (RE)<a class="headerlink" href="#radiative-equilibrium-re" title="Permalink to this headline">¶</a></h2>
+<p>In a first step, we equilibrate our model to a pure radiative equilibrium.
+In this configuration no other tendencies besides the radiative cooling are present - in particulr no convection.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plev</span><span class="p">,</span> <span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_pressure_grids</span><span class="p">(</span><span class="mf">1000e2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_quadratic_pgrid</span><span class="p">(</span><span class="mf">1000e2</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
 <span class="n">atmosphere</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">Atmosphere</span><span class="p">(</span><span class="n">phlev</span><span class="p">)</span>
+<span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;CO2&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="mf">348e-6</span> <span class="c1"># Set reference CO2 concentration</span>
+
+<span class="n">re</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
+    <span class="n">atmosphere</span><span class="p">,</span>
+    <span class="n">convection</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">convection</span><span class="o">.</span><span class="n">NonConvective</span><span class="p">(),</span>
+    <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span>
+    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">re</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 </div>
-<p>The atmosphere component is used to prescribe the gaseous composition of our model. For example,
-we can remove all ozone from our model column</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;O3&quot;</span><span class="p">][:]</span> <span class="o">=</span> <span class="mf">0.0</span>
-</pre></div>
 </div>
-</div>
-</div>
-<p>Next, we can compile and run our RCE simulation</p>
+<div class="section" id="radiative-convective-equilibrium-rce">
+<h2>Radiative-convective equilibrium (RCE)<a class="headerlink" href="#radiative-convective-equilibrium-rce" title="Permalink to this headline">¶</a></h2>
+<p>In a second step, we enable the convective adjustment. We copy the existing atmosphere component to create to individual components that we can later compare.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
-    <span class="n">atmosphere</span><span class="p">,</span>
-    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
-    <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
-    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
+    <span class="n">atmosphere</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>  <span class="c1"># Create an separate atmosphere component.</span>
+    <span class="n">convection</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">convection</span><span class="o">.</span><span class="n">HardAdjustment</span><span class="p">(),</span>
+    <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span>
+    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>  <span class="c1"># Start the simulation.</span>
+<span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 </div>
-<p>Finally, we can plot the equilibrated temperature profile</p>
+</div>
+<div class="section" id="compare-re-and-rce">
+<h2>Compare RE and RCE<a class="headerlink" href="#compare-re-and-rce" title="Permalink to this headline">¶</a></h2>
+<p>Finally, we can compare the thermal structure in radiative equilibrium (RE) and radiative-convective equilibrium (RCE).
+Without convection the temperature lapse-rate in the troposphere is increase significantly.
+This leads to a much cooler tropopsphere despite the same surface temperature (see markers at the bottom).</p>
+<p>In the stratosphere, however, both model configurations are in a pure radiative equilbrium, which is why they barely differ.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;T&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+<span class="c1"># Plot radiative equilibrium (RE)</span>
+<span class="n">l</span><span class="p">,</span> <span class="o">=</span> <span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">re</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;RE&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">surface</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">re</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">pressure</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">l</span><span class="o">.</span><span class="n">get_color</span><span class="p">())</span>
+<span class="c1"># Plot radiative-convective equilibrium (RCE)</span>
+<span class="n">l</span><span class="p">,</span> <span class="o">=</span> <span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">rce</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">rce</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;RCE&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">rce</span><span class="o">.</span><span class="n">surface</span><span class="p">[</span><span class="s2">&quot;temperature&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">rce</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">pressure</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;+&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">l</span><span class="o">.</span><span class="n">get_color</span><span class="p">())</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">pressure</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0, 0.5, &#39;$p$ / hPa&#39;)
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(100000.00000000009, 6.679409185473571)
 </pre></div>
 </div>
-<img alt="_images/atmosphere_9_1.png" src="_images/atmosphere_9_1.png" />
+<img alt="_images/convection_7_1.png" src="_images/convection_7_1.png" />
+</div>
 </div>
 </div>
 </div>
@@ -372,17 +419,17 @@ we can remove all ozone from our model column</p>
         
             <!-- Previous / next buttons -->
 <div class='prev-next-area'> 
-    <a class='left-prev' id="prev-link" href="components.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="humidity.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Model components</p>
+            <p class="prev-next-title">Humidity</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="humidity.html" title="next page">
+    <a class='right-next' id="next-link" href="lapserate.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Humidity</p>
+        <p class="prev-next-title">Lapse rate</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

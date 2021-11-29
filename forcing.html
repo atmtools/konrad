@@ -129,6 +129,11 @@
     </a>
    </li>
    <li class="toctree-l2">
+    <a class="reference internal" href="convection.html">
+     Convection
+    </a>
+   </li>
+   <li class="toctree-l2">
     <a class="reference internal" href="lapserate.html">
      Lapse rate
     </a>
@@ -317,7 +322,7 @@
 </div>
 <div class="section" id="reference-climate">
 <h2>Reference climate<a class="headerlink" href="#reference-climate" title="Permalink to this headline">¶</a></h2>
-<p>In a first step, we equilibrate our model in a reference climate state.</p>
+<p>In a first step, we equilibrate our model to a reference climate state.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_quadratic_pgrid</span><span class="p">(</span><span class="mf">1000e2</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
@@ -331,11 +336,11 @@
 </div>
 </div>
 </div>
-<p>After the model has converged, we store the outgoing-longwave radiation at the top-of-the-atmosphere.
+<p>After the model has converged, we store the outgoing-longwave radiation.
 This value is our reference against which we will later compute the radiative forcing.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">olr_ref</span> <span class="o">=</span> <span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">olr_ref</span> <span class="o">=</span> <span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
@@ -351,8 +356,37 @@ In this defintion, no other changes to the atmospheric state - in particular the
 <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;CO2&quot;</span><span class="p">][:]</span> <span class="o">*=</span> <span class="mi">2</span>  <span class="c1"># double the CO2 concentration</span>
 <span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="o">.</span><span class="n">update_heatingrates</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">)</span>
 
-<span class="n">instant_forcing</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">olr_ref</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Instantanoues forcing: </span><span class="si">{</span><span class="n">instant_forcing</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> W/m^2&quot;</span><span class="p">)</span>
+<span class="n">instant_forcing</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">olr_ref</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>We can plot the vertical profile of the change in outgoing-longwave radiation.
+This allow us to investigate how the forcing changes in different heights of
+the atmosphere.  Note, how the instantaneous forcing increases throughout the
+troposphere.  This is because the higher CO2 concentration will raise the
+emission height which, in the troposphere, is associated with a cooler
+atmosphere.  In the stratosphere, however, the rising emission height leads to
+an increased emission which decreases the forcing.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;phlev&quot;</span><span class="p">],</span> <span class="n">instant_forcing</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">instant_forcing</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">instant_forcing</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)])</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\Delta F$ / $\rm W\,m^{-2}$&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">1000e2</span><span class="p">)</span>
+
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">spinup</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">196</span><span class="p">,</span> <span class="mi">267</span><span class="p">,</span> <span class="mi">288</span><span class="p">])</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">180</span><span class="p">,</span> <span class="mi">290</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Instantanoues forcing: </span><span class="si">{</span><span class="n">instant_forcing</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> W/m^2&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -360,20 +394,45 @@ In this defintion, no other changes to the atmospheric state - in particular the
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Instantanoues forcing: 2.57 W/m^2
 </pre></div>
 </div>
+<img alt="_images/forcing_9_1.png" src="_images/forcing_9_1.png" />
 </div>
 </div>
 </div>
 <div class="section" id="effective-forcing">
 <h2>Effective forcing<a class="headerlink" href="#effective-forcing" title="Permalink to this headline">¶</a></h2>
-<p>The effective forcing includes the so called “stratospheric adjustment”. Due to a significant cooling of the stratosphere, the radiative forcing at the top-of-the-atmosphere is increased.
+<p>The effective forcing includes the so called “stratospheric adjustment”.
+One can simulated by keeping the surface temperature fixed but allowing the atmopsheric temperature to adjust to the increased CO2 concentration.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">perturbed</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span><span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">)</span>
+<span class="n">perturbed</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+<span class="n">effective_forcing</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">perturbed</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">olr_ref</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Due to a significant cooling of the stratosphere, the radiative forcing at the top-of-the-atmosphere is increased.
 The effective forcing is a better description of the radiative imbalance that actually forces the troposphere.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">perturbed</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;24h&#39;</span><span class="p">,</span><span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;150d&#39;</span><span class="p">)</span>
-<span class="n">perturbed</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">effective_forcing</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">perturbed</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;lw_flxu&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">olr_ref</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Effective forcing: </span><span class="si">{</span><span class="n">effective_forcing</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> W/m^2&quot;</span><span class="p">)</span>
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;phlev&quot;</span><span class="p">],</span> <span class="n">effective_forcing</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">effective_forcing</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="mi">2</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">effective_forcing</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="mi">2</span><span class="p">)])</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\Delta F$ / $\rm W\,m^{-2}$&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">1000e2</span><span class="p">)</span>
+
+<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">spinup</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">perturbed</span><span class="o">.</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">180</span><span class="p">,</span> <span class="mi">290</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([</span><span class="mi">196</span><span class="p">,</span> <span class="mi">267</span><span class="p">,</span> <span class="mi">288</span><span class="p">])</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Effective forcing: </span><span class="si">{</span><span class="n">effective_forcing</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> W/m^2&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -381,6 +440,7 @@ The effective forcing is a better description of the radiative imbalance that ac
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Effective forcing: 4.32 W/m^2
 </pre></div>
 </div>
+<img alt="_images/forcing_13_1.png" src="_images/forcing_13_1.png" />
 </div>
 </div>
 </div>
