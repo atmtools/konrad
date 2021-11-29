@@ -40,6 +40,8 @@ import numpy as np
 import numbers
 from netCDF4 import Dataset
 from scipy.interpolate import interp1d
+
+from konrad import constants
 from konrad.component import Component
 
 __all__ = [
@@ -292,24 +294,40 @@ class Cariolle(Ozone):
             alist.append(interp1d(p_data, a, fill_value="extrapolate")(p))
         return alist
 
+    def density_of_molecules(self, p, T):
+        """
+        Parameters:
+            p (ndarray): pressure levels [Pa]
+            T (ndarray): temperature values [K]
+        Returns:
+            ndarray: density of molecules [number of molecules / m3]
+        """
+        return (constants.avogadro * p) / (constants.molar_gas_constant_dry_air * T)
+
+    def overhead_molecules(self, gas, p, z, T):
+        """
+        Parameters:
+            gas (ndarray): gas concentration [ppv] corresponding to levels p
+            p (ndarray): pressure levels [Pa]
+            z (ndarray): height values [m]
+            T (ndarray): temperature values [K]
+        Returns:
+            ndarray: number of molecules per m2 in overhead column
+        """
+        # molecules / m2 of air in each layer
+        molecules_air = self.density_of_molecules(p, T) * np.gradient(z)
+        # overhead column in molecules / m2
+        col = np.flipud(np.cumsum(np.flipud(gas * molecules_air)))
+
+        return col
+
     def __call__(self, atmosphere, timestep, upwelling, **kwargs):
-
-        try:
-            from simotrostra.utils import overhead_molecules
-        except ModuleNotFoundError:
-            raise ModuleNotFoundError(
-                "No module named 'simotrostra'. You need to install it in order"
-                " to use this ozone class.\n"
-                "It can be found here:\n"
-                "https://gitlab.com/simple-stratospheric-chemistry/simotrostra"
-            )
-
         T = atmosphere["T"][0, :]
         p = atmosphere["plev"]  # [Pa]
         o3 = atmosphere["O3"][0, :]  # moles of ozone / moles of air
         z = atmosphere["z"][0, :]  # m
 
-        o3col = overhead_molecules(o3, p, z, T) * 10 ** -4  # in molecules / cm2
+        o3col = self.overhead_molecules(o3, p, z, T) * 10 ** -4  # in molecules / cm2
 
         A1, A2, A3, A4, A5, A6, A7 = self.get_params(p)
         # A7 is in molecules / cm2
