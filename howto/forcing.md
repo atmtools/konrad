@@ -45,10 +45,12 @@ This value is our reference against which we will later compute the radiative fo
 olr_ref = spinup.radiation["lw_flxu"][-1]
 ```
 
-## Instantanoues forcing
+## Instantaneous forcing
 
-The instantanoues forcing is the change in OLR that is induced by a doubling of the CO2 concentration only.
-In this defintion, no other changes to the atmospheric state - in particular the temperature - are allowed.
+In general, the radiative forcing is the change in outgoing-longwave radiation
+$\Delta F$ that is induced by a doubling of the CO2 concentration.  The
+so-called instantaneous forcing is computed before any other changes to the
+atmospheric state, especially the temperature, occur.
 
 ```{code-cell} ipython3
 # Calculate OLR at perturbed atmospheric state.
