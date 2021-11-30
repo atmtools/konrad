@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Getting started &#8212; How to konrad</title>
+    <title>Publications &#8212; How to konrad</title>
     
   <link href="_static/css/theme.css" rel="stylesheet">
   <link href="_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -52,8 +52,7 @@
     <link rel="shortcut icon" href="_static/konrad-logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Store netCDF output" href="netcdf_output.html" />
-    <link rel="prev" title="Introduction" href="intro.html" />
+    <link rel="prev" title="RRTMG interface" href="rrtmg_only.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -98,8 +97,8 @@
  </li>
 </ul>
 <ul class="current nav bd-sidenav">
- <li class="toctree-l1 current active">
-  <a class="current reference internal" href="#">
+ <li class="toctree-l1">
+  <a class="reference internal" href="getting_started.html">
    Getting started
   </a>
  </li>
@@ -189,8 +188,8 @@
    </li>
   </ul>
  </li>
- <li class="toctree-l1">
-  <a class="reference internal" href="publications.html">
+ <li class="toctree-l1 current active">
+  <a class="current reference internal" href="#">
    Publications
   </a>
  </li>
@@ -233,12 +232,9 @@
 
     <div class="dropdown-buttons">
         <!-- ipynb file if we had a myst markdown file -->
-        <a class="dropdown-buttons"
-            href="_sources/getting_started.ipynb"><button type="button"
-                class="btn btn-secondary topbarbtn" title="Download notebook file" data-toggle="tooltip"
-                data-placement="left">.ipynb</button></a>
+        
         <!-- Download raw file -->
-        <a class="dropdown-buttons" href="_sources/getting_started.md"><button type="button"
+        <a class="dropdown-buttons" href="_sources/publications.md"><button type="button"
                 class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
                 data-placement="left">.md</button></a>
         <!-- Download PDF via print -->
@@ -258,7 +254,7 @@
                 data-toggle="tooltip" data-placement="left" title="Source repository"><i
                     class="fab fa-github"></i>repository</button></a>
         
-        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/main/howto/getting_started.md"><button
+        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/main/howto/publications.md"><button
                 type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
                 title="Edit this page"><i class="fas fa-pencil-alt"></i>suggest edit</button></a>
     </div>
@@ -286,93 +282,31 @@
         
               <div>
                 
-  <div class="tex2jax_ignore mathjax_ignore section" id="getting-started">
-<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">from</span> <span class="nn">typhon</span> <span class="kn">import</span> <span class="n">plots</span>
-
-<span class="kn">import</span> <span class="nn">konrad</span>
-
-
-<span class="n">plots</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;typhon&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>At the heart of each <code class="docutils literal notranslate"><span class="pre">konrad</span></code> simulation is the atmosphere component, which
-represents the thermodynamical state of the model column.  In a first step, we
-create a vertical (pressure) grid and initialize the atmosphere.  Internally,
-<code class="docutils literal notranslate"><span class="pre">konrad</span></code> distinguishes full-levels (<code class="docutils literal notranslate"><span class="pre">plev</span></code>) and half-levels (<code class="docutils literal notranslate"><span class="pre">phlev</span></code>).  The
-thermodynamic state and the atmospheric composition are defined for each
-full-level.  Half-levels are used to consistently represent (radiative) fluxes
-between full-levels. Therefore, the surface is also placed at the lowest
-half-level.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plev</span><span class="p">,</span> <span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_pressure_grids</span><span class="p">(</span><span class="mf">1000e2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
-<span class="n">atmosphere</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">Atmosphere</span><span class="p">(</span><span class="n">phlev</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>We can access the state variables in a dict-like way and, for example, plot the initial temperature profile.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;T&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0, 0.5, &#39;$p$ / hPa&#39;)
-</pre></div>
-</div>
-<img alt="_images/getting_started_5_1.png" src="_images/getting_started_5_1.png" />
-</div>
-</div>
-<p>Next, we can compile the RCE object, which combines the different model component and allows the user to control the run.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize the setup for the radiative-convective equilibrium simulation.</span>
-<span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
-    <span class="n">atmosphere</span><span class="p">,</span>
-    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="mf">288.</span><span class="p">),</span>  <span class="c1"># Run with a fixed surface temperature.</span>
-    <span class="n">timestep</span><span class="o">=</span><span class="s1">&#39;12h&#39;</span><span class="p">,</span>  <span class="c1"># Set timestep in model time.</span>
-    <span class="n">max_duration</span><span class="o">=</span><span class="s1">&#39;100d&#39;</span><span class="p">,</span>  <span class="c1"># Set maximum runtime.</span>
-<span class="p">)</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>After defining our RCE model, we can perform the actual simulation</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>  <span class="c1"># Start the simulation.</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>Finally, we can plot the RCE state and compare it to the inital (standard) atmopshere</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;plev&#39;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s1">&#39;T&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
-<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0, 0.5, &#39;$p$ / hPa&#39;)
-</pre></div>
-</div>
-<img alt="_images/getting_started_11_1.png" src="_images/getting_started_11_1.png" />
-</div>
-</div>
+  <div class="tex2jax_ignore mathjax_ignore section" id="publications">
+<h1>Publications<a class="headerlink" href="#publications" title="Permalink to this headline">¶</a></h1>
+<p>Here is a list of publications that used <code class="docutils literal notranslate"><span class="pre">konrad</span></code>. If you are aware of any
+publications that are currently not listed just open an issue or pull request.</p>
+<p id="id1"><dl class="citation">
+<dt class="label" id="id2"><span class="brackets">BSKJdlC21</span></dt>
+<dd><p>Jiawei Bao, Bjorn Stevens, Lukas Kluft, and Diego Jiménez-de-la-Cuesta. Changes in the tropical lapse rate due to entrainment and their impact on climate sensitivity. <em>Geophysical Research Letters</em>, 48(18):e2021GL094969, 2021. <a class="reference external" href="https://doi.org/https://doi.org/10.1029/2021GL094969">doi:https://doi.org/10.1029/2021GL094969</a>.</p>
+</dd>
+<dt class="label" id="id3"><span class="brackets">BKS21</span></dt>
+<dd><p>Stella Bourdin, Lukas Kluft, and Bjorn Stevens. Dependence of climate sensitivity on the given distribution of relative humidity. <em>Geophysical Research Letters</em>, 48(8):e2021GL092462, 2021. <a class="reference external" href="https://doi.org/https://doi.org/10.1029/2021GL092462">doi:https://doi.org/10.1029/2021GL092462</a>.</p>
+</dd>
+<dt class="label" id="id4"><span class="brackets">DKS+19</span></dt>
+<dd><p>Sally Dacie, Lukas Kluft, Hauke Schmidt, Bjorn Stevens, Stefan A. Buehler, Peer J. Nowack, Simone Dietmüller, N. Luke Abraham, and Thomas Birner. A 1d rce study of factors affecting the tropical tropopause layer and surface climate. <em>Journal of Climate</em>, 32(20):6769 – 6782, 2019. <a class="reference external" href="https://doi.org/10.1175/JCLI-D-18-0778.1">doi:10.1175/JCLI-D-18-0778.1</a>.</p>
+</dd>
+<dt class="label" id="id7"><span class="brackets">KDB+21</span></dt>
+<dd><p>Lukas Kluft, Sally Dacie, Manfred Brath, Stefan A. Buehler, and Bjorn Stevens. Temperature-dependence of the clear-sky feedback in radiative-convective equilibrium. <em>Geophysical Research Letters</em>, 48(22):e2021GL094649, 2021. <a class="reference external" href="https://doi.org/https://doi.org/10.1029/2021GL094649">doi:https://doi.org/10.1029/2021GL094649</a>.</p>
+</dd>
+<dt class="label" id="id6"><span class="brackets">KDB+19</span></dt>
+<dd><p>Lukas Kluft, Sally Dacie, Stefan A. Buehler, Hauke Schmidt, and Bjorn Stevens. Re-examining the first climate models: climate sensitivity of a modern radiative–convective equilibrium model. <em>Journal of Climate</em>, 32(23):8111–8125, 2019. <a class="reference external" href="https://doi.org/10.1175/JCLI-D-18-0774.1">doi:10.1175/JCLI-D-18-0774.1</a>.</p>
+</dd>
+<dt class="label" id="id8"><span class="brackets">KDA+21</span></dt>
+<dd><p>C. A. Kroll, S. Dacie, A. Azoulay, H. Schmidt, and C. Timmreck. The impact of volcanic eruptions of different magnitude on stratospheric water vapor in the tropics. <em>Atmospheric Chemistry and Physics</em>, 21(8):6565–6591, 2021. <a class="reference external" href="https://doi.org/10.5194/acp-21-6565-2021">doi:10.5194/acp-21-6565-2021</a>.</p>
+</dd>
+</dl>
+</p>
 </div>
 
     <script type="text/x-thebe-config">
@@ -400,19 +334,12 @@ half-level.</p>
         
             <!-- Previous / next buttons -->
 <div class='prev-next-area'> 
-    <a class='left-prev' id="prev-link" href="intro.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="rrtmg_only.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Introduction</p>
+            <p class="prev-next-title">RRTMG interface</p>
         </div>
-    </a>
-    <a class='right-next' id="next-link" href="netcdf_output.html" title="next page">
-    <div class="prev-next-info">
-        <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Store netCDF output</p>
-    </div>
-    <i class="fas fa-angle-right"></i>
     </a>
 </div>
         
