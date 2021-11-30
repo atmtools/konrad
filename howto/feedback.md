@@ -29,7 +29,7 @@ plots.styles.use()
 
 ## Regression method
 
-Compute the climate feedback as regression of the radiation balance over the surface temperature change (Gregory et al. 2014).
+Compute the climate feedback as regression of the radiation balance over the surface temperature change {cite:p}`gregory04`.
 
 ```{code-cell} ipython3
 phlev = konrad.utils.get_quadratic_pgrid(1000e2, 10, 128)
@@ -106,4 +106,9 @@ feedback = (
 )
 
 print(f"Climate feedback: {feedback:.3f} W/m^2/K")
+```
+
+## References
+```{bibliography}
+:filter: docname in docnames
 ```

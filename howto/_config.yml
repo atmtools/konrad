@@ -15,3 +15,7 @@ launch_buttons:
 execute:
   execute_notebooks: force
   timeout: 90
+bibtex_bibfiles             : references.bib
+sphinx:
+  config:
+    bibtex_reference_style      : author_year
