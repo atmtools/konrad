@@ -29,6 +29,6 @@ Please have a look at our [repository](https://github.com/atmtools/konrad) for
 more detailed information on how to install konrad on macOS or for Python 3.9+.
 
 ## Useful links
-* [Konrad on Github](https://github.com/atmtools/konrad)
+* [Konrad on GitHub](https://github.com/atmtools/konrad)
 * [Konrad on PyPI](https://pypi.org/project/konrad/)
 * [Konrad on Zenodo](https://doi.org/10.5281/zenodo.1313687)
