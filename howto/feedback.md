@@ -107,8 +107,3 @@ feedback = (
 
 print(f"Climate feedback: {feedback:.3f} W/m^2/K")
 ```
-
-## References
-```{bibliography}
-:filter: docname in docnames
-```

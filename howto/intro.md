@@ -4,11 +4,11 @@ Welcome to _"How to konrad"_! This collection of Python code is meant to serve
 as a brief introduction and overview over the usage of the one-dimensional
 radiative-convective equilibrium (RCE) model konrad.
 
-> The purpose of a model such as ours is not to produce a comprehensive
+> "The purpose of a model such as ours is not to produce a comprehensive
 > simluation but to gain insight into the behavior of more complex models
-> and, perhaps, into the behaviour of the climate system itself.
+> and, perhaps, into the behaviour of the climate system itself."
 >
-> _{cite:ts}`somervile84`_
+> \- _{cite:ts}`somervile84`_
 
 ## Idea
 
@@ -29,11 +29,6 @@ Please have a look at our [repository](https://github.com/atmtools/konrad) for
 more detailed information on how to install konrad on macOS or for Python 3.9+.
 
 ## Useful links
-* [Konrad on Github](https://github.com/atmtools/konrad)
+* [Konrad on GitHub](https://github.com/atmtools/konrad)
 * [Konrad on PyPI](https://pypi.org/project/konrad/)
 * [Konrad on Zenodo](https://doi.org/10.5281/zenodo.1313687)
-
-## References
-```{bibliography}
-:filter: docname in docnames
-```
