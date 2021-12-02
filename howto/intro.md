@@ -4,11 +4,11 @@ Welcome to _"How to konrad"_! This collection of Python code is meant to serve
 as a brief introduction and overview over the usage of the one-dimensional
 radiative-convective equilibrium (RCE) model konrad.
 
-> The purpose of a model such as ours is not to produce a comprehensive
+> "The purpose of a model such as ours is not to produce a comprehensive
 > simluation but to gain insight into the behavior of more complex models
-> and, perhaps, into the behaviour of the climate system itself.
+> and, perhaps, into the behaviour of the climate system itself."
 >
-> _{cite:ts}`somervile84`_
+> \- _{cite:ts}`somervile84`_
 
 ## Idea
 
