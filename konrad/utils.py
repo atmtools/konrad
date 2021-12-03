@@ -163,7 +163,7 @@ def get_quadratic_pgrid(surface_pressure=1000e2, top_pressure=1, num=128):
     .. math::
       ln(p/p_\mathrm{t}) = -\frac{\ln(p_\mathrm{s}/p_\mathrm{t})}{2}
         \left(\frac{i^2}{N^2} + \frac{i}{N}\right)
-        \ln(p_\mathrm{s}/p_\mathrm{t})
+        + \ln(p_\mathrm{s}/p_\mathrm{t})
 
     Parameters:
         surface_pressure (float): Pressure of the lowest first grid point [Pa].
