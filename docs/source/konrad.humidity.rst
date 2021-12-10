@@ -22,13 +22,14 @@ Relative humidity
 
    RelativeHumidityModel
    CacheFromAtmosphere
-   VerticallyUniform
-   Manabe67
    Cess76
-   Romps14
-   PolynomialCshapedRH
+   Manabe67
    PerturbProfile
+   PolynomialCshapedRH
    ProfileFromData
+   Romps14
+   VerticallyUniform
+   VshapeT
 
 Stratospheric coupling
 ----------------------

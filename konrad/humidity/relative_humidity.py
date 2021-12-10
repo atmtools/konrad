@@ -9,19 +9,6 @@ from konrad.physics import vmr2relative_humidity
 from konrad.utils import gaussian
 
 
-__all__ = [
-    "RelativeHumidityModel",
-    "CacheFromAtmosphere",
-    "VerticallyUniform",
-    "Manabe67",
-    "Cess76",
-    "Romps14",
-    "PolynomialCshapedRH",
-    "PerturbProfile",
-    "ProfileFromData",
-]
-
-
 class RelativeHumidityModel(Component, metaclass=abc.ABCMeta):
     def __call__(self, atmosphere, **kwargs):
         """Return the vertical distribution of relative humidity.
@@ -347,3 +334,29 @@ class ProfileFromData(RelativeHumidityModel):
 
         plev = atmosphere["plev"]
         return self._rh_func(plev)
+
+
+class VshapeT(RelativeHumidityModel):
+    """Fix the relative humidity to a V-shaped profile in temperature space
+
+    The V-shape is defined by two linear segments in temperature space:
+    One beingroughly between the top of the boundary layer and the freezing-level.
+    And one between the freezing-level and the cold-point.
+    """
+
+    def __init__(self, rh_surface=0.8, rh_minimum=0.4, rh_coldpoint=0.8):
+        """
+        Parameters:
+            rh_surface (float): Relative humidity at T > 290 K.
+            rh_minimum (float): Mininmum RH at T =250 K.
+            rh_coldpoint (float): Relative humidity at T < 200 K (cold-point).
+        """
+        self._f = interp1d(
+            x=[400, 290, 250, 200, 100],
+            y=[rh_surface, rh_surface, rh_minimum, rh_coldpoint, rh_coldpoint],
+            fill_value="extrapolate",
+            kind="linear",
+        )
+
+    def __call__(self, atmosphere, **kwargs):
+        return self._f(atmosphere["T"][-1])
