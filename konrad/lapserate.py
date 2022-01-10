@@ -132,6 +132,26 @@ class DryLapseRate(FixedLapseRate):
         super().__init__(lapserate=gamma_d)
 
 
+class BoundaryLayer(LapseRate):
+    """Moist-adiabatic lapse rate with a dry boundary layer above the surface."""
+    def __init__(self, bl_height=950e2):
+        """Initialize a moist-adiabat with boundary layer.
+
+        Parameters:
+            bl_height (float): Height of boundary layer [Pa].
+        """
+        self.bl_height = bl_height
+
+        self._dry_lr = DryLapseRate()
+        self._moist_lr = MoistLapseRate()
+
+    def __call__(self, p, T):
+        if p > self.bl_height:
+            return self._dry_lr(p, T)
+        else:
+            return self._moist_lr(p, T)
+
+
 def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0):
     """Create a moist-adiabat from a given surface T up to the cold point.
 
