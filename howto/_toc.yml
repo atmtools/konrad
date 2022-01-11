@@ -9,6 +9,7 @@ chapters:
     - file: humidity
     - file: convection
     - file: lapserate
+    - file: ozone
     - file: clouds
     - file: surface
 - file: climate_modeling
