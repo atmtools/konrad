@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Clouds &#8212; How to konrad</title>
+    <title>Ozone &#8212; How to konrad</title>
     
   <link href="_static/css/theme.css" rel="stylesheet">
   <link href="_static/css/index.ff1ffe594081f20da1ef19478df9384b.css" rel="stylesheet">
@@ -52,8 +52,8 @@
     <link rel="shortcut icon" href="_static/konrad-logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Surface" href="surface.html" />
-    <link rel="prev" title="Ozone" href="ozone.html" />
+    <link rel="next" title="Clouds" href="clouds.html" />
+    <link rel="prev" title="Lapse rate" href="lapserate.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -138,13 +138,13 @@
      Lapse rate
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="ozone.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Ozone
     </a>
    </li>
-   <li class="toctree-l2 current active">
-    <a class="current reference internal" href="#">
+   <li class="toctree-l2">
+    <a class="reference internal" href="clouds.html">
      Clouds
     </a>
    </li>
@@ -239,11 +239,11 @@
     <div class="dropdown-buttons">
         <!-- ipynb file if we had a myst markdown file -->
         <a class="dropdown-buttons"
-            href="_sources/clouds.ipynb"><button type="button"
+            href="_sources/ozone.ipynb"><button type="button"
                 class="btn btn-secondary topbarbtn" title="Download notebook file" data-toggle="tooltip"
                 data-placement="left">.ipynb</button></a>
         <!-- Download raw file -->
-        <a class="dropdown-buttons" href="_sources/clouds.md"><button type="button"
+        <a class="dropdown-buttons" href="_sources/ozone.md"><button type="button"
                 class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
                 data-placement="left">.md</button></a>
         <!-- Download PDF via print -->
@@ -263,7 +263,7 @@
                 data-toggle="tooltip" data-placement="left" title="Source repository"><i
                     class="fab fa-github"></i>repository</button></a>
         
-        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/main/howto/clouds.md"><button
+        <a class="edit-button" href="https://github.com/atmtools/konrad/edit/main/howto/ozone.md"><button
                 type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip" data-placement="left"
                 title="Edit this page"><i class="fas fa-pencil-alt"></i>suggest edit</button></a>
     </div>
@@ -289,13 +289,13 @@
             <nav id="bd-toc-nav" aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#clear-sky-background">
-   Clear-sky background
+  <a class="reference internal nav-link" href="#fixed-ozone-distribution">
+   Fixed ozone distribution
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#conceptual-cloud">
-   Conceptual cloud
+  <a class="reference internal nav-link" href="#linear-ozone-parameterization">
+   Linear ozone parameterization
   </a>
  </li>
 </ul>
@@ -308,7 +308,7 @@
         <div class="col-12 col-md-9 pl-md-3 pr-md-0">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Clouds</h1>
+                <h1>Ozone</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -319,13 +319,13 @@
                         <nav aria-label="Page">
                             <ul class="visible nav section-nav flex-column">
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#clear-sky-background">
-   Clear-sky background
+  <a class="reference internal nav-link" href="#fixed-ozone-distribution">
+   Fixed ozone distribution
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
-  <a class="reference internal nav-link" href="#conceptual-cloud">
-   Conceptual cloud
+  <a class="reference internal nav-link" href="#linear-ozone-parameterization">
+   Linear ozone parameterization
   </a>
  </li>
 </ul>
@@ -337,12 +337,11 @@
             
               <div>
                 
-  <div class="tex2jax_ignore mathjax_ignore section" id="clouds">
-<h1>Clouds<a class="headerlink" href="#clouds" title="Permalink to this headline">¶</a></h1>
+  <div class="tex2jax_ignore mathjax_ignore section" id="ozone">
+<h1>Ozone<a class="headerlink" href="#ozone" title="Permalink to this headline">¶</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">typhon</span> <span class="kn">import</span> <span class="n">plots</span>
 
 <span class="kn">import</span> <span class="nn">konrad</span>
@@ -353,86 +352,89 @@
 </div>
 </div>
 </div>
-<div class="section" id="clear-sky-background">
-<h2>Clear-sky background<a class="headerlink" href="#clear-sky-background" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="fixed-ozone-distribution">
+<h2>Fixed ozone distribution<a class="headerlink" href="#fixed-ozone-distribution" title="Permalink to this headline">¶</a></h2>
+<p>In it’s default configuration, konrad will keep a fixed vertical distribution of ozone following the RCEMIP protocol <span id="id1">[<a class="reference internal" href="publications.html#id22">Wing <em>et al.</em>, 2018</a>]</span>.
+As a consequence, no matter how the thermodynamic state of the atmosphere changes, the amount and distribution of ozone will stay the same.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_quadratic_pgrid</span><span class="p">(</span><span class="n">num</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">phlev</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_quadratic_pgrid</span><span class="p">(</span><span class="n">top_pressure</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
 <span class="n">atmosphere</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">Atmosphere</span><span class="p">(</span><span class="n">phlev</span><span class="p">)</span>
 
-<span class="n">rrtmg</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">radiation</span><span class="o">.</span><span class="n">RRTMG</span><span class="p">()</span>
-
-
-<span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
-    <span class="n">atmosphere</span><span class="o">=</span><span class="n">atmosphere</span><span class="p">,</span>
-    <span class="n">humidity</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">FixedRH</span><span class="p">(</span><span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">VerticallyUniform</span><span class="p">(</span><span class="mf">0.8</span><span class="p">)),</span>
-    <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="mf">300.0</span><span class="p">),</span>
-    <span class="n">max_duration</span><span class="o">=</span><span class="s2">&quot;100d&quot;</span><span class="p">,</span>
-    <span class="n">timestep</span><span class="o">=</span><span class="s2">&quot;12h&quot;</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-
 <span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">Ts</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">285</span><span class="p">,</span> <span class="mi">295</span><span class="p">,</span> <span class="mi">305</span><span class="p">]:</span>
+    <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
+        <span class="n">atmosphere</span><span class="p">,</span>
+        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="n">Ts</span><span class="p">),</span>
+        <span class="n">timestep</span><span class="o">=</span><span class="s2">&quot;12h&quot;</span><span class="p">,</span>
+        <span class="n">max_duration</span><span class="o">=</span><span class="s2">&quot;150d&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
-<span class="n">ax1</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">rce</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s2">&quot;net_htngrt&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
-<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Q / $\sf K\,day^{-1}$&quot;</span><span class="p">)</span>
-<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
-<span class="n">ax1</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="n">phlev</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="n">l</span><span class="p">,</span> <span class="o">=</span> <span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">180</span><span class="p">,</span> <span class="mi">306</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+
+    <span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span>
+        <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span>
+        <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;O3&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">Ts</span><span class="si">}</span><span class="s2"> K&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">l</span><span class="o">.</span><span class="n">get_color</span><span class="p">(),</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\rmO_3$ / ppmv&quot;</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;$T_\mathrm</span><span class="si">{s}</span><span class="s2">$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s2">&quot;x-small&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(100000.00000000001, 0.5829979815268262)
-</pre></div>
-</div>
-<img alt="_images/clouds_3_1.png" src="_images/clouds_3_1.png" />
+<img alt="_images/ozone_3_0.png" src="_images/ozone_3_0.png" />
 </div>
 </div>
 </div>
-<div class="section" id="conceptual-cloud">
-<h2>Conceptual cloud<a class="headerlink" href="#conceptual-cloud" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="linear-ozone-parameterization">
+<h2>Linear ozone parameterization<a class="headerlink" href="#linear-ozone-parameterization" title="Permalink to this headline">¶</a></h2>
+<p>In a warming climate, however, we expect the ozone concentration to change with the atmospheric temperature profile.
+Konrad includes a linearized ozone scheme introduced by <span id="id2">Cariolle and Teyssèdre [<a class="reference internal" href="publications.html#id15">2007</a>]</span>.
+This schemme accounts for the effect of a changing temperature profile.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">single_cloud</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">cloud</span><span class="o">.</span><span class="n">ConceptualCloud</span><span class="p">(</span>
-    <span class="n">atmosphere</span><span class="p">,</span>  <span class="c1"># required for consistent coordinates</span>
-    <span class="n">cloud_top</span><span class="o">=</span><span class="mf">200e2</span><span class="p">,</span>  <span class="c1"># in Pa</span>
-    <span class="n">depth</span><span class="o">=</span><span class="mf">100e2</span><span class="p">,</span>  <span class="c1"># in Pa</span>
-    <span class="n">phase</span><span class="o">=</span><span class="s2">&quot;ice&quot;</span><span class="p">,</span>  <span class="c1"># &quot;ice&quot; or &quot;liquid&quot;</span>
-    <span class="n">water_path</span><span class="o">=</span><span class="mf">24.0</span><span class="p">,</span>  <span class="c1"># in g/m^3</span>
-    <span class="n">cloud_fraction</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>  <span class="c1"># [0-1]</span>
-<span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">rrtmg</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">radiation</span><span class="o">.</span><span class="n">RRTMG</span><span class="p">()</span>
-<span class="n">rrtmg</span><span class="o">.</span><span class="n">update_heatingrates</span><span class="p">(</span>
-    <span class="n">atmosphere</span><span class="o">=</span><span class="n">atmosphere</span><span class="p">,</span>
-    <span class="n">cloud</span><span class="o">=</span><span class="n">single_cloud</span><span class="p">,</span>
-<span class="p">)</span>
+<span class="k">for</span> <span class="n">Ts</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">285</span><span class="p">,</span> <span class="mi">295</span><span class="p">,</span> <span class="mi">305</span><span class="p">]:</span>
+    <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
+        <span class="n">atmosphere</span><span class="p">,</span>
+        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="n">Ts</span><span class="p">),</span>
+        <span class="n">ozone</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">ozone</span><span class="o">.</span><span class="n">Cariolle</span><span class="p">(),</span>
+        <span class="n">timestep</span><span class="o">=</span><span class="s2">&quot;2h&quot;</span><span class="p">,</span>
+        <span class="n">max_duration</span><span class="o">=</span><span class="s2">&quot;150d&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
 
-<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax0</span><span class="p">,</span> <span class="n">ax1</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">rrtmg</span><span class="p">[</span><span class="s2">&quot;net_htngrt&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Q / $\sf K\,day^{-1}$&quot;</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
-<span class="n">ax0</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="n">phlev</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="n">l</span><span class="p">,</span> <span class="o">=</span> <span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax0</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$T$ / K&quot;</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">180</span><span class="p">,</span> <span class="mi">306</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;$p$ / hPa&quot;</span><span class="p">)</span>
+    <span class="n">ax0</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
 
-<span class="n">ax1</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;k&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
-<span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span> <span class="n">rrtmg</span><span class="p">[</span><span class="s2">&quot;net_htngrt&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">rrtmg</span><span class="p">[</span><span class="s2">&quot;net_htngrt_clr&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
-<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;$\sf Q_\mathrm</span><span class="si">{cloud}</span><span class="s2">$ / $\sf K\,day^{-1}$&quot;</span><span class="p">)</span>
-<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mf">2.25</span><span class="p">,</span> <span class="mf">2.25</span><span class="p">)</span>
-<span class="n">ax1</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="n">phlev</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+    <span class="n">plots</span><span class="o">.</span><span class="n">profile_p_log</span><span class="p">(</span>
+        <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;plev&quot;</span><span class="p">],</span>
+        <span class="n">atmosphere</span><span class="p">[</span><span class="s2">&quot;O3&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">Ts</span><span class="si">}</span><span class="s2"> K&quot;</span><span class="p">,</span>
+        <span class="n">color</span><span class="o">=</span><span class="n">l</span><span class="o">.</span><span class="n">get_color</span><span class="p">(),</span>
+        <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;$\rmO_3$ / ppmv&quot;</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">r</span><span class="s2">&quot;$T_\mathrm</span><span class="si">{s}</span><span class="s2">$&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s2">&quot;x-small&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(100000.00000000001, 0.5829979815268262)
-</pre></div>
-</div>
-<img alt="_images/clouds_5_1.png" src="_images/clouds_5_1.png" />
+<img alt="_images/ozone_5_0.png" src="_images/ozone_5_0.png" />
 </div>
 </div>
 </div>
@@ -463,17 +465,17 @@
             
                 <!-- Previous / next buttons -->
 <div class='prev-next-area'> 
-    <a class='left-prev' id="prev-link" href="ozone.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="lapserate.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Ozone</p>
+            <p class="prev-next-title">Lapse rate</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="surface.html" title="next page">
+    <a class='right-next' id="next-link" href="clouds.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Surface</p>
+        <p class="prev-next-title">Clouds</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>

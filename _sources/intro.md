@@ -22,7 +22,7 @@ system.
 You can install the latest konrad version directly from
 [PyPI](https://pypi.org/project/konrad/) using `pip`:
 ```sh
-python3 -m pip install --pre konrad
+python3 -m pip install konrad
 ```
 
 Please have a look at our [repository](https://github.com/atmtools/konrad) for
