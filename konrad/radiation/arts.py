@@ -198,7 +198,7 @@ class _ARTS:
         # Setup the lookup table calculation
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
         self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
-        self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
+        self.ws.atmfields_checkedCalc()
         self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
         self.ws.abs_t_pert = np.arange(-160, 61, 20)
 
@@ -271,7 +271,7 @@ class _ARTS:
         self.ws.z_field.value[0, 0, 0] = 0.0
 
         # Perform configuration and atmosphere checks
-        self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
+        self.ws.atmfields_checkedCalc()
         self.ws.propmat_clearsky_agenda_checkedCalc()
         self.ws.atmgeom_checkedCalc()
         self.ws.cloudbox_checkedCalc()
