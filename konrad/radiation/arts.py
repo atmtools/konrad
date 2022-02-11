@@ -198,7 +198,7 @@ class _ARTS:
         # Setup the lookup table calculation
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
         self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
-        self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
+        self.ws.atmfields_checkedCalc()
         self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
         self.ws.abs_t_pert = np.arange(-160, 61, 20)
 
@@ -226,6 +226,8 @@ class _ARTS:
 
     def set_atmospheric_state(self, atmosphere, t_surface):
         """Set and check the atmospheric fields."""
+        import pyarts
+
         atm_fields_compact = atmosphere.to_atm_fields_compact()
 
         # Scale dry-air VMRs with H2O and CO2 content.
@@ -247,7 +249,7 @@ class _ARTS:
                 atm_fields_compact.scale(species, 1 - variable_vmrs)
 
         # Compute the N2 VMR as a residual of the full atmosphere composition.
-        n2 = ty.arts.types.GriddedField3(
+        n2 = pyarts.types.GriddedField3(
             grids=atm_fields_compact.grids[1:],
             data=0.7808 * (1 - variable_vmrs),
         )
@@ -269,7 +271,7 @@ class _ARTS:
         self.ws.z_field.value[0, 0, 0] = 0.0
 
         # Perform configuration and atmosphere checks
-        self.ws.atmfields_checkedCalc(bad_partition_functions_ok=1)
+        self.ws.atmfields_checkedCalc()
         self.ws.propmat_clearsky_agenda_checkedCalc()
         self.ws.atmgeom_checkedCalc()
         self.ws.cloudbox_checkedCalc()
