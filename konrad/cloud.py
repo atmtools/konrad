@@ -710,7 +710,7 @@ class MidLevelCloud(ConceptualCloud):
     Mid-level clouds are coupled to the freezing level.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, atmosphere, *args, **kwargs):
         """Initialize a conceputal mid-level cloud."""
         default_kwargs = dict(
             cloud_top=550e2,
@@ -732,7 +732,7 @@ class LowCloud(ConceptualCloud):
     Low-level clouds are fixed in pressure coordinates.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, atmosphere, *args, **kwargs):
         """Initialize a conceputal low-level cloud."""
         default_kwargs = dict(
             cloud_top=850e2,
