@@ -90,7 +90,7 @@ class Atmosphere(Component):
         [0] http://arts.mi.uni-hamburg.de/docserver-trunk/variables/atm_fields_compact
 
         Parameters:
-            atm_fields_compact (typhon.arts.types.GriddedField4):
+            atm_fields_compact (pyarts.types.GriddedField4):
                 Compact set of atmospheric fields.
         """
 
@@ -117,17 +117,15 @@ class Atmosphere(Component):
         Parameters:
             xmlfile (str): Path to XML file.
         """
+        import pyarts
+
         # Read the content of given XML file.
-        griddedfield = typhon.arts.xml.load(xmlfile)
+        griddedfield = pyarts.xml.load(xmlfile)
 
-        # Check if the XML file contains an atm_fields_compact (GriddedField4).
-        arts_type = typhon.arts.utils.get_arts_typename(griddedfield)
-        if arts_type != "GriddedField4":
-            raise TypeError(
-                'XML file contains "{}". Expected "GriddedField4".'.format(arts_type)
-            )
+        if not isinstance(griddedfield, pyarts.GriddedField4):
+            raise TypeError('XML file does not an "GriddedField4".')
 
-        return cls.from_atm_fields_compact(griddedfield, **kwargs)
+        return cls.from_atm_fields_compact(griddedfield)
 
     @classmethod
     def from_dict(cls, dictionary):
@@ -183,6 +181,8 @@ class Atmosphere(Component):
 
     def to_atm_fields_compact(self):
         """Convert an atmosphere into an ARTS atm_fields_compact."""
+        import pyarts
+
         # Store all atmosphere variables including geopotential height.
         variables = self.atmosphere_variables + ["z"]
 
@@ -192,7 +192,7 @@ class Atmosphere(Component):
         ]
 
         # Create a GriddedField4.
-        atmfield = typhon.arts.types.GriddedField4()
+        atmfield = pyarts.types.GriddedField4()
 
         # Set grids and their names.
         atmfield.gridnames = ["Species", "Pressure", "Longitude", "Latitude"]

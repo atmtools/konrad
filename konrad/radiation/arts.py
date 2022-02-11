@@ -226,6 +226,8 @@ class _ARTS:
 
     def set_atmospheric_state(self, atmosphere, t_surface):
         """Set and check the atmospheric fields."""
+        import pyarts
+
         atm_fields_compact = atmosphere.to_atm_fields_compact()
 
         # Scale dry-air VMRs with H2O and CO2 content.
@@ -247,7 +249,7 @@ class _ARTS:
                 atm_fields_compact.scale(species, 1 - variable_vmrs)
 
         # Compute the N2 VMR as a residual of the full atmosphere composition.
-        n2 = ty.arts.types.GriddedField3(
+        n2 = pyarts.types.GriddedField3(
             grids=atm_fields_compact.grids[1:],
             data=0.7808 * (1 - variable_vmrs),
         )
