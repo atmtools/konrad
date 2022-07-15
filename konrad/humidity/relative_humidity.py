@@ -344,15 +344,24 @@ class VshapeT(RelativeHumidityModel):
     And one between the freezing-level and the cold-point.
     """
 
-    def __init__(self, rh_surface=0.8, rh_minimum=0.4, rh_coldpoint=0.8):
+    def __init__(
+        self,
+        rh_surface=0.8,
+        rh_minimum=0.4,
+        rh_coldpoint=0.8,
+        T_boundary=290,
+        T_coldpoint=200,
+    ):
         """
         Parameters:
-            rh_surface (float): Relative humidity at T > 290 K.
-            rh_minimum (float): Mininmum RH at T =250 K.
-            rh_coldpoint (float): Relative humidity at T < 200 K (cold-point).
+            rh_surface (float): Relative humidity at `T > T_boundary`.
+            rh_minimum (float): Mininmum RH at `T = 250 K`.
+            rh_coldpoint (float): Relative humidity at `jT < `T_coldpoint`.
+            T_boundary (float): Tropospheric temperature above which `RH = rh_surface`.
+            T_coldpoint (float): Tropospheric temperature below which `RH = rh_coldpoint`.
         """
         self._f = interp1d(
-            x=[400, 290, 250, 200, 100],
+            x=[400, T_boundary, 250, T_coldpoint, 100],
             y=[rh_surface, rh_surface, rh_minimum, rh_coldpoint, rh_coldpoint],
             fill_value="extrapolate",
             kind="linear",
