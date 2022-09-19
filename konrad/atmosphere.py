@@ -192,7 +192,7 @@ class Atmosphere(Component):
         ]
 
         # Create a GriddedField4.
-        atmfield = pyarts.types.GriddedField4()
+        atmfield = pyarts.arts.GriddedField4()
 
         # Set grids and their names.
         atmfield.gridnames = ["Species", "Pressure", "Longitude", "Latitude"]
@@ -212,10 +212,10 @@ class Atmosphere(Component):
                 f(np.log(self["phlev"])).reshape(1, self["phlev"].size, 1, 1)
             )
         atmfield.data = np.vstack(profiles)
-        atmfield.dataname = "Data"
+        atmfield.name = "Data"
 
         # Perform a consistency check of the passed grids and data tensor.
-        atmfield.check_dimension()
+        atmfield.checksize_strict()
 
         return atmfield
 
