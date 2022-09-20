@@ -126,25 +126,17 @@ class _ARTS:
         self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
 
         # Read line catagloge and create absorption lines.
-        self.ws.ReadSplitARTSCAT(
-            abs_lines=self.ws.abs_lines,
-            abs_species=self.ws.abs_species,
-            basename="hitran_split_artscat5/",
-            fmin=0.0,
-            fmax=1e99,
-            globalquantumnumbers="",
-            localquantumnumbers="",
-            ignore_missing=0,
+        self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
+            basename="lines/"
         )
 
         # Set line shape and cut off.
-        self.ws.abs_linesSetLineShapeType(self.ws.abs_lines, "VP")
-        self.ws.abs_linesSetNormalization(self.ws.abs_lines, "VVH")
-        self.ws.abs_linesSetCutoff(self.ws.abs_lines, "ByLine", 750e9)
-        self.ws.propmat_clearsky_agendaAuto()
-
-        self.ws.abs_lines_per_speciesCreateFromLines()
-        self.ws.abs_lines_per_speciesCompact()
+        self.ws.LegacyContinuaInit()
+        self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
+        self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
+        self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
+        self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
 
         # Create a standard atmosphere
         p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
@@ -171,26 +163,23 @@ class _ARTS:
 
         # Setup the lookup table calculation
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
-        self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
+        self.ws.vmr_field.value = self.ws.vmr_field.value.value.clip(min=0.0)
         self.ws.atmfields_checkedCalc()
         self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
         self.ws.abs_t_pert = np.arange(-160, 61, 20)
 
         nls_idx = [
-            i for i, tag in enumerate(self.ws.abs_species.value) if "H2O" in tag[0]
-        ]
-        self.ws.abs_speciesSet(
-            abs_species=self.ws.abs_nls,
-            species=[", ".join(self.ws.abs_species.value[nls_idx[0]])],
-        )
+            i for i, tag in enumerate(self.ws.abs_species.value) if "H2O" in tag
+        ][0]
+        self.ws.abs_nls = [self.ws.abs_species.value[nls_idx]]
 
         self.ws.abs_nls_pert = np.array(
             [10 ** x for x in [-9, -7, -5, -3, -1, 0, 0.5, 1, 1.5, 2]]
         )
 
         # Run checks
-        self.ws.abs_xsec_agenda_checkedCalc()
-        self.ws.lbl_checkedCalc()
+        self.ws.propmat_clearsky_agenda_checkedCalc()
+        self.ws.lbl_checked = 1  # self.ws.lbl_checkedCalc()
 
         # Calculate actual lookup table.
         self.ws.abs_lookupCalc()
