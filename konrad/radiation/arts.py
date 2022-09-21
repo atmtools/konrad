@@ -30,7 +30,7 @@ class _ARTS:
                 scaled with the water-vapor concentration (default is `False.`)
             verbosity (int): Control the ARTS verbosity from 0 (quiet) to 2.
         """
-        from pyarts.workspace import Workspace, arts_agenda
+        from pyarts.workspace import Workspace
 
         self.nstreams = nstreams
         self.scale_vmr = scale_vmr
