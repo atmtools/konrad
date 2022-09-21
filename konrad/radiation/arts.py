@@ -257,10 +257,10 @@ class _ARTS:
         self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
 
         return (
-            self.ws.f_grid.value.value.copy(),
-            self.ws.p_grid.value.value.copy(),
-            self.ws.spectral_irradiance_field.value.value.copy(),
-            self.ws.trans_field.value.value[:, 1:, 0].copy().prod(axis=1),
+            self.ws.f_grid.value[:].copy(),
+            self.ws.p_grid.value[:].copy(),
+            self.ws.spectral_irradiance_field.value[:].copy(),
+            self.ws.trans_field.value[:, 1:, 0].copy().prod(axis=1),
         )
 
     def calc_optical_thickness(self, atmosphere, t_surface):
@@ -275,7 +275,7 @@ class _ARTS:
             axis=-1,
         )
 
-        return self.ws.f_grid.value.value.copy(), tau
+        return self.ws.f_grid.value[:].copy(), tau
 
     @staticmethod
     def integrate_spectral_irradiance(frequency, irradiance):
