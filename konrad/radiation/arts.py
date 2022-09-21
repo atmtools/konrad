@@ -30,7 +30,7 @@ class _ARTS:
                 scaled with the water-vapor concentration (default is `False.`)
             verbosity (int): Control the ARTS verbosity from 0 (quiet) to 2.
         """
-        from pyarts.workspace import Workspace, arts_agenda
+        from pyarts.workspace import Workspace
 
         self.nstreams = nstreams
         self.scale_vmr = scale_vmr
@@ -38,38 +38,14 @@ class _ARTS:
         if ws is None:
             self.ws = Workspace(verbosity=verbosity)
 
-        self.ws.execute_controlfile("general/general.arts")
-        self.ws.execute_controlfile("general/continua.arts")
-        self.ws.execute_controlfile("general/agendas.arts")
-        self.ws.execute_controlfile("general/planet_earth.arts")
+        self.ws.PlanetSet(option="Earth")
+        self.ws.AtmosphereSet1D()
 
-        # Agenda settings
-        self.ws.Copy(self.ws.abs_xsec_agenda, self.ws.abs_xsec_agenda__noCIA)
-        self.ws.Copy(self.ws.iy_main_agenda, self.ws.iy_main_agenda__Emission)
-        self.ws.Copy(self.ws.iy_space_agenda, self.ws.iy_space_agenda__CosmicBackground)
-        self.ws.Copy(
-            self.ws.iy_surface_agenda, self.ws.iy_surface_agenda__UseSurfaceRtprop
-        )
-        self.ws.Copy(
-            self.ws.propmat_clearsky_agenda,
-            self.ws.propmat_clearsky_agenda__LookUpTable,
-        )
-        self.ws.Copy(self.ws.ppath_agenda, self.ws.ppath_agenda__FollowSensorLosPath)
-        self.ws.Copy(
-            self.ws.ppath_step_agenda, self.ws.ppath_step_agenda__GeometricPath
-        )
-
-        @arts_agenda
-        def p_eq_agenda(workspace):
-            workspace.water_p_eq_fieldMK05()
-
-        self.ws.Copy(self.ws.water_p_eq_agenda, p_eq_agenda)
-
-        @arts_agenda
-        def cloudbox_agenda(workspace):
-            workspace.iyInterpCloudboxField()
-
-        self.ws.Copy(self.ws.iy_cloudbox_agenda, cloudbox_agenda)
+        self.ws.water_p_eq_agendaSet()
+        self.ws.gas_scattering_agendaSet()
+        self.ws.iy_main_agendaSet(option="Emission")
+        self.ws.iy_space_agendaSet()
+        self.ws.iy_surface_agendaSet()
 
         # Number of Stokes components to be computed
         self.ws.IndexSet(self.ws.stokes_dim, 1)
@@ -93,9 +69,8 @@ class _ARTS:
 
         # Surface handling
         self.ws.VectorSetConstant(self.ws.surface_scalar_reflectivity, 1, 0.0)
-        self.ws.Copy(
-            self.ws.surface_rtprop_agenda,
-            self.ws.surface_rtprop_agenda__Specular_NoPol_ReflFix_SurfTFromt_surface,
+        self.ws.surface_rtprop_agendaSet(
+            option="Specular_NoPol_ReflFix_SurfTFromt_surface",
         )
 
         # Read lookup table
@@ -113,15 +88,13 @@ class _ARTS:
                 "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'"
             )
 
+        self.ws.abs_lines_per_speciesSetEmpty()
         self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
         self.ws.f_gridFromGasAbsLookup()
         self.ws.abs_lookupAdapt()
+        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
 
-        # Sensor settings
         self.ws.sensorOff()  # No sensor properties
-
-        # Atmosphere
-        self.ws.AtmosphereSet1D()
 
         # Set number of OMP threads
         if threads is not None:
@@ -153,24 +126,17 @@ class _ARTS:
         self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
 
         # Read line catagloge and create absorption lines.
-        self.ws.ReadSplitARTSCAT(
-            abs_lines=self.ws.abs_lines,
-            abs_species=self.ws.abs_species,
-            basename="hitran_split_artscat5/",
-            fmin=0.0,
-            fmax=1e99,
-            globalquantumnumbers="",
-            localquantumnumbers="",
-            ignore_missing=0,
+        self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
+            basename="lines/"
         )
 
         # Set line shape and cut off.
-        self.ws.abs_linesSetLineShapeType(self.ws.abs_lines, "VP")
-        self.ws.abs_linesSetNormalization(self.ws.abs_lines, "VVH")
-        self.ws.abs_linesSetCutoff(self.ws.abs_lines, "ByLine", 750e9)
-
-        self.ws.abs_lines_per_speciesCreateFromLines()
-        self.ws.abs_lines_per_speciesCompact()
+        self.ws.LegacyContinuaInit()
+        self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
+        self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
+        self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
+        self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
 
         # Create a standard atmosphere
         p_grid = get_quadratic_pgrid(1_200e2, 0.5, 80)
@@ -197,26 +163,23 @@ class _ARTS:
 
         # Setup the lookup table calculation
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
-        self.ws.vmr_field.value = self.ws.vmr_field.value.clip(min=0.0)
+        self.ws.vmr_field.value = self.ws.vmr_field.value.value.clip(min=0.0)
         self.ws.atmfields_checkedCalc()
         self.ws.abs_lookupSetup(p_step=1.0)  # Do not refine p_grid
         self.ws.abs_t_pert = np.arange(-160, 61, 20)
 
         nls_idx = [
-            i for i, tag in enumerate(self.ws.abs_species.value) if "H2O" in tag[0]
-        ]
-        self.ws.abs_speciesSet(
-            abs_species=self.ws.abs_nls,
-            species=[", ".join(self.ws.abs_species.value[nls_idx[0]])],
-        )
+            i for i, tag in enumerate(self.ws.abs_species.value) if "H2O" in tag
+        ][0]
+        self.ws.abs_nls = [self.ws.abs_species.value[nls_idx]]
 
         self.ws.abs_nls_pert = np.array(
             [10 ** x for x in [-9, -7, -5, -3, -1, 0, 0.5, 1, 1.5, 2]]
         )
 
         # Run checks
-        self.ws.abs_xsec_agenda_checkedCalc()
-        self.ws.lbl_checkedCalc()
+        self.ws.propmat_clearsky_agenda_checkedCalc()
+        self.ws.lbl_checked = 1  # self.ws.lbl_checkedCalc()
 
         # Calculate actual lookup table.
         self.ws.abs_lookupCalc()
@@ -240,7 +203,7 @@ class _ARTS:
             t3_shape = atm_fields_compact.get("abs_species-H2O")[0].shape
             variable_vmrs = np.zeros(t3_shape)
 
-        for species in atm_fields_compact.grids[0]:
+        for species in map(str, atm_fields_compact.grids[0]):
             if (
                 species.startswith("abs_species-")
                 and "H2O" not in species
@@ -249,7 +212,7 @@ class _ARTS:
                 atm_fields_compact.scale(species, 1 - variable_vmrs)
 
         # Compute the N2 VMR as a residual of the full atmosphere composition.
-        n2 = pyarts.types.GriddedField3(
+        n2 = pyarts.arts.GriddedField3(
             grids=atm_fields_compact.grids[1:],
             data=0.7808 * (1 - variable_vmrs),
         )
@@ -261,7 +224,7 @@ class _ARTS:
             value=n2,
         )
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
-        self.ws.vmr_field = self.ws.vmr_field.value.clip(min=0)
+        self.ws.vmr_field = self.ws.vmr_field.value.value.clip(min=0)
 
         # Surface & TOA
         # Add pressure layers to the surface and top-of-the-atmosphere to
@@ -294,9 +257,9 @@ class _ARTS:
         self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
 
         return (
-            self.ws.f_grid.value.copy(),
-            self.ws.p_grid.value.copy(),
-            self.ws.spectral_irradiance_field.value.copy(),
+            self.ws.f_grid.value[:].copy(),
+            self.ws.p_grid.value[:].copy(),
+            self.ws.spectral_irradiance_field.value[:].copy(),
             self.ws.trans_field.value[:, 1:, 0].copy().prod(axis=1),
         )
 
@@ -312,7 +275,7 @@ class _ARTS:
             axis=-1,
         )
 
-        return self.ws.f_grid.value.copy(), tau
+        return self.ws.f_grid.value[:].copy(), tau
 
     @staticmethod
     def integrate_spectral_irradiance(frequency, irradiance):
