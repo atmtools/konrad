@@ -57,7 +57,7 @@ for Ts in [285, 295, 305]:
         color=l.get_color(),
         ax=ax1,
     )
-    ax1.set_xlabel(r"$\rmO_3$ / ppmv")
+    ax1.set_xlabel(r"$\rm O_3$ / ppmv")
     ax1.set_xlim(0, 11)
     ax1.legend(title=r"$T_\mathrm{s}$", fontsize="x-small")
 ```
@@ -94,7 +94,7 @@ for Ts in [285, 295, 305]:
         color=l.get_color(),
         ax=ax1,
     )
-    ax1.set_xlabel(r"$\rmO_3$ / ppmv")
+    ax1.set_xlabel(r"$\rm O_3$ / ppmv")
     ax1.set_xlim(0, 11)
     ax1.legend(title=r"$T_\mathrm{s}$", fontsize="x-small")
 ```
