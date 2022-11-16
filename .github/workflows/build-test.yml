@@ -15,7 +15,7 @@ jobs:
 
         include:
           - name: ubuntu
-            os: ubuntu-18.04
+            os: ubuntu-22.04
 
           - name: macos
             os: macos-latest
