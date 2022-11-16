@@ -31,9 +31,9 @@ jobs:
       - name: Install GCC (MacOS)
         if: matrix.name == 'macos'
         run: |
-          brew install gcc@10
-          echo "CC=gcc-10" >> $GITHUB_ENV
-          echo "FC=gfortran-10" >> $GITHUB_ENV
+          brew install gcc@12
+          echo "CC=gcc-12" >> $GITHUB_ENV
+          echo "FC=gfortran-12" >> $GITHUB_ENV
 
       - name: Install
         run: |
