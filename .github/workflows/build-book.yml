@@ -27,10 +27,11 @@ jobs:
         jupyter-book build -W -n --keep-going howto
     - name: Archive build artifacts
       uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: build
-        path: |
-          howto/_build
+        path: howto/_build
+        retention-days: 1
 
   publish:
     needs: build
