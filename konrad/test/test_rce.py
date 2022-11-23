@@ -19,6 +19,13 @@ class TestRCE:
         RCE(atmosphere_obj)
 
     def test_run(self, atmosphere_obj):
-        """Integrate an RCE simulation for four time steps.."""
-        rce = RCE(atmosphere_obj, timestep="12h", max_duration="48h")
+        """Run a full RCE simulation and check some outputs."""
+        rce = RCE(atmosphere_obj, timestep="12h", max_duration="200d")
         rce.run()
+
+        # Check some basic atmospheric and radiative properties.
+        assert 255.5 < rce.radiation["lw_flxu"][-1, -1] < 256.5
+        assert rce.atmosphere["T"][-1].min() > 150.0
+        assert rce.atmosphere["T"][-1].max() < 288.0
+        assert np.all(rce.atmosphere["H2O"] > 0.0)
+        assert np.all(rce.atmosphere["H2O"] < 0.015)
