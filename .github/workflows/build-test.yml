@@ -11,41 +11,38 @@ jobs:
       fail-fast: false
       matrix:
         name: [ubuntu, macos]
-        python-version: [3.7, 3.8, 3.9]
+        python-version: ["3.8", "3.9", "3.10"]
 
         include:
           - name: ubuntu
-            os: ubuntu-18.04
+            os: ubuntu-22.04
 
           - name: macos
             os: macos-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install GCC (MacOS)
         if: matrix.name == 'macos'
         run: |
-          brew install gcc@10
-          echo "CC=gcc-10" >> $GITHUB_ENV
-          echo "FC=gfortran-10" >> $GITHUB_ENV
+          brew install gcc@12
+          echo "CC=gcc-12" >> $GITHUB_ENV
+          echo "FC=gfortran-12" >> $GITHUB_ENV
 
       - name: Install
         run: |
-          python -m pip install --upgrade pip
-          # We need to install a suitable NumPy version prior to CliMT
-          # because their internal dependency handling is broken.
-          python -m pip install wheel "numpy>=1.20.0,<1.22.0"
+          python -m pip install --upgrade pip wheel
           TARGET=HASWELL python -m pip install -v .[docs,tests]
           python -m pip list
 
       - name: Lint with flake8
-        if: matrix.name == 'ubuntu' && matrix.python-version == '3.7'
+        if: matrix.name == 'ubuntu' && matrix.python-version == '3.9'
         continue-on-error: true
         run: |
           python -m pip install flake8

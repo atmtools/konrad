@@ -4,15 +4,15 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: ["3.9"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies with pip
@@ -26,11 +26,12 @@ jobs:
         conda info
         jupyter-book build -W -n --keep-going howto
     - name: Archive build artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
+      if: always()
       with:
         name: build
-        path: |
-          howto/_build
+        path: howto/_build
+        retention-days: 1
 
   publish:
     needs: build
@@ -38,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download compiled book
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
           path: _build
