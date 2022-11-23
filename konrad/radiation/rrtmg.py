@@ -1,10 +1,15 @@
 """Define an interface for the RRTMG radiation scheme (through CliMT). """
+from contextlib import redirect_stdout, redirect_stderr
+import io
+
 from copy import deepcopy
 import numpy as np
 import datetime
 from sympl import DataArray
 from typhon.physics import vmr2specific_humidity
-import climt
+with redirect_stdout(io.StringIO()) as _, redirect_stderr(io.StringIO()) as _:
+    # Suppress warnings by climt which are created by logging and print statements.
+    import climt
 import logging
 
 from .radiation import Radiation
