@@ -1,20 +1,23 @@
-name: konrad-dev
-dependencies:
-    - python>=3.6
-    - matplotlib>=2.0.0
-    - netcdf4>=1.2.7
-    - numpy>1.22.0
-    - scipy>=0.19.0
-    - typhon>=0.7.0
-    - xarray>=0.9.1
-    - sphinx
-    - sphinx_rtd_theme
-    - pytest
-    - pip
-    - pip:
-        - git+git://github.com/atmtools/climt@allow-latest-numpy#egg=climt
-        - pyarts
-        - sympl>=0.4.0
+name: konrad
 channels:
     - defaults
     - rttools
+dependencies:
+    - python>=3.8
+    - jupyter-book
+    - matplotlib>=2.0.0
+    - netcdf4>=1.2.7
+    - numpy>1.22.0
+    - pyarts==2.5.4
+    - pytest
+    - scipy>=0.19.0
+    - sphinx
+    - sphinx
+    - sphinx_rtd_theme
+    - sphinx_rtd_theme
+    - typhon>=0.7.0
+    - xarray>=0.9.1
+    - pip
+    - pip:
+        - git+https://github.com/atmtools/climt@rrtmg-only#egg=climt
+        - sympl>=0.4.0
