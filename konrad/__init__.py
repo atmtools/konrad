@@ -19,7 +19,7 @@ warnings.filterwarnings(
     module="sympl",
 )
 
-__version__ = open(join(dirname(__file__), "VERSION")).read().strip()
+__version__ = '1.0.1dev'
 
 from . import atmosphere
 from . import cloud
