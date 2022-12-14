@@ -19,7 +19,7 @@ warnings.filterwarnings(
     module="sympl",
 )
 
-__version__ = '1.0.2'
+__version__ = '1.0.2-dev0'
 
 from . import atmosphere
 from . import cloud
