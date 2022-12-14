@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Kluft"
+  given-names: "Lukas"
+  orcid: "https://orcid.org/0000-0002-6533-3928"
+- family-names: "Dacie"
+  given-names: "Sally"
+  orcid: "https://orcid.org/0000-0002-7572-2903"
+- family-names: "Bourdin"
+  given-names: "Stella"
+  orcid: "https://orcid.org/0000-0003-2635-5654"
+title: "konrad"
+url: "https://github.com/atmtools/konrad"
+keywords:
+  - python3
+  - atmospheric-science
+license: MIT
+repository-code: "https://github.com/atmtools/konrad"
+type: software
