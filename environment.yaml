@@ -12,8 +12,6 @@ dependencies:
     - pytest
     - scipy>=0.19.0
     - sphinx
-    - sphinx
-    - sphinx_rtd_theme
     - sphinx_rtd_theme
     - typhon>=0.7.0
     - xarray>=0.9.1
