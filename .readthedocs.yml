@@ -9,6 +9,11 @@ version: 2
 sphinx:
   configuration: docs/source/conf.py
 
+# Workaround to enable Python 3.9
+# https://github.com/readthedocs/readthedocs.org/issues/7554#issuecomment-785114155
+build:
+  image: testing
+
 # Pyhton settings
 python:
   version: 3.9
