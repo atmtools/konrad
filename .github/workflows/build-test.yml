@@ -51,7 +51,7 @@ jobs:
       - name: Test
         run: |
           python -m pip install pytest
-          pytest --pyargs konrad
+          python -m pytest --pyargs konrad
 
       - name: Build docs
         continue-on-error: true
