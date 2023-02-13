@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Climate modeling &#8212; How to konrad</title>
+    <title>Running in parallel &#8212; How to konrad</title>
     
   <!-- Loaded before other Sphinx assets -->
   <link href="_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -53,8 +53,8 @@ const thebe_selector_output = ".output, .cell_output"
     <link rel="shortcut icon" href="_static/konrad-logo.png"/>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Radiative forcing" href="forcing.html" />
-    <link rel="prev" title="Surface" href="surface.html" />
+    <link rel="next" title="Bibliography" href="publications.html" />
+    <link rel="prev" title="RRTMG interface" href="rrtmg_only.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
     
@@ -172,11 +172,11 @@ const thebe_selector_output = ".output, .cell_output"
    </li>
   </ul>
  </li>
- <li class="toctree-l1 current active has-children">
-  <a class="current reference internal" href="#">
+ <li class="toctree-l1 has-children">
+  <a class="reference internal" href="climate_modeling.html">
    Climate modeling
   </a>
-  <input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
+  <input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox"/>
   <label for="toctree-checkbox-2">
    <i class="fas fa-chevron-down">
    </i>
@@ -194,23 +194,23 @@ const thebe_selector_output = ".output, .cell_output"
    </li>
   </ul>
  </li>
- <li class="toctree-l1 has-children">
+ <li class="toctree-l1 current active has-children">
   <a class="reference internal" href="misc.html">
    Miscellaneous examples
   </a>
-  <input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
+  <input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox"/>
   <label for="toctree-checkbox-3">
    <i class="fas fa-chevron-down">
    </i>
   </label>
-  <ul>
+  <ul class="current">
    <li class="toctree-l2">
     <a class="reference internal" href="rrtmg_only.html">
      RRTMG interface
     </a>
    </li>
-   <li class="toctree-l2">
-    <a class="reference internal" href="parallel_jobs.html">
+   <li class="toctree-l2 current active">
+    <a class="current reference internal" href="#">
      Running in parallel
     </a>
    </li>
@@ -272,6 +272,17 @@ title="Toggle navigation"
         
     </div>
     <div class="header-article__right">
+<div class="menu-dropdown menu-dropdown-launch-buttons">
+  <button class="headerbtn menu-dropdown__trigger"
+      aria-label="Launch interactive content">
+      <i class="fas fa-rocket"></i>
+  </button>
+  <div class="menu-dropdown__content">
+    <ul>
+    </ul>
+  </div>
+</div>
+
 <button onclick="toggleFullScreen()"
   class="headerbtn"
   data-toggle="tooltip"
@@ -311,7 +322,7 @@ title="Source repository"
       </li>
       
       <li>
-        <a href="https://github.com/atmtools/konrad/edit/main/howto/climate_modeling.md"
+        <a href="https://github.com/atmtools/konrad/edit/main/howto/parallel_jobs.md"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -339,7 +350,24 @@ title="Edit this page"
   <div class="menu-dropdown__content">
     <ul>
       <li>
-        <a href="_sources/climate_modeling.md"
+        <a href="_sources/parallel_jobs.ipynb"
+   class="headerbtn"
+   data-toggle="tooltip"
+data-placement="left"
+title="Download notebook file"
+>
+  
+
+<span class="headerbtn__icon-container">
+  <i class="fas fa-code"></i>
+  </span>
+<span class="headerbtn__text-container">.ipynb</span>
+</a>
+
+      </li>
+      
+      <li>
+        <a href="_sources/parallel_jobs.md"
    class="headerbtn"
    data-toggle="tooltip"
 data-placement="left"
@@ -388,7 +416,7 @@ title="Print to PDF"
         <div class="col pl-md-3 pl-lg-5 content-container">
             <!-- Table of contents that is only displayed when printing the page -->
             <div id="jb-print-docs-body" class="onlyprint">
-                <h1>Climate modeling</h1>
+                <h1>Running in parallel</h1>
                 <!-- Table of contents -->
                 <div id="print-main-content">
                     <div id="jb-print-toc">
@@ -400,9 +428,49 @@ title="Print to PDF"
                 
               <div>
                 
-  <section class="tex2jax_ignore mathjax_ignore" id="climate-modeling">
-<h1>Climate modeling<a class="headerlink" href="#climate-modeling" title="Permalink to this headline">#</a></h1>
-<div class="toctree-wrapper compound">
+  <section class="tex2jax_ignore mathjax_ignore" id="running-in-parallel">
+<h1>Running in parallel<a class="headerlink" href="#running-in-parallel" title="Permalink to this headline">#</a></h1>
+<p>One of the advantages of simple models like <code class="docutils literal notranslate"><span class="pre">konrad</span></code> is their low computational
+cost. This allows the user to explore a wide range of parameters in ensemble
+simulations.</p>
+<p>The python standard library includes the <code class="docutils literal notranslate"><span class="pre">multiprocessing</span></code> package, which
+allows to run these ensembles in parallel.</p>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+
+<span class="kn">import</span> <span class="nn">konrad</span>
+
+
+<span class="k">def</span> <span class="nf">run_rce</span><span class="p">(</span><span class="n">Ts</span><span class="o">=</span><span class="mf">300.</span><span class="p">,</span> <span class="n">RH</span><span class="o">=</span><span class="mf">0.8</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run an RCE for a given combination of Ts and RH.&quot;&quot;&quot;</span>
+    <span class="n">rce</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">RCE</span><span class="p">(</span>
+        <span class="n">atmosphere</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">atmosphere</span><span class="o">.</span><span class="n">Atmosphere</span><span class="p">(</span><span class="n">konrad</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_quadratic_pgrid</span><span class="p">(</span><span class="n">num</span><span class="o">=</span><span class="mi">64</span><span class="p">)),</span>
+        <span class="n">surface</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">surface</span><span class="o">.</span><span class="n">FixedTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="o">=</span><span class="n">Ts</span><span class="p">),</span> 
+        <span class="n">humidity</span><span class="o">=</span><span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">FixedRH</span><span class="p">(</span><span class="n">konrad</span><span class="o">.</span><span class="n">humidity</span><span class="o">.</span><span class="n">VerticallyUniform</span><span class="p">(</span><span class="n">RH</span><span class="p">)),</span> 
+    <span class="p">)</span>
+    <span class="n">rce</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">rce</span>
+
+
+<span class="c1"># Define set of parameters</span>
+<span class="n">Tss</span> <span class="o">=</span> <span class="p">[</span><span class="mi">273</span><span class="p">,</span> <span class="mi">288</span><span class="p">,</span> <span class="mi">294</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">305</span><span class="p">]</span>
+<span class="n">RHs</span> <span class="o">=</span> <span class="p">[</span><span class="mf">.1</span><span class="p">,</span> <span class="mf">.25</span><span class="p">,</span> <span class="mf">.5</span><span class="p">,</span> <span class="mf">.75</span><span class="p">,</span> <span class="mf">.9</span><span class="p">]</span>
+
+<span class="n">rce_configs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">Tss</span><span class="p">,</span> <span class="n">RHs</span><span class="p">))</span>
+
+<span class="c1"># Run processes in parallel</span>
+<span class="hll"><span class="k">with</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+</span><span class="hll">    <span class="n">rce_results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">run_rce</span><span class="p">,</span> <span class="n">rce_configs</span><span class="p">)</span>
+</span>
+<span class="c1"># Combine results in a dict.</span>
+<span class="c1"># (In python, tuples are immutable and can be used as dict-keys directly.)</span>
+<span class="n">rces</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">rce_configs</span><span class="p">,</span> <span class="n">rce_results</span><span class="p">))</span>
+
+<span class="c1"># Print results</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">rh</span><span class="p">),</span> <span class="n">rce</span> <span class="ow">in</span> <span class="n">rces</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;T_s: </span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">K&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;RH </span><span class="si">{</span><span class="n">rh</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;OLR: </span><span class="si">{</span><span class="n">rce</span><span class="o">.</span><span class="n">radiation</span><span class="p">[</span><span class="s1">&#39;lw_flxu&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
 </div>
 </section>
 
@@ -433,17 +501,17 @@ title="Print to PDF"
                 
     <!-- Previous / next buttons -->
 <div class='prev-next-area'>
-    <a class='left-prev' id="prev-link" href="surface.html" title="previous page">
+    <a class='left-prev' id="prev-link" href="rrtmg_only.html" title="previous page">
         <i class="fas fa-angle-left"></i>
         <div class="prev-next-info">
             <p class="prev-next-subtitle">previous</p>
-            <p class="prev-next-title">Surface</p>
+            <p class="prev-next-title">RRTMG interface</p>
         </div>
     </a>
-    <a class='right-next' id="next-link" href="forcing.html" title="next page">
+    <a class='right-next' id="next-link" href="publications.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Radiative forcing</p>
+        <p class="prev-next-title">Bibliography</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>
