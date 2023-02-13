@@ -19,4 +19,5 @@ chapters:
 - file: misc
   sections:
     - file: rrtmg_only
+    - file: parallel_jobs
 - file: publications
