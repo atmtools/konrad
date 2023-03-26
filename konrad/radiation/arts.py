@@ -1,5 +1,6 @@
 import logging
 import os
+import warnings
 from os.path import join, dirname, isfile
 
 import numpy as np
@@ -44,20 +45,25 @@ class _ARTS:
         self.ws.water_p_eq_agendaSet()
         self.ws.gas_scattering_agendaSet()
         self.ws.iy_main_agendaSet(option="Emission")
-        self.ws.iy_space_agendaSet()
-        self.ws.iy_surface_agendaSet()
+        self.ws.ppath_agendaSet(option="FollowSensorLosPath")
+        self.ws.ppath_step_agendaSet(option="GeometricPath")
+        self.ws.iy_space_agendaSet(option="CosmicBackground")
+        self.ws.iy_surface_agendaSet(option="UseSurfaceRtprop")
+
+        # Non reflecting surface
+        self.ws.VectorSetConstant(self.ws.surface_scalar_reflectivity, 1, 0.0)
+        self.ws.surface_rtprop_agendaSet(
+            option="Specular_NoPol_ReflFix_SurfTFromt_surface"
+        )
 
         # Number of Stokes components to be computed
         self.ws.IndexSet(self.ws.stokes_dim, 1)
-
-        self.ws.jacobianOff()  # No jacobian calculation
-        self.ws.cloudboxOff()  # Clearsky = No scattering
 
         # Set Absorption Species
         self.ws.abs_speciesSet(
             species=[
                 "O2, O2-CIAfunCKDMT100",
-                "H2O, H2O-SelfContCKDMT252, H2O-ForeignContCKDMT252",
+                "H2O, H2O-SelfContCKDMT400, H2O-ForeignContCKDMT400",
                 "O3",
                 "CO2, CO2-CKDMT252",
                 "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
@@ -67,34 +73,32 @@ class _ARTS:
             ]
         )
 
-        # Surface handling
-        self.ws.VectorSetConstant(self.ws.surface_scalar_reflectivity, 1, 0.0)
-        self.ws.surface_rtprop_agendaSet(
-            option="Specular_NoPol_ReflFix_SurfTFromt_surface",
-        )
-
         # Read lookup table
         abs_lookup = os.getenv(
             "KONRAD_LOOKUP_TABLE", join(dirname(__file__), "data/abs_lookup.xml")
         )
 
-        if not isfile(abs_lookup):
-            raise FileNotFoundError(
+        self.ws.abs_lookup_is_adapted.initialize_if_not()
+        if isfile(abs_lookup):
+            self.ws.abs_lines_per_speciesSetEmpty()
+            self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
+            self.ws.f_gridFromGasAbsLookup()
+            self.ws.abs_lookupAdapt()
+            self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
+
+            self.ws.jacobianOff()  # No jacobian calculation
+            self.ws.cloudboxOff()  # Clearsky = No scattering
+            self.ws.sensorOff()  # No sensor properties
+        else:
+            warnings.warn(
                 "Could not find ARTS absorption lookup table.\n"
                 "To perform ARTS calculations you have to download the lookup "
                 "table at:\n\n    https://doi.org/10.5281/zenodo.3885410\n\n"
                 "Afterwards, use the following environment variable to tell "
                 "konrad where to find it:\n\n"
-                "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'"
+                "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'",
+                UserWarning,
             )
-
-        self.ws.abs_lines_per_speciesSetEmpty()
-        self.ws.ReadXML(self.ws.abs_lookup, abs_lookup)
-        self.ws.f_gridFromGasAbsLookup()
-        self.ws.abs_lookupAdapt()
-        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
-
-        self.ws.sensorOff()  # No sensor properties
 
         # Set number of OMP threads
         if threads is not None:
@@ -129,13 +133,17 @@ class _ARTS:
         self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
             basename="lines/"
         )
+        self.ws.ReadXML(
+            self.ws.predefined_model_data,
+            "model/mt_ckd_4.0/H2O.xml"
+        )
 
         # Set line shape and cut off.
-        self.ws.LegacyContinuaInit()
         self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
         self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        self.ws.abs_lines_per_speciesTurnOffLineMixing()
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
 
         # Create a standard atmosphere
@@ -179,7 +187,7 @@ class _ARTS:
 
         # Run checks
         self.ws.propmat_clearsky_agenda_checkedCalc()
-        self.ws.lbl_checked = 1  # self.ws.lbl_checkedCalc()
+        self.ws.lbl_checkedCalc()
 
         # Calculate actual lookup table.
         self.ws.abs_lookupCalc()
@@ -241,6 +249,9 @@ class _ARTS:
 
     def calc_spectral_irradiance_field(self, atmosphere, t_surface):
         """Calculate the spectral irradiance field."""
+        if not self.ws.abs_lookup_is_adapted.value.value:
+            raise Exception("Simulations without lookup table are not supported.")
+
         self.set_atmospheric_state(atmosphere, t_surface)
 
         # get the zenith angle grid and the integrations weights
