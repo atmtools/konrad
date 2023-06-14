@@ -152,7 +152,7 @@ class BoundaryLayer(LapseRate):
             return self._moist_lr(p, T)
 
 
-def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0):
+def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0, lapserate=None):
     """Create a moist-adiabat from a given surface T up to the cold point.
 
     Warning:
@@ -165,17 +165,19 @@ def get_moist_adiabat(p, p_s=None, T_s=300.0, T_min=155.0):
         p_s (float): Surface pressure [Pa].
         T_s (float): Surface temperautre [K].
         T_min (float): Cold-point temperature (constant temperature above).
+        lapserate (konrad.lapserate.LapseRate): Lapse-rate component.
 
     Returns:
         ndarray: Moist-adiabativ temperature profile.
 
     """
-    dTdp = MoistLapseRate().calc_lapse_rate
+    if lapserate is None:
+        lapserate = MoistLapseRate()
 
     T = np.zeros_like(p)
     dp = np.gradient(p)
 
-    r = ode(dTdp).set_integrator("lsoda", atol=1e-4)
+    r = ode(lapserate).set_integrator("lsoda", atol=1e-4)
     r.set_initial_value(T_s, p[0] - 0.5 * dp[0] if p_s is None else p_s)
 
     i = 0
