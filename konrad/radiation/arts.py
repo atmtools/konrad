@@ -357,10 +357,15 @@ class _ARTS:
             trans_field=self.ws.trans_field,
             use_parallel_za=0,
         )
-        self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
-
+        #self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
+        
+        
         # Perform RT calculations
-        #self.ws.DisortCalcIrradiance(nstreams=self.nstreams, emission=1)
+        # set particle scattering to zero, because we want only clear sky
+        self.ws.scat_data_checked = 1
+        self.ws.Touch(self.ws.scat_data)
+
+        self.ws.DisortCalcIrradiance(nstreams=self.nstreams, emission=1)
         
         spec_flux_up = self.ws.spectral_irradiance_field.value[:, :, 0, 0, 1]
         spec_flux_down = self.ws.spectral_irradiance_field.value[:, :, 0, 0, 0]
@@ -387,12 +392,19 @@ class _ARTS:
         )
 
         # calculate intensity field
+        
         self.ws.Tensor3Create("trans_field")
         self.ws.spectral_radiance_fieldClearskyPlaneParallel(
             trans_field=self.ws.trans_field,
             use_parallel_za=0,
         )
-        self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
+        #self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
+        
+        # set particle scattering to zero, because we want only clear sky
+        self.ws.scat_data_checked = 1
+        self.ws.Touch(self.ws.scat_data)
+
+        self.ws.DisortCalcIrradiance(nstreams=self.nstreams, emission=1)
 
         return (
             self.ws.f_grid.value[:].copy(),
