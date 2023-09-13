@@ -29,13 +29,6 @@ REQUIRED_VARIABLES = [
     "sw_flxu",
 ]
 
-    
-radiation_variables = [
-    "lw_flxu", "lw_flxd", "lw_htngrt", "lw_flxu_clr", "lw_flxd_clr", "lw_htngrt_clr", 
-    "sw_flxu", "sw_flxd","sw_htngrt", "sw_flxu_clr", "sw_flxd_clr", "sw_htngrt_clr",
-    "net_htngrt", "net_htngrt_clr", "toa"
-        ]
-
 
 class Radiation(Component, metaclass=abc.ABCMeta):
     """Abstract base class to define requirements for radiation models."""
@@ -194,10 +187,3 @@ class Radiation(Component, metaclass=abc.ABCMeta):
         )
 
         self.current_solar_angle = solar_angle
-
-#%% not official konrad
-    def copy_values(self):
-        raddict = dict()
-        for variable in radiation_variables:
-            raddict[variable] = np.copy(self[variable].ravel())
-        return raddict

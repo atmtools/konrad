@@ -336,8 +336,6 @@ class Atmosphere(Component):
         T = np.ma.masked_array(self["T"][-1, :], plev < self.pmin)
 
         return np.argmin(T)
-    
-
 
     def get_cold_point_plev(self, interpolate=False):
         """Return the cold point pressure.
@@ -381,27 +379,31 @@ class Atmosphere(Component):
 
     def get_tropopause_index_wmo(self):
         self.calculate_height()
-        height = self['z'][-1, :] / 1000
-        lapse_rate = self.get_lapse_rates() * (-1000) 
+        height = self["z"][-1, :] / 1000
+        lapse_rate = self.get_lapse_rates() * (-1000)
         height_diffs = np.diff(height)
         height_diffs = np.insert(height_diffs, 0, 0)
-        
-        
         for i in np.ma.masked_array(height, (lapse_rate > 2)).nonzero()[0]:
             current_height = height[i]
-            test_height = np.ma.masked_outside(height, current_height, current_height+2.5)
+            test_height = np.ma.masked_outside(
+                height, current_height, current_height + 2.5
+            )
 
-            if (np.ma.average(np.ma.masked_array(lapse_rate, test_height.mask), weights=height_diffs)) < 2 and (i>0):
-
+            if (
+                np.ma.average(
+                    np.ma.masked_array(lapse_rate, test_height.mask),
+                    weights=height_diffs,
+                )
+            ) < 2 and (i > 0):
                 return i
-            
+
         return None
-    
+
     def get_tropopause_plev_wmo(self):
-        return self['plev'][self.get_tropopause_index_wmo()]
-    
+        return self["plev"][self.get_tropopause_index_wmo()]
+
     def get_tropopause_T_wmo(self):
-        return self['T'][-1, self.get_tropopause_index_wmo()]
+        return self["T"][-1, self.get_tropopause_index_wmo()]
 
     def get_triple_point_index(self):
         """Return the model level index at the triple point.
