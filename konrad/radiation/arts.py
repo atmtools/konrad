@@ -353,10 +353,10 @@ class _ARTS:
         # calculate intensity field
         self.ws.Tensor3Create("trans_field")
 
-        self.ws.spectral_radiance_fieldClearskyPlaneParallel(
-            trans_field=self.ws.trans_field,
-            use_parallel_za=0,
-        )
+        #self.ws.spectral_radiance_fieldClearskyPlaneParallel(
+        #    trans_field=self.ws.trans_field,
+        #    use_parallel_za=0,
+        #)
         #self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
         
         
@@ -394,10 +394,10 @@ class _ARTS:
         # calculate intensity field
         
         self.ws.Tensor3Create("trans_field")
-        self.ws.spectral_radiance_fieldClearskyPlaneParallel(
-            trans_field=self.ws.trans_field,
-            use_parallel_za=0,
-        )
+        #self.ws.spectral_radiance_fieldClearskyPlaneParallel(
+        #    trans_field=self.ws.trans_field,
+        #    use_parallel_za=0,
+        #)
         #self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
         
         # set particle scattering to zero, because we want only clear sky
