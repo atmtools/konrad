@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import typhon
 import netCDF4
@@ -377,7 +378,7 @@ class Atmosphere(Component):
             # Return the single coldest point on the actual pressure grid.
             return self["plev"][self.get_cold_point_index()]
 
-    def get_tropopause_index_wmo(self):
+    def get_tropopause_index_wmo(self, raise_error=True):
         self.calculate_height()
         height = self["z"][-1, :] / 1000
         lapse_rate = self.get_lapse_rates() * (-1000)
@@ -396,8 +397,14 @@ class Atmosphere(Component):
                 )
             ) < 2 and (i > 0):
                 return i
-
-        return None
+        if raise_error:
+            raise RuntimeError("No WMO tropopause found.")
+        else:
+            warnings.warn(
+                "No WMO tropopause found. Top of the atmosphere is returned.",
+                RuntimeWarning,
+            )
+            return -1
 
     def get_tropopause_plev_wmo(self):
         return self["plev"][self.get_tropopause_index_wmo()]
