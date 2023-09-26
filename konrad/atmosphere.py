@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 import typhon
 import netCDF4
@@ -376,6 +377,40 @@ class Atmosphere(Component):
         else:
             # Return the single coldest point on the actual pressure grid.
             return self["plev"][self.get_cold_point_index()]
+
+    def get_tropopause_index_wmo(self, raise_error=True):
+        self.calculate_height()
+        height = self["z"][-1, :] / 1000
+        lapse_rate = self.get_lapse_rates() * (-1000)
+        height_diffs = np.diff(height)
+        height_diffs = np.insert(height_diffs, 0, 0)
+        for i in np.ma.masked_array(height, (lapse_rate > 2)).nonzero()[0]:
+            current_height = height[i]
+            test_height = np.ma.masked_outside(
+                height, current_height, current_height + 2.5
+            )
+
+            if (
+                np.ma.average(
+                    np.ma.masked_array(lapse_rate, test_height.mask),
+                    weights=height_diffs,
+                )
+            ) < 2 and (i > 0):
+                return i
+        if raise_error:
+            raise RuntimeError("No WMO tropopause found.")
+        else:
+            warnings.warn(
+                "No WMO tropopause found. Top of the atmosphere is returned.",
+                RuntimeWarning,
+            )
+            return -1
+
+    def get_tropopause_plev_wmo(self):
+        return self["plev"][self.get_tropopause_index_wmo()]
+
+    def get_tropopause_T_wmo(self):
+        return self["T"][-1, self.get_tropopause_index_wmo()]
 
     def get_triple_point_index(self):
         """Return the model level index at the triple point.

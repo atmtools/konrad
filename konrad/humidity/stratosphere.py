@@ -38,6 +38,20 @@ class ColdPointCoupling(StratosphereCoupler):
         atmosphere["H2O"][-1, cp_index:] = atmosphere["H2O"][-1, cp_index]
 
 
+class TropopauseCoupling(StratosphereCoupler):
+    def __init__(self, tp_fct=None):
+        self._tp_fct = tp_fct
+
+    def adjust_stratospheric_vmr(self, atmosphere):
+        if self._tp_fct is None:
+            tp_index = atmosphere.get_tropopause_index_wmo()
+            cp_index = atmosphere.get_cold_point_index()
+            fix_index = np.max([tp_index, cp_index])
+        else:
+            fix_index = self._tp_fct(atmosphere)
+        atmosphere["H2O"][-1, fix_index:] = atmosphere["H2O"][-1, fix_index]
+
+
 class FixedStratosphericVMR(StratosphereCoupler):
     """Keep stratospheric VMR fixed at a constant value."""
 
