@@ -19,7 +19,17 @@ logger = logging.getLogger(__name__)
 
 
 class _ARTS:
-    def __init__(self, ws=None, threads=None, nstreams=4, scale_vmr=True, verbosity=0, quadrature = False, quadrature_filename=join(dirname(__file__), "data", '64_quadrature.h5'), lookup_filename=join(dirname(__file__), "data", 'quadrature_lookup.xml')):
+    def __init__(
+        self,
+        ws=None,
+        threads=None,
+        nstreams=4,
+        scale_vmr=True,
+        verbosity=0,
+        quadrature=False,
+        quadrature_filename=None,
+        lookup_filename=None,
+    ):
         """Initialize a wrapper for an ARTS workspace.
 
         Parameters:
@@ -31,7 +41,7 @@ class _ARTS:
             scale_vmr (bool): Control whether dry volume mixing ratios are
                 scaled with the water-vapor concentration (default is `False.`)
             verbosity (int): Control the ARTS verbosity from 0 (quiet) to 2.
-            
+
             quadrature (bool): use quadrature scheme or LBL calculation via ARTS (default)
             quadrature_filename (str): where to find the file that contains the wavenumbers (cm^{-1})
                 and weights to compute the quadrature scheme. This file must contain at least the variable S (wavenumbers) and
@@ -48,10 +58,15 @@ class _ARTS:
         self.nstreams = nstreams
         self.scale_vmr = scale_vmr
         self._quadrature = quadrature
+        
+        if quadrature_filename is None:
+            quadrature_filename = join(dirname(__file__), "data", "64_quadrature.h5")
+            lookup_filename = join(dirname(__file__), "data", "quadrature_lookup.xml")
+        
 
         if ws is None:
             self.ws = Workspace(verbosity=verbosity)
-
+            
         self.ws.PlanetSet(option="Earth")
         self.ws.AtmosphereSet1D()
 
@@ -85,8 +100,8 @@ class _ARTS:
                 "CO",
             ]
         )
-        
-        if (self._quadrature == True):
+
+        if self._quadrature == True:
             import xarray as xr
             import pyarts
 
@@ -94,9 +109,9 @@ class _ARTS:
             self._lookup_filename = lookup_filename
 
             # requires os.environ['ARTS_DATA_PATH'] to be set to the location of arts-cat-data
-            line_basename="lines/"
-            xsec_basename="xsec/"
-            cia_basename="cia-xml/hitran2011/hitran_cia2012_adapted.xml.gz"
+            line_basename = "lines/"
+            xsec_basename = "xsec/"
+            cia_basename = "cia-xml/hitran2011/hitran_cia2012_adapted.xml.gz"
 
             # No jacobian calculation
             self.ws.jacobianOff()
@@ -112,36 +127,44 @@ class _ARTS:
             self.ws.Touch(self.ws.scat_data)
 
             # open quadrature/weight combo
-            self._optimization_result = xr.open_dataset(quadrature_filename, engine = "netcdf4")
+            self._optimization_result = xr.open_dataset(
+                quadrature_filename, engine="netcdf4"
+            )
 
             self._S = self._optimization_result.S.data
             self._W = self._optimization_result.W.data
 
             self.ws.f_grid = pyarts.arts.convert.kaycm2freq(self._S)
 
-            if (lookup_filename == None):
+            if lookup_filename == None:
                 self.ws.ReadXML(
-                    self.ws.predefined_model_data,
-                    "model/mt_ckd_4.0/H2O.xml"
+                    self.ws.predefined_model_data, "model/mt_ckd_4.0/H2O.xml"
                 )
 
                 # Read line catalog
-                self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename=line_basename)
+                self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
+                    basename=line_basename
+                )
 
                 # Read cross section data
                 self.ws.ReadXsecData(basename=xsec_basename)
 
                 # Read CIA data
-                self.ws.abs_cia_dataReadFromXML(filename = cia_basename)
+                self.ws.abs_cia_dataReadFromXML(filename=cia_basename)
 
                 # Set line shape and cut off.
                 self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
-                self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
-                self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
-                self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+                self.ws.abs_lines_per_speciesLineShapeType(
+                    self.ws.abs_lines_per_species, "VP"
+                )
+                self.ws.abs_lines_per_speciesNormalization(
+                    self.ws.abs_lines_per_species, "VVH"
+                )
+                self.ws.abs_lines_per_speciesCutoff(
+                    self.ws.abs_lines_per_species, "ByLine", 750e9
+                )
                 self.ws.abs_lines_per_speciesTurnOffLineMixing()
-                self.ws.propmat_clearsky_agendaAuto(T_extrapolfac = 1E99)
-
+                self.ws.propmat_clearsky_agendaAuto(T_extrapolfac=1e99)
             else:
                 abs_lookup = lookup_filename
                 self.ws.abs_lookup_is_adapted.initialize_if_not()
@@ -153,7 +176,6 @@ class _ARTS:
                 self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
 
                 self.ws.sensorOff()  # No sensor properties
-            
         else:
             ### use ARTS LBL with lookup table
             # Read lookup table
@@ -182,12 +204,11 @@ class _ARTS:
                     "    $ export KONRAD_LOOKUP_TABLE='/path/to/abs_lookup.xml'",
                     UserWarning,
                 )
-
         # Set number of OMP threads
         if threads is not None:
             self.ws.SetNumberOfThreads(threads)
 
-    def calc_lookup_table(self, filename=None, fnum=2 ** 15, wavenumber=None):
+    def calc_lookup_table(self, filename=None, fnum=2**15, wavenumber=None):
         """Calculate an absorption lookup table.
 
         The lookup table is constructed to cover surface temperatures
@@ -213,19 +234,16 @@ class _ARTS:
         self.ws.f_grid = ty.physics.wavenumber2frequency(wavenumber)
 
         # Read line catagloge and create absorption lines.
-        self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(
-            basename="lines/"
-        )
-        self.ws.ReadXML(
-            self.ws.predefined_model_data,
-            "model/mt_ckd_4.0/H2O.xml"
-        )
+        self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+        self.ws.ReadXML(self.ws.predefined_model_data, "model/mt_ckd_4.0/H2O.xml")
 
         # Set line shape and cut off.
         self.ws.abs_lines_per_speciesCompact()  # Throw away lines outside f_grid
         self.ws.abs_lines_per_speciesLineShapeType(self.ws.abs_lines_per_species, "VP")
         self.ws.abs_lines_per_speciesNormalization(self.ws.abs_lines_per_species, "VVH")
-        self.ws.abs_lines_per_speciesCutoff(self.ws.abs_lines_per_species, "ByLine", 750e9)
+        self.ws.abs_lines_per_speciesCutoff(
+            self.ws.abs_lines_per_species, "ByLine", 750e9
+        )
         self.ws.abs_lines_per_speciesTurnOffLineMixing()
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=0)
 
@@ -265,7 +283,7 @@ class _ARTS:
         self.ws.abs_nls = [self.ws.abs_species.value[nls_idx]]
 
         self.ws.abs_nls_pert = np.array(
-            [10 ** x for x in [-9, -7, -5, -3, -1, 0, 0.5, 1, 1.5, 2]]
+            [10**x for x in [-9, -7, -5, -3, -1, 0, 0.5, 1, 1.5, 2]]
         )
 
         # Run checks
@@ -293,7 +311,6 @@ class _ARTS:
         else:
             t3_shape = atm_fields_compact.get("abs_species-H2O")[0].shape
             variable_vmrs = np.zeros(t3_shape)
-
         for species in map(str, atm_fields_compact.grids[0]):
             if (
                 species.startswith("abs_species-")
@@ -301,7 +318,6 @@ class _ARTS:
                 and "CO2" not in species
             ):
                 atm_fields_compact.scale(species, 1 - variable_vmrs)
-
         # Compute the N2 VMR as a residual of the full atmosphere composition.
         n2 = pyarts.arts.GriddedField3(
             grids=atm_fields_compact.grids[1:],
@@ -324,7 +340,7 @@ class _ARTS:
         self.ws.z_surface = np.array([[0.0]])
         self.ws.z_field.value[0, 0, 0] = 0.0
         self.ws.surface_skin_t = self.ws.t_field.value[0, 0, 0]
-        
+
         # set cloudbox to full atmosphere
         self.ws.cloudboxSetFullAtm()
         self.ws.pnd_fieldZero()
@@ -334,17 +350,15 @@ class _ARTS:
         self.ws.propmat_clearsky_agenda_checkedCalc()
         self.ws.atmgeom_checkedCalc()
         self.ws.cloudbox_checkedCalc()
-        
+
     def calc_monochromatic_fluxes(self, atmosphere, t_surface):
         """Calculate the spectral irradiance field."""
 
         self.set_atmospheric_state(atmosphere, t_surface)
-        
-        if self._lookup_filename == None:
 
+        if self._lookup_filename == None:
             self.ws.scat_data_checkedCalc()
             self.ws.lbl_checkedCalc()
-
         # get the zenith angle grid and the integrations weights
         self.ws.AngularGridsSetFluxCalc(
             N_za_grid=self.nstreams, N_aa_grid=1, za_grid_type="double_gauss"
@@ -353,37 +367,23 @@ class _ARTS:
         # calculate intensity field
         self.ws.Tensor3Create("trans_field")
 
-        #self.ws.spectral_radiance_fieldClearskyPlaneParallel(
-        #    trans_field=self.ws.trans_field,
-        #    use_parallel_za=0,
-        #)
-        #self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
-        
-        
-        # Perform RT calculations
-        # set particle scattering to zero, because we want only clear sky
-        self.ws.scat_data_checked = 1
-        self.ws.Touch(self.ws.scat_data)
+        self.ws.spectral_radiance_fieldClearskyPlaneParallel(
+            trans_field=self.ws.trans_field,
+            use_parallel_za=0,
+        )
+        self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
 
-        self.ws.DisortCalcIrradiance(nstreams=self.nstreams, emission=1)
-        
         spec_flux_up = self.ws.spectral_irradiance_field.value[:, :, 0, 0, 1]
         spec_flux_down = self.ws.spectral_irradiance_field.value[:, :, 0, 0, 0]
-        spec_flux_up = (spec_flux_up * (c * 100))
-        spec_flux_down = (spec_flux_down * (c * 100))
+        spec_flux_up = spec_flux_up * (c * 100)
+        spec_flux_down = spec_flux_down * (c * 100)
 
-
-        return (
-            spec_flux_up, -spec_flux_down
-            
-        )
-
+        return (spec_flux_up, -spec_flux_down)
 
     def calc_spectral_irradiance_field(self, atmosphere, t_surface):
         """Calculate the spectral irradiance field."""
         if not self.ws.abs_lookup_is_adapted.value.value:
             raise Exception("Simulations without lookup table are not supported.")
-
         self.set_atmospheric_state(atmosphere, t_surface)
 
         # get the zenith angle grid and the integrations weights
@@ -392,19 +392,12 @@ class _ARTS:
         )
 
         # calculate intensity field
-        
         self.ws.Tensor3Create("trans_field")
-        #self.ws.spectral_radiance_fieldClearskyPlaneParallel(
-        #    trans_field=self.ws.trans_field,
-        #    use_parallel_za=0,
-        #)
-        #self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
-        
-        # set particle scattering to zero, because we want only clear sky
-        self.ws.scat_data_checked = 1
-        self.ws.Touch(self.ws.scat_data)
-
-        self.ws.DisortCalcIrradiance(nstreams=self.nstreams, emission=1)
+        self.ws.spectral_radiance_fieldClearskyPlaneParallel(
+            trans_field=self.ws.trans_field,
+            use_parallel_za=0,
+        )
+        self.ws.spectral_irradiance_fieldFromSpectralRadianceField()
 
         return (
             self.ws.f_grid.value[:].copy(),
@@ -426,7 +419,7 @@ class _ARTS:
         )
 
         return self.ws.f_grid.value[:].copy(), tau
-    
+
     def integrate_quadrature_irradiance(self, spectral_flux):
         int_flux = np.matmul(self._W, spectral_flux)
         return int_flux
@@ -500,15 +493,16 @@ class ARTS(RRTMG):
         )
         sw_fluxes = sw_dT_fluxes[1]
 
-        if (self._arts._quadrature == True):
+        if self._arts._quadrature == True:
             # Perform quadrature simulation
             spec_flux_up, spec_flux_down = self._arts.calc_monochromatic_fluxes(
                 atmosphere=atmosphere, t_surface=surface["temperature"][0]
             )
 
-            Fd = self._arts.integrate_quadrature_irradiance(spectral_flux = spec_flux_down)
-            Fu = self._arts.integrate_quadrature_irradiance(spectral_flux = spec_flux_up)
-
+            Fd = self._arts.integrate_quadrature_irradiance(
+                spectral_flux=spec_flux_down
+            )
+            Fu = self._arts.integrate_quadrature_irradiance(spectral_flux=spec_flux_up)
         else:
             # Perform ARTS simulation
             f, _, irradiance_field, _ = self._arts.calc_spectral_irradiance_field(
