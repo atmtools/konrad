@@ -60,6 +60,7 @@ class _ARTS:
         self._quadrature = quadrature
         
         if quadrature_filename is None:
+            # set default quadrature name, assign lookup table
             quadrature_filename = join(dirname(__file__), "data", "64_quadrature.h5")
             lookup_filename = join(dirname(__file__), "data", "quadrature_lookup.xml")
         
@@ -101,7 +102,7 @@ class _ARTS:
             ]
         )
 
-        if self._quadrature == True:
+        if self._quadrature:
             import xarray as xr
             import pyarts
 
@@ -493,7 +494,7 @@ class ARTS(RRTMG):
         )
         sw_fluxes = sw_dT_fluxes[1]
 
-        if self._arts._quadrature == True:
+        if self._arts._quadrature:
             # Perform quadrature simulation
             spec_flux_up, spec_flux_down = self._arts.calc_monochromatic_fluxes(
                 atmosphere=atmosphere, t_surface=surface["temperature"][0]
