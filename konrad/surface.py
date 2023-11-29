@@ -56,7 +56,7 @@ class Surface(Component, metaclass=abc.ABCMeta):
         self.albedo = albedo
         self.longwave_emissivity = longwave_emissivity
         self.height = height
-        self["temperature"] = (("time",), np.array([temperature], dtype=float))
+        self["temperature"] = (("time",), np.array([temperature], dtype=float).reshape(1))
 
         # The surface pressure is initialized before the first iteration
         # within the RCE framework to ensure a pressure that is consistent
