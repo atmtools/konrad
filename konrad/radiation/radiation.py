@@ -91,7 +91,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
             cloud = ClearSky.from_atmosphere(atmosphere)
 
         if aerosol is None:
-            aerosol = NoAerosol()
+            aerosol = NoAerosol(atmosphere)
 
         # Call the interal radiative transfer routines.
         self.calc_radiation(atmosphere, surface, cloud, aerosol)
