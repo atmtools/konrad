@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 from scipy.interpolate import interp1d
 
-from konrad import aerosol
+from konrad.aerosol import NoAerosol
 from konrad import constants
 from konrad.component import Component
 from konrad.radiation.common import fluxes2heating
@@ -91,7 +91,7 @@ class Radiation(Component, metaclass=abc.ABCMeta):
             cloud = ClearSky.from_atmosphere(atmosphere)
 
         if aerosol is None:
-            aerosol = aerosol.NoAerosol()
+            aerosol = NoAerosol()
 
         # Call the interal radiative transfer routines.
         self.calc_radiation(atmosphere, surface, cloud, aerosol)
