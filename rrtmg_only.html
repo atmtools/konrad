@@ -427,14 +427,17 @@ document.write(`
 <span class="c1"># Create cloud component (here clear-sky).</span>
 <span class="n">cloud</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">cloud</span><span class="o">.</span><span class="n">ClearSky</span><span class="o">.</span><span class="n">from_atmosphere</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">)</span>
 
+<span class="c1"># Create aerosol component (here clear-sky).</span>
+<span class="n">aerosol</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">aerosol</span><span class="o">.</span><span class="n">NoAerosol</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">)</span>
+
 <span class="c1"># Setup the RRTMG radiation component (choose zenith angle and solar constant).</span>
 <span class="n">rrtmg</span> <span class="o">=</span> <span class="n">konrad</span><span class="o">.</span><span class="n">radiation</span><span class="o">.</span><span class="n">RRTMG</span><span class="p">(</span><span class="n">zenith_angle</span><span class="o">=</span><span class="mf">47.88</span><span class="p">)</span>
-<span class="n">rrtmg</span><span class="o">.</span><span class="n">calc_radiation</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">,</span> <span class="n">surface</span><span class="p">,</span> <span class="n">cloud</span><span class="p">)</span>  <span class="c1"># Actual RT simulation</span>
+<span class="n">rrtmg</span><span class="o">.</span><span class="n">calc_radiation</span><span class="p">(</span><span class="n">atmosphere</span><span class="p">,</span> <span class="n">surface</span><span class="p">,</span> <span class="n">cloud</span><span class="p">,</span> <span class="n">aerosol</span><span class="p">)</span>  <span class="c1"># Actual RT simulation</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/opt/hostedtoolcache/Python/3.11.6/x64/lib/python3.11/site-packages/typhon/nonlte/rtc/__init__.py:8: NumbaDeprecationWarning: The &#39;nopython&#39; keyword argument was not supplied to the &#39;numba.jit&#39; decorator. The implicit default value for this argument is currently False, but it will be changed to True in Numba 0.59.0. See https://numba.readthedocs.io/en/stable/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit for details.
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/opt/hostedtoolcache/Python/3.11.7/x64/lib/python3.11/site-packages/typhon/nonlte/rtc/__init__.py:8: NumbaDeprecationWarning: The &#39;nopython&#39; keyword argument was not supplied to the &#39;numba.jit&#39; decorator. The implicit default value for this argument is currently False, but it will be changed to True in Numba 0.59.0. See https://numba.readthedocs.io/en/stable/reference/deprecation.html#deprecation-of-object-mode-fall-back-behaviour-when-using-jit for details.
   @numba.jit
 </pre></div>
 </div>
