@@ -23,7 +23,14 @@ __all__ = [
 class RRTMG(Radiation):
     """RRTMG radiation scheme using the CliMT python wrapper."""
 
-    def __init__(self, *args, solar_constant=551.58, mcica=False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        solar_constant=551.58,
+        mcica=False,
+        aerosol_type="all_aerosol_properties",
+        **kwargs
+    ):
         """
         Parameters:
             zenith_angle (float): angle of the Sun [degrees].
@@ -46,6 +53,16 @@ class RRTMG(Radiation):
                     use the mcica version of RRTMG (needed for partly cloudy
                     skies)
 
+            aerosol_type (str):
+                Choose how to treat aerosols in the shortwave.
+                * :code:`no_aerosols`
+                    Do not include aerosols
+                * :code:`ecmwf`
+                    Set :code:`aerosol_optical_depth_at_55_micron`.
+                    Other shortwave aerosol parameters are ignored.
+                * :code:`all_aerosol_properties`
+                    Input all aerosol optical properties
+                    (:code:`aerosol_optical_depth_at_55_micron` is ignored)
         """
         super().__init__(*args, **kwargs)
         self._state_lw = None
@@ -57,9 +74,10 @@ class RRTMG(Radiation):
         self._is_mcica = mcica
 
         # These are set in the first call and depend on properties set in the
-        # cloud class or instance.
+        # cloud / aerosol class or instance.
         self._cloud_optical_properties = None
         self._cloud_ice_properties = None
+        self._aerosol_type = "no_aerosol"
 
         self.solar_constant = solar_constant
 
@@ -85,6 +103,7 @@ class RRTMG(Radiation):
             cloud_ice_properties=self._cloud_ice_properties,
             cloud_liquid_water_properties="radius_dependent_absorption",
             cloud_overlap_method=overlap,
+            aerosol_type=self._aerosol_type,
             mcica=self._is_mcica,
         )
         state_lw = {}
@@ -117,9 +136,8 @@ class RRTMG(Radiation):
 
             state0["time"] = datetime.datetime(2000, 1, 1)
 
-        ### Aerosols ###
-        # TODO: Should all the aerosol values be zero?!
-        # Longwave specific
+        # Aerosol
+        # Longwave
         num_lw_bands = self._rad_lw.num_longwave_bands
 
         state_lw["longwave_optical_thickness_due_to_aerosol"] = DataArray(
@@ -133,7 +151,7 @@ class RRTMG(Radiation):
             attrs={"units": "dimensionless"},
         )
 
-        # Shortwave specific changes
+        # Shortwave
         num_sw_bands = self._rad_sw.num_shortwave_bands
 
         num_aerosols = self._rad_sw.num_ecmwf_aerosols
@@ -195,6 +213,20 @@ class RRTMG(Radiation):
         for varname in props + sw_props if sw else props + lw_props:
             state0[varname] = cloud[varname]
 
+    def update_aerosol_radiative_properties(self, aerosol, state_sw, state_lw):
+        state_sw[
+            "shortwave_optical_thickness_due_to_aerosol"
+        ] = aerosol.optical_thickness_due_to_aerosol_sw
+        state_sw[
+            "single_scattering_albedo_due_to_aerosol"
+        ] = aerosol.single_scattering_albedo_aerosol_sw
+        state_sw["aerosol_asymmetry_parameter"] = aerosol.asymmetry_factor_aerosol_sw
+        state_lw[
+            "longwave_optical_thickness_due_to_aerosol"
+        ] = aerosol.optical_thickness_due_to_aerosol_lw
+
+        return
+
     def update_radiative_state(self, atmosphere, surface, state0, sw=True):
         """Update CliMT formatted atmospheric state using parameters from our
         model.
@@ -251,13 +283,14 @@ class RRTMG(Radiation):
 
         return state0
 
-    def radiative_fluxes(self, atmosphere, surface, cloud):
+    def radiative_fluxes(self, atmosphere, surface, cloud, aerosol):
         """Returns shortwave and longwave fluxes and heating rates.
 
         Parameters:
             atmosphere (konrad.atmosphere.Atmosphere): atmosphere model
             surface (konrad.surface): surface model
             cloud (konrad.cloud): cloud model
+            aerosol (konrad.aerosol): aerosol model
 
         Returns:
             tuple: containing two dictionaries, one of air temperature
@@ -266,8 +299,12 @@ class RRTMG(Radiation):
         if self._state_lw is None or self._state_sw is None:  # first time only
             self._cloud_optical_properties = cloud._rrtmg_cloud_optical_properties
             self._cloud_ice_properties = cloud._rrtmg_cloud_ice_properties
+            self._aerosol_type = aerosol._aerosol_type
             self._state_lw, self._state_sw = self.init_radiative_state(
                 atmosphere, surface
+            )
+            self.update_aerosol_radiative_properties(
+                aerosol, state_sw=self._state_sw, state_lw=self._state_lw
             )
             self.update_cloudy_radiative_state(cloud, self._state_lw, sw=False)
             self.update_cloudy_radiative_state(cloud, self._state_sw, sw=True)
@@ -285,7 +322,7 @@ class RRTMG(Radiation):
 
         return lw_fluxes, sw_fluxes
 
-    def calc_cloudy_nomcica_radiation(self, atmosphere, surface, cloud):
+    def calc_cloudy_nomcica_radiation(self, atmosphere, surface, cloud, aerosol):
 
         cloud_fraction = deepcopy(cloud["cloud_area_fraction_in_atmosphere_layer"][:])
 
@@ -306,7 +343,9 @@ class RRTMG(Radiation):
         # RRTMG can be used in the shortwave - all wavelengths see cloud.
         # Use the same approach for the longwave for consistency.
         cloud["cloud_area_fraction_in_atmosphere_layer"][cloud_fraction != 0] = 1
-        lw_overcast, sw_overcast = self.radiative_fluxes(atmosphere, surface, cloud)
+        lw_overcast, sw_overcast = self.radiative_fluxes(
+            atmosphere, surface, cloud, aerosol
+        )
         lw_fluxes, sw_fluxes = lw_overcast[1], sw_overcast[1]
 
         # Combine overcast and clear sky fluxes and heating rates to get the
@@ -322,7 +361,7 @@ class RRTMG(Radiation):
 
         return lw_fluxes, sw_fluxes
 
-    def calc_radiation(self, atmosphere, surface, cloud):
+    def calc_radiation(self, atmosphere, surface, cloud, aerosol):
         """Updates the shortwave, longwave and net heatingrates.
         Converts output from radiative_fluxes to be in the format required for
         our model.
@@ -331,11 +370,12 @@ class RRTMG(Radiation):
             atmosphere (konrad.atmosphere.Atmosphere): Atmosphere model.
             surface (konrad.surface): Surface model.
             cloud (konrad.cloud): cloud model
+            aerosol (konrad.aerosol): aerosol model
         """
         if not self._is_mcica and not isinstance(cloud, ClearSky):
             if isinstance(cloud, CloudEnsemble):
                 weights, cloud_combinations = cloud.get_combinations()
-
+                # aerosols have to be added to CloudEnsemble
                 lw_fluxes = {}
                 sw_fluxes = {}
                 for weight, cloud_case in zip(weights, cloud_combinations):
@@ -357,11 +397,11 @@ class RRTMG(Radiation):
 
             else:
                 lw_fluxes, sw_fluxes = self.calc_cloudy_nomcica_radiation(
-                    atmosphere, surface, cloud
+                    atmosphere, surface, cloud, aerosol
                 )
         else:
             lw_dT_fluxes, sw_dT_fluxes = self.radiative_fluxes(
-                atmosphere, surface, cloud
+                atmosphere, surface, cloud, aerosol
             )
             lw_fluxes = lw_dT_fluxes[1]
             sw_fluxes = sw_dT_fluxes[1]

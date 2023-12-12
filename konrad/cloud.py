@@ -60,6 +60,85 @@ __all__ = [
 ]
 
 
+# TODO: Make this a staticmethod of the ``Cloud`` class?
+def get_p_data_array(values, units="kg m^-2", numlevels=200):
+    """Return a DataArray of values."""
+    if isinstance(values, DataArray):
+        return values
+
+    elif isinstance(values, np.ndarray):
+        if values.shape == (numlevels,):
+            return DataArray(values, dims=("mid_levels",), attrs={"units": units})
+        else:
+            raise ValueError(
+                "Cloud parameter input array is not the right size"
+                " for the number of model levels."
+            )
+
+    elif isinstance(values, (int, float)):
+        return DataArray(
+            values
+            * np.ones(
+                numlevels,
+            ),
+            dims=("mid_levels",),
+            attrs={"units": units},
+        )
+
+    raise TypeError(
+        "Cloud variable input must be a single value, `numpy.ndarray` or a "
+        "`sympl.DataArray`"
+    )
+
+
+# TODO: Make this a staticmethod of the ``Cloud`` class?
+def get_waveband_data_array(values, units="dimensionless", numlevels=200, sw=True):
+    """Return a DataArray of values."""
+    if isinstance(values, DataArray):
+        return values
+
+    if sw:
+        dims_bands = "num_shortwave_bands"
+        numbands = 14
+    else:
+        dims_bands = "num_longwave_bands"
+        numbands = 16
+
+    if isinstance(values, (int, float)):
+        return DataArray(
+            values * np.ones((numlevels, numbands)),
+            dims=("mid_levels", dims_bands),
+            attrs={"units": units},
+        )
+
+    elif isinstance(values, np.ndarray):
+        if values.shape == (numlevels,):
+            return DataArray(
+                np.repeat(values[:, np.newaxis], numbands, axis=1),
+                dims=("mid_levels", dims_bands),
+                attrs={"units": units},
+            )
+        elif values.shape == (numlevels, numbands):
+            return DataArray(
+                values,
+                dims=("mid_levels", dims_bands),
+                attrs={"units": units},
+            )
+
+    raise TypeError(
+        "Cloud variable input must be a single value, `numpy.ndarray` or a "
+        "`sympl.DataArray`"
+    )
+
+
+def get_aerosol_waveband_data_array(
+    values, units="dimensionless", numlevels=200, sw=True
+):
+    """Return a DataArray of values."""
+    a = get_waveband_data_array(values, units=units, numlevels=numlevels, sw=sw)
+    return a.T
+
+
 def get_rectangular_profile(z, value, ztop, depth):
     """Produce a rectangular profile, an array containing zeros and the value
     'value' corresponding to a certain height range.

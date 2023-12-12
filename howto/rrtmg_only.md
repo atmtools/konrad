@@ -36,9 +36,12 @@ surface = konrad.surface.SlabOcean.from_atmosphere(atmosphere)
 # Create cloud component (here clear-sky).
 cloud = konrad.cloud.ClearSky.from_atmosphere(atmosphere)
 
+# Create aerosol component (here clear-sky).
+aerosol = konrad.aerosol.NoAerosol(atmosphere)
+
 # Setup the RRTMG radiation component (choose zenith angle and solar constant).
 rrtmg = konrad.radiation.RRTMG(zenith_angle=47.88)
-rrtmg.calc_radiation(atmosphere, surface, cloud)  # Actual RT simulation
+rrtmg.calc_radiation(atmosphere, surface, cloud, aerosol)  # Actual RT simulation
 ```
 
 ## Plot radiative fluxes

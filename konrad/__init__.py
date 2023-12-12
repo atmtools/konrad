@@ -21,6 +21,7 @@ warnings.filterwarnings(
 
 __version__ = '1.0.2-dev0'
 
+from . import aerosol
 from . import atmosphere
 from . import cloud
 from . import component
