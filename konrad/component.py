@@ -1,3 +1,4 @@
+import copy
 import operator
 from collections.abc import Hashable
 
@@ -224,3 +225,7 @@ class Component:
                 raise KeyError(f"'{variable}' not found and no default given.")
 
         return values if keepdims else values.ravel()
+
+    def copy(self):
+        """Return a deepcopy of the component."""
+        return copy.deepcopy(self)
