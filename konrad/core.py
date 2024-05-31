@@ -154,7 +154,7 @@ class RCE:
         # Sub-model initialisation
 
         # Atmosphere
-        self.atmosphere = atmosphere
+        self.atmosphere = atmosphere.copy()
 
         # Radiation
         if radiation is None:
@@ -171,7 +171,7 @@ class RCE:
         # Surface
         self.surface = utils.return_if_type(
             surface, "surface", Surface, FixedTemperature()
-        )
+        ).copy()
 
         # Cloud
         self.cloud = utils.return_if_type(
