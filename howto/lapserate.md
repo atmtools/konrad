@@ -57,7 +57,7 @@ for lapserate in [6.5, 8, 10]:
     )
     rce.run()  # Start the simulation.
 
-    plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
+    plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['T'][-1, :])
 ax.set_xlabel(r"$T$ / K")
 ax.set_ylabel("$p$ / hPa")
 ```
@@ -79,7 +79,7 @@ rce = konrad.RCE(
 rce.run()  # Start the simulation.
 
 fig, ax = plt.subplots()
-plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
+plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['T'][-1, :])
 ax.set_xlabel(r"$T$ / K")
 ax.set_ylabel("$p$ / hPa")
 ```
@@ -106,7 +106,7 @@ for Ts in [280, 290, 300]:
     )
     rce.run()  # Start the simulation.
 
-    plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
+    plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['T'][-1, :])
 ax.set_xlabel(r"$T$ / K")
 ax.set_ylabel("$p$ / hPa")
 ```

@@ -68,7 +68,9 @@ Finally, we can plot the RCE state and compare it to the inital (standard) atmop
 
 ```{code-cell} ipython3
 fig, ax = plt.subplots()
-plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
+plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :], label="Init. state")
+plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['T'][-1, :], label="RCE")
+ax.legend()
 ax.set_xlabel(r"$T$ / K")
 ax.set_ylabel("$p$ / hPa")
 ```
