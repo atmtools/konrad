@@ -57,3 +57,14 @@ class TestAtmosphere:
         atmosphere_new = atmosphere_obj.refine_plev(phlev=phlev)
 
         # TODO Add a proper test of values
+
+    def test_copy(self, atmosphere_obj):
+        """Test deepcopy of atmosphere component."""
+        atmosphere_copy =  atmosphere_obj.copy()
+
+        # Check if copied data is equal
+        assert np.array_equal(atmosphere_obj["T"], atmosphere_copy["T"])
+
+        # Check if copied data is independent
+        atmosphere_obj["T"][:] += 1.0
+        assert not np.array_equal(atmosphere_obj["T"], atmosphere_copy["T"])
