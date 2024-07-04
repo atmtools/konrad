@@ -43,12 +43,12 @@ rce = konrad.RCE(
 rce.run()
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
-plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1], ax=ax0)
+plots.profile_p_log(rce.atmosphere["plev"], rce.atmosphere["T"][-1], ax=ax0)
 ax0.set_ylabel("$p$ / hPa")
 ax0.set_xlabel("$T$ / K")
 
 ax1.axvline(0, color="k", linewidth=0.8)
-plots.profile_p_log(atmosphere["plev"], rce.radiation["net_htngrt"][-1], ax=ax1)
+plots.profile_p_log(rce.atmosphere["plev"], rce.radiation["net_htngrt"][-1], ax=ax1)
 ax1.set_xlabel("Q / $\sf K\,day^{-1}$")
 ax1.set_xlim(-4, 0.5)
 ax1.set_ylim(bottom=phlev.max())
@@ -58,7 +58,7 @@ ax1.set_ylim(bottom=phlev.max())
 
 ```{code-cell} ipython3
 single_cloud = konrad.cloud.ConceptualCloud(
-    atmosphere,  # required for consistent coordinates
+    rce.atmosphere,  # required for consistent coordinates
     cloud_top=200e2,  # in Pa
     depth=100e2,  # in Pa
     phase="ice",  # "ice" or "liquid"
@@ -68,20 +68,20 @@ single_cloud = konrad.cloud.ConceptualCloud(
 
 rrtmg = konrad.radiation.RRTMG()
 rrtmg.update_heatingrates(
-    atmosphere=atmosphere,
+    atmosphere=rce.atmosphere,
     cloud=single_cloud,
 )
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
 ax0.axvline(0, color="k", linewidth=0.8)
-plots.profile_p_log(atmosphere["plev"], rrtmg["net_htngrt"][-1], ax=ax0)
+plots.profile_p_log(rce.atmosphere["plev"], rrtmg["net_htngrt"][-1], ax=ax0)
 ax0.set_xlabel("Q / $\sf K\,day^{-1}$")
 ax0.set_xlim(-4, 0.5)
 ax0.set_ylabel("$p$ / hPa")
 ax0.set_ylim(bottom=phlev.max())
 
 ax1.axvline(0, color="k", linewidth=0.8)
-plots.profile_p_log(atmosphere["plev"], rrtmg["net_htngrt"][-1] - rrtmg["net_htngrt_clr"][-1], ax=ax1)
+plots.profile_p_log(rce.atmosphere["plev"], rrtmg["net_htngrt"][-1] - rrtmg["net_htngrt_clr"][-1], ax=ax1)
 ax1.set_xlabel("$\sf Q_\mathrm{cloud}$ / $\sf K\,day^{-1}$")
 ax1.set_xlim(-2.25, 2.25)
 ax1.set_ylim(bottom=phlev.max())

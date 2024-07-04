@@ -53,7 +53,7 @@ Finally, we can plot the equilibrated temperature profile
 
 ```{code-cell} ipython3
 fig, ax = plt.subplots()
-plots.profile_p_log(atmosphere['plev'], atmosphere['T'][-1, :])
+plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['T'][-1, :])
 ax.set_xlabel(r"$T$ / K")
 ax.set_ylabel("$p$ / hPa")
 ```

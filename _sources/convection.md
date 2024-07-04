@@ -53,7 +53,7 @@ In a second step, we enable the convective adjustment. We copy the existing atmo
 
 ```{code-cell} ipython3
 rce = konrad.RCE(
-    atmosphere.copy(),  # Create an separate atmosphere component.
+    atmosphere,
     convection=konrad.convection.HardAdjustment(),
     timestep='24h',
     max_duration='150d',

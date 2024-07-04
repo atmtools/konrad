@@ -44,15 +44,15 @@ for Ts in [285, 295, 305]:
     )
     rce.run()
 
-    l, = plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1], ax=ax0)
+    l, = plots.profile_p_log(rce.atmosphere["plev"], rce.atmosphere["T"][-1], ax=ax0)
     ax0.set_xlabel(r"$T$ / K")
     ax0.set_xlim(180, 306)
     ax0.set_ylabel("$p$ / hPa")
     ax0.set_ylim(bottom=atmosphere["plev"].max())
 
     plots.profile_p_log(
-        atmosphere["plev"],
-        atmosphere["O3"][-1] * 1e6,
+        rce.atmosphere["plev"],
+        rce.atmosphere["O3"][-1] * 1e6,
         label=f"{Ts} K",
         color=l.get_color(),
         ax=ax1,
@@ -81,15 +81,15 @@ for Ts in [285, 295, 305]:
     )
     rce.run()
 
-    l, = plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1], ax=ax0)
+    l, = plots.profile_p_log(rce.atmosphere["plev"], rce.atmosphere["T"][-1], ax=ax0)
     ax0.set_xlabel(r"$T$ / K")
     ax0.set_xlim(180, 306)
     ax0.set_ylabel("$p$ / hPa")
-    ax0.set_ylim(bottom=atmosphere["plev"].max())
+    ax0.set_ylim(bottom=rce.atmosphere["plev"].max())
 
     plots.profile_p_log(
-        atmosphere["plev"],
-        atmosphere["O3"][-1] * 1e6,
+        rce.atmosphere["plev"],
+        rce.atmosphere["O3"][-1] * 1e6,
         label=f"{Ts} K",
         color=l.get_color(),
         ax=ax1,

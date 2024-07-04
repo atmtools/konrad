@@ -92,5 +92,5 @@ rce = konrad.RCE(
 rce.run()
 
 # Plot adjusted state
-plots.profile_p_log(atmosphere["plev"], atmosphere["T"][-1])
+plots.profile_p_log(rce.atmosphere["plev"], rce.atmosphere["T"][-1])
 ```
