@@ -58,13 +58,13 @@ $Q_r$ is a decisive quantity in climate science as it destabilizies the atmosphe
 
 ```{code-cell} ipython3
 fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
-plots.profile_p_log(atmosphere['plev'], atmosphere['H2O'][-1, :], ax=ax0)
+plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['H2O'][-1, :], ax=ax0)
 ax0.set_xlabel(r"$q$ / VMR")
 ax0.set_xscale("log")
 ax0.set_ylabel("$p$ / hPa")
 
 ax1.axvline(0, color="k", linewidth=0.8)
-plots.profile_p_log(atmosphere['plev'], rce.radiation["net_htngrt"][-1, :], ax=ax1)
+plots.profile_p_log(rce.atmosphere['plev'], rce.radiation["net_htngrt"][-1, :], ax=ax1)
 ax1.set_xlim(-2, 0.5)
 ax1.set_xlabel(r"$Q_\mathrm{r}$ / (K/day)")
 ```
@@ -90,12 +90,12 @@ rce = konrad.RCE(
 rce.run()  # Start the simulation.
 
 fig, (ax0, ax1) = plt.subplots(ncols=2, sharey=True)
-plots.profile_p_log(atmosphere['plev'], atmosphere['H2O'][-1, :], ax=ax0)
+plots.profile_p_log(rce.atmosphere['plev'], rce.atmosphere['H2O'][-1, :], ax=ax0)
 ax0.set_xlabel(r"$q$ / VMR")
 ax0.set_ylabel("$p$ / hPa")
 
 ax1.axvline(0, color="k", linewidth=0.8)
-plots.profile_p_log(atmosphere['plev'], rce.radiation["net_htngrt"][-1, :], ax=ax1)
+plots.profile_p_log(rce.atmosphere['plev'], rce.radiation["net_htngrt"][-1, :], ax=ax1)
 ax1.set_xlim(-2, 0.5)
 ax1.set_xlabel(r"$Q_\mathrm{r}$ / (K/day)")
 ```

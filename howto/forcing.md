@@ -54,8 +54,8 @@ atmospheric state, especially the temperature, occur.
 
 ```{code-cell} ipython3
 # Calculate OLR at perturbed atmospheric state.
-atmosphere["CO2"][:] *= 2  # double the CO2 concentration
-spinup.radiation.update_heatingrates(atmosphere)
+spinup.atmosphere["CO2"][:] *= 2  # double the CO2 concentration
+spinup.radiation.update_heatingrates(spinup.atmosphere)
 
 instant_forcing = -(spinup.radiation["lw_flxu"][-1] - olr_ref)
 ```
@@ -94,7 +94,7 @@ The effective forcing includes the so called "stratospheric adjustment".
 One can simulated by keeping the surface temperature fixed but allowing the atmopsheric temperature to adjust to the increased CO2 concentration.
 
 ```{code-cell} ipython3
-perturbed = konrad.RCE(atmosphere.copy(), timestep='24h',max_duration='150d')
+perturbed = konrad.RCE(spinup.atmosphere, timestep='24h',max_duration='150d')
 perturbed.run()
 
 effective_forcing = -(perturbed.radiation["lw_flxu"][-1] - olr_ref)

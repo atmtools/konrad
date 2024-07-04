@@ -45,10 +45,10 @@ spinup = konrad.RCE(
 )
 spinup.run()  # Start the simulation.
 
-atmosphere["CO2"][:] *= 2.0 # double the CO2 concentration
+spinup.atmosphere["CO2"][:] *= 2.0 # double the CO2 concentration
 
 perturbed = konrad.RCE(
-    atmosphere,
+    spinup.atmosphere,
     surface=konrad.surface.SlabOcean(
         temperature=295.0,
         heat_sink=spinup.radiation["toa"][-1],

@@ -284,24 +284,6 @@ class Atmosphere(Component):
 
         return new_atmosphere
 
-    def copy(self):
-        """Create a copy of the atmosphere.
-
-        Returns:
-            konrad.atmosphere: copy of the atmosphere
-        """
-        datadict = dict()
-        datadict["phlev"] = copy(self["phlev"])  # Copy pressure grid.
-
-        # Create copies (and not references) of all atmospheric variables.
-        for variable in self.atmosphere_variables:
-            datadict[variable] = copy(self[variable]).ravel()
-
-        # Create a new atmosphere object from the filled data directory.
-        new_atmosphere = type(self).from_dict(datadict)
-
-        return new_atmosphere
-
     def calculate_height(self):
         """Calculate the geopotential height."""
         g = constants.earth_standard_gravity

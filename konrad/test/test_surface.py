@@ -20,3 +20,15 @@ class TestSurface:
         for t in init_args:
             surf = surface.FixedTemperature(temperature=t)
             assert np.array_equal(surf["temperature"], np.array([280.0], dtype=float))
+
+    def test_copy(self):
+        """Test deepcopy of surface component."""
+        surf = surface.FixedTemperature(temperature=288.)
+        surf_copy =  surf.copy()
+
+        # Check if copied data is equal
+        assert np.array_equal(surf["temperature"], surf_copy["temperature"])
+
+        # Check if copied data is independent
+        surf["temperature"][:] += 1.0
+        assert not np.array_equal(surf["temperature"], surf_copy["temperature"])
