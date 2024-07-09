@@ -5,7 +5,6 @@ from os.path import join, dirname, isfile
 
 import numpy as np
 import typhon as ty
-from scipy.interpolate import PchipInterpolator
 
 from konrad.utils import get_quadratic_pgrid
 from konrad.atmosphere import Atmosphere
@@ -18,34 +17,8 @@ from .radiation import Radiation
 from scipy.constants import speed_of_light as c
 
 import xarray as xr
-import pyarts
-
-from pyarts.workspace import arts_agenda
 
 logger = logging.getLogger(__name__)
-
-
-# ARTS agendas for Rayleigh scattering and Lambretian surface reflectivity
-@arts_agenda
-def gas_scattering_agenda__Rayleigh(ws):
-    """Create an ARTS Rayleigh scattering agenda
-    """
-    ws.Ignore(ws.rtp_vmr)
-    ws.gas_scattering_coefAirSimple()
-    ws.gas_scattering_matRayleigh()
-
-
-# surface scattering agenda for a lambertian surface with user defined reflectivity
-@arts_agenda
-def iy_surface_agenda_Lambertian(ws):
-    """Create an ARTS Lambertian surface agenda
-    """
-    ws.iySurfaceInit()
-    ws.Ignore(ws.dsurface_rmatrix_dx)
-    ws.Ignore(ws.dsurface_emission_dx)
-    ws.iySurfaceLambertian()
-    ws.iySurfaceLambertianDirect()
-
 
 class _ARTS:
     def __init__(
@@ -93,7 +66,33 @@ class _ARTS:
 
 
         """
+        import pyarts
+
+        from pyarts.workspace import arts_agenda
+
+        # ARTS agendas for Rayleigh scattering and Lambretian surface reflectivity
+        @arts_agenda
+        def gas_scattering_agenda__Rayleigh(ws):
+            """Create an ARTS Rayleigh scattering agenda
+            """
+            ws.Ignore(ws.rtp_vmr)
+            ws.gas_scattering_coefAirSimple()
+            ws.gas_scattering_matRayleigh()
+
+
+        # surface scattering agenda for a lambertian surface with user defined reflectivity
+        @arts_agenda
+        def iy_surface_agenda_Lambertian(ws):
+            """Create an ARTS Lambertian surface agenda
+            """
+            ws.iySurfaceInit()
+            ws.Ignore(ws.dsurface_rmatrix_dx)
+            ws.Ignore(ws.dsurface_emission_dx)
+            ws.iySurfaceLambertian()
+            ws.iySurfaceLambertianDirect()
+
         from pyarts.workspace import Workspace
+
 
         self.nstreams = nstreams
         self.scale_vmr = scale_vmr
@@ -388,6 +387,8 @@ class _ARTS:
             wavenumber (array) [cm^-1]: array of wavenumbers.
 
         """
+        import pyarts
+
         if wavenumber is None:
             wavenumber = np.linspace(2000, 50000, 2**15)
             
@@ -782,7 +783,7 @@ class ARTS(Radiation):
         self.store_spectral_olr = store_spectral_olr
         self._arts = _ARTS(**arts_kwargs)
 
-    def calc_radiation(self, atmosphere, surface, cloud):
+    def calc_radiation(self, atmosphere, surface, cloud = None, aerosol = None):
         # Perform RRTMG simulation
         # Add a virtual layer ontop of the atmosphere column to improve the
         # accuracy of top-of-the-atmosphere fluxes.
@@ -857,40 +858,41 @@ class ARTS(Radiation):
         }
 
         if self.store_spectral_olr:
-            self.coords.update({"frequency": f})
+            self.coords.update({"frequency": f_lw})
             self.create_variable(
                 name="outgoing_longwave_radiation",
-                data=irradiance_field[:, -1, 0, 0, 1].reshape(1, -1),
+                data=irradiance_field_lw[:, -1, 0, 0, 1].reshape(1, -1),
                 dims=("time", "frequency"),
             )
 
-    def update_heatingrates(self, atmosphere, surface, cloud=None):
+    def update_heatingrates(self, atmosphere, surface=None, cloud=None, aerosol=None):
         """Returns `xr.Dataset` containing radiative transfer results."""
-        self.calc_radiation(atmosphere, surface, cloud)
+        # As in common but assumes clear sky
 
-        def fluxes(net_fluxes, pressure):
-            Q = fluxes2heating(net_fluxes, pressure, method="gradient")
-            f = PchipInterpolator(np.log(pressure[::-1]), Q[::-1])
-            return f(np.log(atmosphere["plev"]))
+        # Call the interal radiative transfer routines.
+        self.calc_radiation(atmosphere, surface, cloud, aerosol)
 
-        self["sw_htngrt"][-1] = fluxes(
+        # self.correct_bias(rad_dataset)
+
+        self["sw_htngrt"][-1] = fluxes2heating(
             net_fluxes=self["sw_flxu"][-1] - self["sw_flxd"][-1],
             pressure=atmosphere["phlev"],
         )
 
-        self["sw_htngrt_clr"][-1] = fluxes(
+        self["sw_htngrt_clr"][-1] = fluxes2heating(
             net_fluxes=self["sw_flxu_clr"][-1] - self["sw_flxd_clr"][-1],
             pressure=atmosphere["phlev"],
         )
 
-        self["lw_htngrt"][-1] = fluxes(
+        self["lw_htngrt"][-1] = fluxes2heating(
             net_fluxes=self["lw_flxu"][-1] - self["lw_flxd"][-1],
             pressure=atmosphere["phlev"],
         )
 
-        self["lw_htngrt_clr"][-1] = fluxes(
+        self["lw_htngrt_clr"][-1] = fluxes2heating(
             net_fluxes=self["lw_flxu_clr"][-1] - self["lw_flxd_clr"][-1],
             pressure=atmosphere["phlev"],
         )
 
         self.derive_diagnostics()
+
