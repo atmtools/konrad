@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<arts format="binary" version="1">
+<GasAbsLookup><Array type="ArrayOfSpeciesTag" nelem="9">
+<Array type="SpeciesTag" nelem="3">
+<SpeciesTag>"H2O-*-*-*"</SpeciesTag>
+<SpeciesTag>"H2O-SelfContCKDMT400-*-*"</SpeciesTag>
+<SpeciesTag>"H2O-ForeignContCKDMT400-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="2">
+<SpeciesTag>"O2-*-1000000000000-1e+99"</SpeciesTag>
+<SpeciesTag>"O2-CIAfunCKDMT100-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="3">
+<SpeciesTag>"N2-*-*-*"</SpeciesTag>
+<SpeciesTag>"N2-CIAfunCKDMT252-*-*"</SpeciesTag>
+<SpeciesTag>"N2-CIArotCKDMT252-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="1">
+<SpeciesTag>"CH4-*-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="2">
+<SpeciesTag>"CO2-*-*-*"</SpeciesTag>
+<SpeciesTag>"CO2-CKDMT252-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="1">
+<SpeciesTag>"N2O-*-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="1">
+<SpeciesTag>"CO-*-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="1">
+<SpeciesTag>"O3-*-*-*"</SpeciesTag>
+</Array>
+<Array type="SpeciesTag" nelem="1">
+<SpeciesTag>"O3-XFIT"</SpeciesTag>
+</Array>
+</Array>
+<Array name="NonlinearSpecies" type="Index" nelem="1">
+<Index></Index>
+</Array>
+<Vector name="FrequencyGrid" nelem="64">
+</Vector>
+<Vector name="PressureGrid" nelem="12">
+</Vector>
+<Matrix name="ReferenceVmrProfiles" nrows="9" ncols="12">
+</Matrix>
+<Vector name="ReferenceTemperatureProfile" nelem="12">
+</Vector>
+<Vector name="TemperaturePerturbations" nelem="12">
+</Vector>
+<Vector name="NonlinearSpeciesVmrPerturbations" nelem="6">
+</Vector>
+<Tensor4 name="AbsorptionCrossSections" nbooks="12" npages="14" nrows="64" ncols="12">
+</Tensor4>
+</GasAbsLookup>
+</arts>

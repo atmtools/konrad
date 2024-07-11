@@ -13,6 +13,9 @@ authors:
 - family-names: "Kroll"
   given-names: "Clarissa"
   orcid: "https://orcid.org/0000-0002-3449-418X"
+- family-names: "Czarnecki"
+  given-names: "Paulina"
+  orcid: "https://orcid.org/0000-0002-5011-882X"
 title: "konrad"
 url: "https://github.com/atmtools/konrad"
 keywords:
