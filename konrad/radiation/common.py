@@ -7,7 +7,7 @@ def fluxes2heating(net_fluxes, pressure, cp=None, method="diff"):
     r"""Calculate radiative heating from net fluxes
 
     .. math::
-        Q_\mathrm{r} = \frac{F}{c_p} \frac{\mathrm{d}F}{\mathrm{d}p}
+        Q_\mathrm{r} = \frac{g}{c_p} \frac{\mathrm{d}F}{\mathrm{d}p}
 
     Parameters:
         net_fluxes (ndarray): Net radiative flux.
