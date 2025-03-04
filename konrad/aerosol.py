@@ -25,7 +25,8 @@ Create an instance of an aerosol class, *e.g.* a :py:class:`VolcanoAerosol`:
 
     >>> rrtmg.calc_radiation(atmosphere=..., surface=...,aerosol=aerosol)
 
-More input files for radiative properties of aerosols are available at #TODO
+More input files for radiative properties of aerosols are available at
+https://doi.org/10.5281/zenodo.8212074
 """
 
 import os
