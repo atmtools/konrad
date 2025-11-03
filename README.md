@@ -46,8 +46,8 @@ CC=gcc-12 FC=gfortran-12
 
 # Install a trimmed down version of CliMT that ships RRTMG only.
 export CC FC TARGET
-python -m pip install git+https://github.com/atmtools/climt@rrtmg-only
+python3 -m pip install git+https://github.com/atmtools/climt@rrtmg-only
 
 # Install konrad itself
-python -m pip install konrad
+python3 -m pip install konrad
 ```
