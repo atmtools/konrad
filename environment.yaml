@@ -17,5 +17,5 @@ dependencies:
     - xarray>=0.9.1
     - pip<25.3  # pip 25.3 enforces changes to the build system
     - pip:
-        - climt
+        - git+https://github.com/atmtools/climt@rrtmg-only
         - sympl>=0.4.0
