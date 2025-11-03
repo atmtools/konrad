@@ -36,13 +36,13 @@ jobs:
           TARGET: HASWELL
         run: |
           brew install gcc@12
-          python -m pip install --upgrade pip wheel
+          python -m pip install --upgrade 'pip<25.3' wheel
           python -m pip install git+https://github.com/atmtools/climt@rrtmg-only --no-binary climt
 
       - name: Install CliMT (Linux)
         if: matrix.name == 'ubuntu'
         run: |
-          python -m pip install --upgrade pip wheel
+          python -m pip install --upgrade 'pip<25.3' wheel
           python -m pip install git+https://github.com/atmtools/climt@rrtmg-only --no-binary climt
 
       - name: Install
