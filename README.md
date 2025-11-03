@@ -20,18 +20,18 @@ But of course, any other Python distribution is also working.
 ## Install stable release
 You can install the latest stable version of ``konrad`` using ``pip``:
 ```bash
-python -m pip install konrad
+python3 -m pip install konrad
 ```
 
 Konrad depends on the [CliMT](https://github.com/CliMT/climt) package.
 CliMT handles a variety of underlying FORTRAN code and provides precompiled
 binary wheels for some Python versions and operating systems.
 
-However (for Python >3.7) the FORTRAN libraries need to be compiled locally.
+However, on some architectures the FORTRAN libraries need to be compiled locally.
 In this case, you need to specify a C compiler, a FORTRAN compiler, and the
 target architecture using the corresponding environment variables:
 ```bash
-CC=gcc FC=gfortran TARGET=HASWELL python -m pip install konrad
+CC=gcc FC=gfortran TARGET=HASWELL python3 -m pip install konrad
 ```
 
 ### macOS
