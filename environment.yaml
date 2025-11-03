@@ -15,7 +15,7 @@ dependencies:
     - sphinx_rtd_theme
     - typhon>=0.7.0
     - xarray>=0.9.1
-    - pip
+    - pip<25.3  # pip 25.3 enforces changes to the build system
     - pip:
         - climt
         - sympl>=0.4.0
