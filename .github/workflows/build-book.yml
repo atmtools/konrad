@@ -24,7 +24,6 @@ jobs:
         python -m pip list
     - name: build book
       run: |
-        conda info
         jupyter-book build -W -n --keep-going howto
     - name: Archive build artifacts
       uses: actions/upload-artifact@v4
