@@ -152,7 +152,16 @@ class Component:
             self.coords["time"] = [0]
             return xr.Dataset(
                 coords=self.coords,
-                data_vars=self.data_vars,
+                # Convert `None` to ndarrays filled with np.nan
+                data_vars={
+                    k: (
+                        dim,
+                        np.full([len(self.coords[d]) for d in dim], fill_value=np.nan),
+                    )
+                    if val is None
+                    else (dim, val)
+                    for k, (dim, val) in self.data_vars.items()
+                },
                 attrs=self.attrs,
             )
 
