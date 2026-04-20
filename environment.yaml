@@ -20,3 +20,4 @@ dependencies:
     - pip:
         - git+https://github.com/atmtools/climt@rrtmg-only
         - sympl>=0.4.0
+        - -e .
