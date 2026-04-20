@@ -3,7 +3,7 @@ channels:
     - conda-forge
     - rttools
 dependencies:
-    - python==3.10
+    - python=3.10
     - jupyter-book<2
     - matplotlib>=2.0.0
     - netcdf4>=1.2.7
