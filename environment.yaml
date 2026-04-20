@@ -15,6 +15,7 @@ dependencies:
     - sphinx_rtd_theme
     - typhon>=0.7.0
     - xarray>=0.9.1
+    - setuptools<=80  # more recent setuptools version remove pkg_resources
     - pip<25.3  # pip 25.3 enforces changes to the build system
     - pip:
         - git+https://github.com/atmtools/climt@rrtmg-only
