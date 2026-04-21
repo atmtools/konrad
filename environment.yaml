@@ -3,11 +3,11 @@ channels:
     - conda-forge
     - rttools
 dependencies:
-    - python==3.10
+    - python=3.11
     - jupyter-book<2
     - matplotlib>=2.0.0
     - netcdf4>=1.2.7
-    - numpy>1.22.0
+    - numpy<2.3
     - pyarts>=2.5.8
     - pytest
     - scipy>=0.19.0
@@ -15,7 +15,9 @@ dependencies:
     - sphinx_rtd_theme
     - typhon>=0.7.0
     - xarray>=0.9.1
+    - setuptools<=80  # more recent setuptools version remove pkg_resources
     - pip<25.3  # pip 25.3 enforces changes to the build system
     - pip:
         - git+https://github.com/atmtools/climt@rrtmg-only
         - sympl>=0.4.0
+        - -e .
